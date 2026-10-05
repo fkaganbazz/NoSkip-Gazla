@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Keşfet</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&amp;family=Nunito:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#FFF8F2;font-family:'Nunito',system-ui,sans-serif;color:#24163F}
+a{color:#1F7A45}a:hover{color:#165C34}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; box-sizing: border-box; padding: 56px 20px 0; display: flex; flex-direction: column; background: #FFF8F2; font-family: 'Nunito', system-ui, sans-serif; color: #24163F">
+
+<h1 style="margin: 0; font-family: 'Baloo 2', 'Nunito', sans-serif; font-weight: 800; font-size: 30px; line-height: 1.1">Keşfet</h1>
+
+<div style="margin-top: 12px; position: relative">
+<label for="ara" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Challenge ara</label>
+<input id="ara" type="search" placeholder="Challenge ara" style="width: 100%; height: 48px; box-sizing: border-box; padding: 0 16px 0 44px; border-radius: 16px; border: 1px solid #EFE6DC; background: #FFFFFF; font-family: inherit; font-size: 16px; font-weight: 600; color: #24163F">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5B4A7A" stroke-width="2.4" stroke-linecap="round" aria-hidden="true" style="position: absolute; left: 15px; top: 14px"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16 L20.5 20.5"></path></svg>
+</div>
+
+<div style="margin: 12px -20px 0; padding: 0 20px; display: flex; gap: 8px; overflow: hidden">
+<sc-for list="{{chips}}" as="c" hint-placeholder-count="6">
+<button type="button" aria-pressed="{{c.pressed}}" onClick="{{c.pick}}" style="flex-shrink: 0; height: 40px; padding: 0 16px; box-sizing: border-box; border-radius: 20px; border: 1px solid {{c.border}}; background: {{c.bg}}; font-family: inherit; font-size: 14px; font-weight: 800; color: {{c.color}}; white-space: nowrap; cursor: pointer">{{c.label}}</button>
+</sc-for>
+</div>
+
+<a href="ChallengePreview.dc.html" style="position: relative; margin-top: 14px; height: 150px; box-sizing: border-box; padding: 16px 18px; border-radius: 26px; background: #24163F; overflow: hidden; display: flex; text-decoration: none; color: #FFF8F2">
+<div style="position: absolute; right: -40px; bottom: -60px; width: 200px; height: 200px; border-radius: 50%; background: #2F2150"></div>
+<div style="position: relative; width: 200px; display: flex; flex-direction: column; gap: 4px">
+<span style="font-size: 12px; font-weight: 800; letter-spacing: 1px; color: #FFC83D">HAFTANIN CHALLENGE'I</span>
+<span style="font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 27px; line-height: 1.05">7 gün kahvesiz</span>
+<span style="font-size: 13px; font-weight: 700; color: #D9CFEA">[N] kişi şu an yapıyor</span>
+<span style="margin-top: auto; align-self: flex-start; height: 34px; padding: 0 14px; border-radius: 12px; background: #FFF8F2; color: #24163F; display: flex; align-items: center; font-size: 14px; font-weight: 800">İncele</span>
+</div>
+<div style="position: absolute; right: 10px; bottom: -8px">
+<dc-import name="Diken" mood="saskin" stage="tam" size="112" hint-size="112px,140px"></dc-import>
+</div>
+</a>
+
+<div style="margin-top: 18px; display: flex; align-items: baseline; justify-content: space-between">
+<h2 style="margin: 0; font-family: 'Baloo 2', 'Nunito', sans-serif; font-weight: 800; font-size: 21px">Popüler</h2>
+<a href="#" style="font-size: 14px; font-weight: 800; color: #1F7A45; text-decoration: none">Tümü</a>
+</div>
+<div style="margin-top: 8px; border-radius: 22px; background: #FFFFFF; border: 1px solid #EFE6DC">
+<a href="ChallengePreview.dc.html" style="height: 64px; padding: 0 14px; display: flex; align-items: center; gap: 12px; text-decoration: none; color: #24163F; border-bottom: 1px solid #F4EDE5">
+<span style="width: 42px; height: 42px; flex-shrink: 0; border-radius: 14px; background: #EDE7F6; display: flex; align-items: center; justify-content: center; color: #4B3A78"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 H16 C17.1 3 18 3.9 18 5 V19 C18 20.1 17.1 21 16 21 H8 C6.9 21 6 20.1 6 19 V5 C6 3.9 6.9 3 8 3 Z M11 18 H13 M3.5 3.5 L20.5 20.5"></path></svg></span>
+<span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column"><span style="font-size: 15px; font-weight: 800">Uyanınca 1 saat telefonsuz</span><span style="font-size: 12px; font-weight: 700; color: #5B4A7A">Detoks · Orta</span></span>
+<span style="flex-shrink: 0; padding: 4px 9px; border-radius: 10px; background: #F6EEE5; font-size: 12px; font-weight: 800">30 gün</span>
+</a>
+<a href="ChallengePreview.dc.html" style="height: 64px; padding: 0 14px; display: flex; align-items: center; gap: 12px; text-decoration: none; color: #24163F; border-bottom: 1px solid #F4EDE5">
+<span style="width: 42px; height: 42px; flex-shrink: 0; border-radius: 14px; background: #FFE3D2; display: flex; align-items: center; justify-content: center; color: #9A3412"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5 H20 V15 H11 L7 19 V15 H4 Z M12 12.4 C10.3 11.2 9.4 10.2 9.4 9.2 C9.4 8.4 10 7.8 10.8 7.8 C11.3 7.8 11.7 8.1 12 8.6 C12.3 8.1 12.7 7.8 13.2 7.8 C14 7.8 14.6 8.4 14.6 9.2 C14.6 10.2 13.7 11.2 12 12.4 Z"></path></svg></span>
+<span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column"><span style="font-size: 15px; font-weight: 800">Her gün birine iltifat et</span><span style="font-size: 12px; font-weight: 700; color: #5B4A7A">Sosyal cesaret · Zor</span></span>
+<span style="flex-shrink: 0; padding: 4px 9px; border-radius: 10px; background: #F6EEE5; font-size: 12px; font-weight: 800">7 gün</span>
+</a>
+<a href="ChallengePreview.dc.html" style="height: 64px; padding: 0 14px; display: flex; align-items: center; gap: 12px; text-decoration: none; color: #24163F">
+<span style="width: 42px; height: 42px; flex-shrink: 0; border-radius: 14px; background: #E0EEFF; display: flex; align-items: center; justify-content: center; color: #1E4F9A"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 19 L13 11"></path><path d="M12 6 H19 V9 H12 Z"></path><path d="M13.5 6 V4.5 M15.5 6 V4.5 M17.5 6 V4.5"></path><path d="M4 20.5 L5.5 19"></path></svg></span>
+<span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column"><span style="font-size: 15px; font-weight: 800">Ters elle diş fırçala</span><span style="font-size: 12px; font-weight: 700; color: #5B4A7A">Tuhaf ve eğlenceli · Kolay</span></span>
+<span style="flex-shrink: 0; padding: 4px 9px; border-radius: 10px; background: #F6EEE5; font-size: 12px; font-weight: 800">10 gün</span>
+</a>
+</div>
+
+<div style="margin-top: 14px; height: 58px; box-sizing: border-box; border-radius: 14px; border: 2px dashed #CFC3B6; background: #FBF5EE; display: flex; align-items: center; justify-content: center; gap: 10px">
+<span style="padding: 2px 7px; border-radius: 6px; background: #E3D8CC; font-size: 11px; font-weight: 800; letter-spacing: 0.4px; color: #3F3358">REKLAM</span>
+<span style="font-size: 13px; font-weight: 700; color: #5B4A7A">Banner alanı · 320 × 50</span>
+</div>
+
+<div style="position: absolute; left: 0; bottom: 0">
+<dc-import name="TabBar" active="kesfet" hint-size="390px,88px"></dc-import>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { picked: 0 };
+}
+renderVals() {
+const labels = ['Tümü', 'Detoks', 'Sosyal cesaret', 'Spor', 'Yeme-içme', 'Okuma', 'Para', 'Tuhaf'];
+const chips = labels.map((label, i) => {
+const on = this.state.picked === i;
+return { label, pressed: on ? 'true' : 'false', bg: on ? '#24163F' : '#FFFFFF', border: on ? '#24163F' : '#E3D8CC', color: on ? '#FFF8F2' : '#24163F', pick: () => this.setState({ picked: i }) };
+});
+return { chips };
+}
+}
+</script>
+</body>
+</html>

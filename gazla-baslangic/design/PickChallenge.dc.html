@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>İlk challenge'ını seç</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&amp;family=Nunito:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#FFF8F2;font-family:'Nunito',system-ui,sans-serif;color:#24163F}
+a{color:#1F7A45}a:hover{color:#165C34}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; box-sizing: border-box; padding: 56px 20px 32px; display: flex; flex-direction: column; background: #FFF8F2; font-family: 'Nunito', system-ui, sans-serif; color: #24163F">
+
+<div style="display: flex; align-items: center; gap: 12px">
+<a href="Main.dc.html" aria-label="Geri" style="width: 44px; height: 44px; flex-shrink: 0; box-sizing: border-box; border-radius: 22px; background: #FFFFFF; border: 1px solid #EFE6DC; display: flex; align-items: center; justify-content: center; color: #24163F"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5 L8 12 L15 19"></path></svg></a>
+<div role="progressbar" aria-label="Adım 1 / 4" aria-valuemin="1" aria-valuemax="4" aria-valuenow="1" style="flex-grow: 1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px">
+<span style="height: 8px; border-radius: 4px; background: #1F7A45"></span>
+<span style="height: 8px; border-radius: 4px; background: #E3D8CC"></span>
+<span style="height: 8px; border-radius: 4px; background: #E3D8CC"></span>
+<span style="height: 8px; border-radius: 4px; background: #E3D8CC"></span>
+</div>
+<span style="width: 30px; text-align: right; font-size: 14px; font-weight: 800; color: #5B4A7A">1/4</span>
+</div>
+
+<div style="margin-top: 24px; display: flex; flex-direction: column; gap: 6px">
+<h1 style="margin: 0; font-family: 'Baloo 2', 'Nunito', sans-serif; font-weight: 800; font-size: 30px; line-height: 1.1">İlk challenge'ını seç</h1>
+<p style="margin: 0; font-size: 15px; font-weight: 600; line-height: 1.45; color: #3F3358">Sonra istediğin kadar ekleyebilirsin. Arkadaşların da aynı challenge'a katılabilir.</p>
+</div>
+
+<div style="margin-top: 20px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+<sc-for list="{{tiles}}" as="c" hint-placeholder-count="6">
+<button type="button" aria-pressed="{{c.pressed}}" onClick="{{c.pick}}" style="position: relative; height: 134px; box-sizing: border-box; padding: 14px; border-radius: 22px; border: 1px solid {{c.border}}; box-shadow: {{c.ring}}; background: {{c.bg}}; display: flex; flex-direction: column; align-items: flex-start; text-align: left; font-family: inherit; color: #24163F; cursor: pointer">
+<span style="width: 36px; height: 36px; border-radius: 12px; background: {{c.tint}}; display: flex; align-items: center; justify-content: center; color: {{c.ink}}">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{c.icon}}"></path></svg>
+</span>
+<span style="margin-top: 10px; font-size: 15px; font-weight: 800; line-height: 1.25">{{c.title}}</span>
+<span style="margin-top: auto; font-size: 13px; font-weight: 700; color: #5B4A7A">{{c.meta}}</span>
+<sc-if value="{{c.selected}}" hint-placeholder-val="{{ false }}">
+<span style="position: absolute; top: 12px; right: 12px; width: 26px; height: 26px; border-radius: 13px; background: #1F7A45; display: flex; align-items: center; justify-content: center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5 L10 17.5 L19 7"></path></svg></span>
+</sc-if>
+</button>
+</sc-for>
+</div>
+
+<div style="margin-top: auto; display: flex; flex-direction: column; gap: 4px">
+<a href="SignIn.dc.html" style="height: 56px; border-radius: 18px; background: #1F7A45; box-shadow: 0 4px 0 #165C34; color: #FFFFFF; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 17px; font-weight: 800">Devam</a>
+<a href="Create.dc.html" style="height: 48px; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 16px; font-weight: 800; color: #24163F">Kendim oluşturacağım</a>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { picked: 1 };
+}
+renderVals() {
+const list = [
+{ title: '7 gün kahvesiz', meta: 'Yeme-içme · 7 gün', tint: '#FFF1C7', ink: '#8A5A00', icon: 'M5 8 H16 V14 C16 17 13.8 19 11 19 H10 C7.2 19 5 17 5 14 Z M16 10 H18 C19.4 10 20.5 11.1 20.5 12.5 C20.5 13.9 19.4 15 18 15 H16 M9 3.5 C8.3 4.4 8.3 5.3 9 6.2 M12.5 3.5 C11.8 4.4 11.8 5.3 12.5 6.2' },
+{ title: 'Uyanınca 1 saat telefonsuz', meta: 'Detoks · 30 gün', tint: '#EDE7F6', ink: '#4B3A78', icon: 'M8 3 H16 C17.1 3 18 3.9 18 5 V19 C18 20.1 17.1 21 16 21 H8 C6.9 21 6 20.1 6 19 V5 C6 3.9 6.9 3 8 3 Z M11 18 H13 M3.5 3.5 L20.5 20.5' },
+{ title: 'Her gün birine iltifat et', meta: 'Sosyal cesaret · 7 gün', tint: '#FFE3D2', ink: '#9A3412', icon: 'M4 5 H20 V15 H11 L7 19 V15 H4 Z M12 12.4 C10.3 11.2 9.4 10.2 9.4 9.2 C9.4 8.4 10 7.8 10.8 7.8 C11.3 7.8 11.7 8.1 12 8.6 C12.3 8.1 12.7 7.8 13.2 7.8 C14 7.8 14.6 8.4 14.6 9.2 C14.6 10.2 13.7 11.2 12 12.4 Z' },
+{ title: 'Plank: her gün +5 saniye', meta: 'Spor · 10 gün', tint: '#DDF3E4', ink: '#1F6B40', icon: 'M20 13.5 A8 8 0 1 1 4 13.5 A8 8 0 1 1 20 13.5 Z M12 9.5 V13.5 L14.5 16 M9.5 2.5 H14.5' },
+{ title: 'Her gün 20 sayfa oku', meta: 'Okuma · 30 gün', tint: '#FFE3EC', ink: '#A3275A', icon: 'M4 5.5 C6.5 4.5 9.5 4.5 12 6 C14.5 4.5 17.5 4.5 20 5.5 V19 C17.5 18 14.5 18 12 19.5 C9.5 18 6.5 18 4 19 Z M12 6 V19.5' },
+{ title: 'Gereksiz harcama yok', meta: 'Para · 7 gün', tint: '#D9F2EF', ink: '#0F6B63', icon: 'M6 6.5 H18 C19.4 6.5 20.5 7.6 20.5 9 V17 C20.5 18.4 19.4 19.5 18 19.5 H6 C4.6 19.5 3.5 18.4 3.5 17 V9 C3.5 7.6 4.6 6.5 6 6.5 Z M15.5 13 H20.5 M6 6.5 L15 3.5 L16.2 6.5' }
+];
+const tiles = list.map((c, i) => {
+const selected = this.state.picked === i;
+return {
+...c,
+selected,
+pressed: selected ? 'true' : 'false',
+border: selected ? '#1F7A45' : '#EFE6DC',
+ring: selected ? '0 0 0 2px #1F7A45' : '0 1px 2px rgba(36, 22, 63, 0.05)',
+bg: selected ? '#F3FBF6' : '#FFFFFF',
+pick: () => this.setState({ picked: i })
+};
+});
+return { tiles };
+}
+}
+</script>
+</body>
+</html>

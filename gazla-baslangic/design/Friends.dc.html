@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Arkadaşlar</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&amp;family=Nunito:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#FFF8F2;font-family:'Nunito',system-ui,sans-serif;color:#24163F}
+a{color:#1F7A45}a:hover{color:#165C34}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; box-sizing: border-box; padding: 56px 20px 0; display: flex; flex-direction: column; background: #FFF8F2; font-family: 'Nunito', system-ui, sans-serif; color: #24163F">
+
+<div style="display: flex; align-items: center; justify-content: space-between">
+<h1 style="margin: 0; font-family: 'Baloo 2', 'Nunito', sans-serif; font-weight: 800; font-size: 30px; line-height: 1.1">Arkadaşlar</h1>
+<button type="button" aria-label="Arkadaş ekle" style="width: 44px; height: 44px; border-radius: 22px; border: none; background: #24163F; display: flex; align-items: center; justify-content: center; color: #FFF8F2; cursor: pointer"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="8" r="3.5"></circle><path d="M3.5 20 C3.5 16 6.5 13.5 10 13.5 C11.5 13.5 12.9 14 14 14.8"></path><path d="M18.5 14 V20 M15.5 17 H21.5"></path></svg></button>
+</div>
+
+<div style="margin-top: 14px; position: relative">
+<label for="ara" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Kullanıcı adıyla ara</label>
+<input id="ara" type="search" placeholder="Kullanıcı adıyla ara" style="width: 100%; height: 48px; box-sizing: border-box; padding: 0 16px 0 44px; border-radius: 16px; border: 1px solid #EFE6DC; background: #FFFFFF; font-family: inherit; font-size: 16px; font-weight: 600; color: #24163F">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5B4A7A" stroke-width="2.4" stroke-linecap="round" aria-hidden="true" style="position: absolute; left: 15px; top: 14px"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16 L20.5 20.5"></path></svg>
+</div>
+
+<div style="position: relative; margin-top: 12px; height: 92px; box-sizing: border-box; padding: 14px 16px; border-radius: 22px; background: #DDF3E4; overflow: hidden; display: flex; align-items: center">
+<div style="position: relative; width: 220px; display: flex; flex-direction: column; gap: 4px">
+<div style="font-size: 16px; font-weight: 800; color: #0E3B22">Arkadaşını davet et</div>
+<div style="font-size: 13px; font-weight: 700; line-height: 1.35; color: #1F4D33">Linkle gelen, doğrudan grubuna katılır.</div>
+</div>
+<button type="button" style="position: relative; margin-left: auto; margin-right: 58px; height: 40px; padding: 0 14px; border-radius: 14px; border: none; background: #24163F; color: #FFF8F2; font-family: inherit; font-size: 14px; font-weight: 800; cursor: pointer">Paylaş</button>
+<div style="position: absolute; right: -6px; bottom: -22px">
+<dc-import name="Diken" mood="selam" stage="tam" size="76" hint-size="76px,95px"></dc-import>
+</div>
+</div>
+
+<div style="margin-top: 18px; font-size: 13px; font-weight: 800; letter-spacing: 0.6px; color: #5B4A7A">İSTEKLER · 1</div>
+<div style="margin-top: 8px; border-radius: 20px; background: #FFFFFF; border: 1px solid #EFE6DC">
+<div style="height: 62px; padding: 0 12px 0 14px; display: flex; align-items: center; gap: 12px">
+<span style="width: 40px; height: 40px; flex-shrink: 0; border-radius: 20px; background: #E0EEFF; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #1E4F9A">K</span>
+<span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column"><span style="font-size: 15px; font-weight: 800">Kerem</span><span style="font-size: 12px; font-weight: 700; color: #5B4A7A">@kerem.a · 3 ortak</span></span>
+<button type="button" style="flex-shrink: 0; height: 36px; padding: 0 12px; border-radius: 12px; border: none; background: #1F7A45; color: #FFFFFF; font-family: inherit; font-size: 14px; font-weight: 800; white-space: nowrap; cursor: pointer">Kabul et</button>
+<button type="button" aria-label="İsteği sil" style="width: 36px; height: 36px; border-radius: 12px; border: none; background: #F6EEE5; display: flex; align-items: center; justify-content: center; color: #3F3358; cursor: pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 6 L18 18 M18 6 L6 18"></path></svg></button>
+</div>
+</div>
+
+<div style="margin-top: 16px; font-size: 13px; font-weight: 800; letter-spacing: 0.6px; color: #C2410C">BUGÜN BEKLEYENLER · 2</div>
+<div style="margin-top: 8px; border-radius: 20px; background: #FFFFFF; border: 1px solid #EFE6DC">
+<div style="height: 62px; padding: 0 12px 0 14px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #F4EDE5">
+<a href="FriendProfile.dc.html" style="flex-grow: 1; display: flex; align-items: center; gap: 12px; text-decoration: none; color: #24163F">
+<span style="width: 40px; height: 40px; flex-shrink: 0; box-sizing: border-box; border-radius: 20px; border: 2px dashed #FF7A3D; padding: 2px"><span style="width: 100%; height: 100%; border-radius: 50%; background: #E4DBF2; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; color: #4B3A78">E</span></span>
+<span style="display: flex; flex-direction: column"><span style="font-size: 15px; font-weight: 800">Ece</span><span style="font-size: 12px; font-weight: 700; color: #5B4A7A">11 gün seri · telefonsuz sabah</span></span>
+</a>
+<a href="Poke.dc.html" style="height: 36px; padding: 0 16px; border-radius: 18px; background: #FF5A1F; box-shadow: 0 2px 0 #C2410C; color: #24163F; display: flex; align-items: center; text-decoration: none; font-size: 14px; font-weight: 800">Dürt</a>
+</div>
+<div style="height: 62px; padding: 0 12px 0 14px; display: flex; align-items: center; gap: 12px">
+<span style="width: 40px; height: 40px; flex-shrink: 0; box-sizing: border-box; border-radius: 20px; border: 2px dashed #FF7A3D; padding: 2px"><span style="width: 100%; height: 100%; border-radius: 50%; background: #FFF1C7; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; color: #8A5A00">S</span></span>
+<span style="flex-grow: 1; display: flex; flex-direction: column"><span style="font-size: 15px; font-weight: 800">Selin</span><span style="font-size: 12px; font-weight: 700; color: #5B4A7A">4 gün seri · 20 sayfa oku</span></span>
+<a href="Poke.dc.html" style="height: 36px; padding: 0 16px; border-radius: 18px; background: #FF5A1F; box-shadow: 0 2px 0 #C2410C; color: #24163F; display: flex; align-items: center; text-decoration: none; font-size: 14px; font-weight: 800">Dürt</a>
+</div>
+</div>
+
+<div style="margin-top: 16px; font-size: 13px; font-weight: 800; letter-spacing: 0.6px; color: #1F7A45">BUGÜNÜ TAMAMLAYANLAR · 2</div>
+<div style="margin-top: 8px; border-radius: 20px; background: #FFFFFF; border: 1px solid #EFE6DC">
+<div style="height: 62px; padding: 0 12px 0 14px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #F4EDE5">
+<span style="position: relative; width: 40px; height: 40px; flex-shrink: 0; border-radius: 20px; background: #FFD8C2; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; color: #9A3412">M<span style="position: absolute; right: -3px; bottom: -3px; width: 18px; height: 18px; box-sizing: border-box; border-radius: 9px; border: 2px solid #FFFFFF; background: #1F7A45; display: flex; align-items: center; justify-content: center"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5 L10 17.5 L19 7"></path></svg></span></span>
+<span style="flex-grow: 1; display: flex; flex-direction: column"><span style="font-size: 15px; font-weight: 800">Mert</span><span style="font-size: 12px; font-weight: 700; color: #5B4A7A">12 gün seri · 2 challenge</span></span>
+<button type="button" style="height: 36px; padding: 0 12px; border-radius: 18px; border: none; background: #DDF3E4; color: #165C34; font-family: inherit; font-size: 14px; font-weight: 800; cursor: pointer">Gaz ver</button>
+</div>
+<div style="height: 62px; padding: 0 12px 0 14px; display: flex; align-items: center; gap: 12px">
+<span style="position: relative; width: 40px; height: 40px; flex-shrink: 0; border-radius: 20px; background: #CDEBD8; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; color: #1F6B40">C<span style="position: absolute; right: -3px; bottom: -3px; width: 18px; height: 18px; box-sizing: border-box; border-radius: 9px; border: 2px solid #FFFFFF; background: #1F7A45; display: flex; align-items: center; justify-content: center"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5 L10 17.5 L19 7"></path></svg></span></span>
+<span style="flex-grow: 1; display: flex; flex-direction: column"><span style="font-size: 15px; font-weight: 800">Can</span><span style="font-size: 12px; font-weight: 700; color: #5B4A7A">4 gün seri · plank</span></span>
+<button type="button" style="height: 36px; padding: 0 12px; border-radius: 18px; border: none; background: #DDF3E4; color: #165C34; font-family: inherit; font-size: 14px; font-weight: 800; cursor: pointer">Gaz ver</button>
+</div>
+</div>
+
+<div style="position: absolute; left: 0; bottom: 0">
+<dc-import name="TabBar" active="arkadaslar" hint-size="390px,88px"></dc-import>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

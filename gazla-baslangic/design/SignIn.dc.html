@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Hesap aç</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&amp;family=Nunito:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#FFF8F2;font-family:'Nunito',system-ui,sans-serif;color:#24163F}
+a{color:#1F7A45}a:hover{color:#165C34}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; box-sizing: border-box; padding: 56px 20px 30px; display: flex; flex-direction: column; background: #FFF8F2; font-family: 'Nunito', system-ui, sans-serif; color: #24163F">
+
+<div style="display: flex; align-items: center; gap: 12px">
+<a href="PickChallenge.dc.html" aria-label="Geri" style="width: 44px; height: 44px; flex-shrink: 0; box-sizing: border-box; border-radius: 22px; background: #FFFFFF; border: 1px solid #EFE6DC; display: flex; align-items: center; justify-content: center; color: #24163F"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5 L8 12 L15 19"></path></svg></a>
+<div role="progressbar" aria-label="Adım 2 / 4" aria-valuemin="1" aria-valuemax="4" aria-valuenow="2" style="flex-grow: 1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px">
+<span style="height: 8px; border-radius: 4px; background: #1F7A45"></span>
+<span style="height: 8px; border-radius: 4px; background: linear-gradient(90deg, #1F7A45 50%, #E3D8CC 50%)"></span>
+<span style="height: 8px; border-radius: 4px; background: #E3D8CC"></span>
+<span style="height: 8px; border-radius: 4px; background: #E3D8CC"></span>
+</div>
+<span style="width: 30px; text-align: right; font-size: 14px; font-weight: 800; color: #5B4A7A">2/4</span>
+</div>
+
+<div style="margin-top: 22px; display: flex; flex-direction: column; align-items: center; gap: 14px">
+<dc-import name="Diken" mood="mutlu" stage="tam" size="184" hint-size="184px,230px"></dc-import>
+<div style="display: flex; align-items: center; gap: 8px; padding: 8px 14px 8px 10px; border-radius: 999px; background: #DDF3E4; color: #165C34; font-size: 14px; font-weight: 800">
+<span style="width: 22px; height: 22px; border-radius: 11px; background: #1F7A45; display: flex; align-items: center; justify-content: center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5 L10 17.5 L19 7"></path></svg></span>
+Uyanınca 1 saat telefonsuz · 30 gün
+</div>
+</div>
+
+<div style="margin-top: 20px; display: flex; flex-direction: column; gap: 6px">
+<h1 style="margin: 0; font-family: 'Baloo 2', 'Nunito', sans-serif; font-weight: 800; font-size: 30px; line-height: 1.1">Serin kaybolmasın, hesabını aç</h1>
+<p style="margin: 0; font-size: 15px; font-weight: 600; line-height: 1.45; color: #3F3358">Arkadaşların seni bulabilsin. Telefon değiştirsen de serin ve bahçen seninle gelsin.</p>
+</div>
+
+<div style="margin-top: auto; display: flex; flex-direction: column; gap: 10px">
+<a href="Profile.dc.html" style="height: 54px; border-radius: 18px; background: #0B0B0F; color: #FFFFFF; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 17px; font-weight: 800">Apple ile devam et</a>
+<a href="Profile.dc.html" style="height: 54px; box-sizing: border-box; border-radius: 18px; background: #FFFFFF; border: 2px solid #E3D8CC; color: #24163F; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 17px; font-weight: 800">Google ile devam et</a>
+<a href="Profile.dc.html" style="height: 48px; border-radius: 18px; color: #24163F; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; font-size: 16px; font-weight: 800">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6 H20 V18 H4 Z"></path><path d="M4.5 6.5 L12 12.5 L19.5 6.5"></path></svg>
+E-posta ile devam et
+</a>
+<p style="margin: 6px 0 0; font-size: 13px; font-weight: 600; line-height: 1.5; color: #5B4A7A; text-align: center">Devam ederek <a href="#" style="color: #24163F; font-weight: 800">Kullanım Koşulları</a>'nı ve <a href="#" style="color: #24163F; font-weight: 800">Gizlilik Politikası</a>'nı kabul edersin. Verilerini nasıl işlediğimizi <a href="#" style="color: #24163F; font-weight: 800">KVKK Aydınlatma Metni</a>'nde anlatıyoruz.</p>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Ayarlar</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&amp;family=Nunito:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#FFF8F2;font-family:'Nunito',system-ui,sans-serif;color:#24163F}
+a{color:#1F7A45}a:hover{color:#165C34}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 1420px; overflow: hidden; box-sizing: border-box; padding: 56px 20px 40px; display: flex; flex-direction: column; background: #FFF8F2; font-family: 'Nunito', system-ui, sans-serif; color: #24163F">
+
+<div style="display: flex; align-items: center; gap: 12px">
+<a href="Garden.dc.html" aria-label="Geri" style="width: 44px; height: 44px; flex-shrink: 0; box-sizing: border-box; border-radius: 22px; background: #FFFFFF; border: 1px solid #EFE6DC; display: flex; align-items: center; justify-content: center; color: #24163F"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5 L8 12 L15 19"></path></svg></a>
+<h1 style="margin: 0; font-family: 'Baloo 2', 'Nunito', sans-serif; font-weight: 800; font-size: 26px; line-height: 1.1">Ayarlar</h1>
+</div>
+
+<a href="Profile.dc.html" style="margin-top: 18px; padding: 14px 16px; border-radius: 22px; background: #FFFFFF; border: 1px solid #EFE6DC; display: flex; align-items: center; gap: 14px; text-decoration: none; color: #24163F">
+<span style="width: 52px; height: 52px; flex-shrink: 0; border-radius: 26px; background: #FFE3D2; display: flex; align-items: center; justify-content: center; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 24px; color: #9A3412">D</span>
+<span style="flex-grow: 1; display: flex; flex-direction: column"><span style="font-size: 17px; font-weight: 800">Deniz</span><span style="font-size: 14px; font-weight: 700; color: #5B4A7A">@deniz.k · Profili düzenle</span></span>
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5B4A7A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5 L16 12 L9 19"></path></svg>
+</a>
+
+<div style="margin-top: 22px; font-size: 13px; font-weight: 800; letter-spacing: 0.6px; color: #5B4A7A">CHALLENGE VE BİLDİRİMLER</div>
+<div style="margin-top: 8px; border-radius: 22px; background: #FFFFFF; border: 1px solid #EFE6DC">
+<div style="padding: 14px 16px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #F4EDE5">
+<span style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 16px; font-weight: 800">Sert mod</span><span style="font-size: 13px; font-weight: 600; color: #5B4A7A">Arkadaşların sana laf sokabilir. Kapalıyken sadece gaz verebilirler.</span></span>
+<button type="button" role="switch" aria-checked="{{hardOn}}" aria-label="Sert mod" onClick="{{toggleHard}}" style="position: relative; width: 52px; height: 32px; flex-shrink: 0; border-radius: 16px; border: none; background: {{hardBg}}; cursor: pointer"><span style="position: absolute; top: 3px; left: {{hardKnob}}px; width: 26px; height: 26px; border-radius: 13px; background: #FFFFFF; box-shadow: 0 1px 3px rgba(36, 22, 63, 0.3)"></span></button>
+</div>
+<div style="padding: 14px 16px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #F4EDE5">
+<span style="flex-grow: 1; font-size: 16px; font-weight: 800">Dürtme bildirimleri</span>
+<button type="button" role="switch" aria-checked="{{pokeOn}}" aria-label="Dürtme bildirimleri" onClick="{{togglePoke}}" style="position: relative; width: 52px; height: 32px; flex-shrink: 0; border-radius: 16px; border: none; background: {{pokeBg}}; cursor: pointer"><span style="position: absolute; top: 3px; left: {{pokeKnob}}px; width: 26px; height: 26px; border-radius: 13px; background: #FFFFFF; box-shadow: 0 1px 3px rgba(36, 22, 63, 0.3)"></span></button>
+</div>
+<a href="#" style="min-height: 56px; padding: 0 16px; display: flex; align-items: center; gap: 12px; text-decoration: none; color: #24163F; border-bottom: 1px solid #F4EDE5">
+<span style="flex-grow: 1; font-size: 16px; font-weight: 800">Günlük hatırlatma</span>
+<span style="font-size: 15px; font-weight: 700; color: #5B4A7A">21:00</span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B4A7A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5 L16 12 L9 19"></path></svg>
+</a>
+<a href="#" style="padding: 14px 16px; display: flex; align-items: center; gap: 12px; text-decoration: none; color: #24163F">
+<span style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 16px; font-weight: 800">Gün bitişi</span><span style="font-size: 13px; font-weight: 600; color: #5B4A7A">Gece yarısından sonra 2 saat daha işaretleyebilirsin. Saat dilimine göre hesaplanır.</span></span>
+<span style="flex-shrink: 0; font-size: 15px; font-weight: 700; color: #5B4A7A">+2 saat</span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B4A7A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0"><path d="M9 5 L16 12 L9 19"></path></svg>
+</a>
+</div>
+
+<div style="margin-top: 22px; font-size: 13px; font-weight: 800; letter-spacing: 0.6px; color: #5B4A7A">GÖRÜNÜM</div>
+<div role="radiogroup" aria-label="Tema" style="margin-top: 8px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 16px; background: #EFE6DC">
+<sc-for list="{{themes}}" as="t" hint-placeholder-count="3">
+<button type="button" role="radio" aria-checked="{{t.checked}}" onClick="{{t.pick}}" style="height: 44px; border: none; border-radius: 12px; background: {{t.bg}}; box-shadow: {{t.shadow}}; font-family: inherit; font-size: 15px; font-weight: 800; color: {{t.color}}; cursor: pointer">{{t.label}}</button>
+</sc-for>
+</div>
+
+<div style="margin-top: 22px; font-size: 13px; font-weight: 800; letter-spacing: 0.6px; color: #5B4A7A">GİZLİLİK VE GÜVENLİK</div>
+<div style="margin-top: 8px; border-radius: 22px; background: #FFFFFF; border: 1px solid #EFE6DC">
+<a href="#" style="min-height: 56px; padding: 0 16px; display: flex; align-items: center; gap: 12px; text-decoration: none; color: #24163F; border-bottom: 1px solid #F4EDE5"><span style="flex-grow: 1; font-size: 16px; font-weight: 800">Beni kimler bulabilir</span><span style="font-size: 15px; font-weight: 700; color: #5B4A7A">Herkes</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B4A7A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5 L16 12 L9 19"></path></svg></a>
+<a href="#" style="min-height: 56px; padding: 0 16px; display: flex; align-items: center; gap: 12px; text-decoration: none; color: #24163F; border-bottom: 1px solid #F4EDE5"><span style="flex-grow: 1; font-size: 16px; font-weight: 800">Engellenen kullanıcılar</span><span style="font-size: 15px; font-weight: 700; color: #5B4A7A">1</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B4A7A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5 L16 12 L9 19"></path></svg></a>
+<a href="AdConsent.dc.html" style="min-height: 56px; padding: 0 16px; display: flex; align-items: center; gap: 12px; text-decoration: none; color: #24163F"><span style="flex-grow: 1; font-size: 16px; font-weight: 800">Reklam tercihleri</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B4A7A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5 L16 12 L9 19"></path></svg></a>
+</div>
+
+<div style="margin-top: 22px; font-size: 13px; font-weight: 800; letter-spacing: 0.6px; color: #5B4A7A">DESTEK VE YASAL</div>
+<div style="margin-top: 8px; border-radius: 22px; background: #FFFFFF; border: 1px solid #EFE6DC">
+<a href="#" style="min-height: 54px; padding: 0 16px; display: flex; align-items: center; gap: 12px; text-decoration: none; color: #24163F; border-bottom: 1px solid #F4EDE5"><span style="flex-grow: 1; font-size: 16px; font-weight: 800">Yardım ve SSS</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B4A7A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5 L16 12 L9 19"></path></svg></a>
+<a href="#" style="min-height: 54px; padding: 0 16px; display: flex; align-items: center; gap: 12px; text-decoration: none; color: #24163F; border-bottom: 1px solid #F4EDE5"><span style="flex-grow: 1; font-size: 16px; font-weight: 800">Bize yaz</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B4A7A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5 L16 12 L9 19"></path></svg></a>
+<a href="#" style="min-height: 54px; padding: 0 16px; display: flex; align-items: center; gap: 12px; text-decoration: none; color: #24163F; border-bottom: 1px solid #F4EDE5"><span style="flex-grow: 1; font-size: 16px; font-weight: 800">KVKK Aydınlatma Metni</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B4A7A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5 L16 12 L9 19"></path></svg></a>
+<a href="#" style="min-height: 54px; padding: 0 16px; display: flex; align-items: center; gap: 12px; text-decoration: none; color: #24163F; border-bottom: 1px solid #F4EDE5"><span style="flex-grow: 1; font-size: 16px; font-weight: 800">Gizlilik Politikası</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B4A7A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5 L16 12 L9 19"></path></svg></a>
+<a href="#" style="min-height: 54px; padding: 0 16px; display: flex; align-items: center; gap: 12px; text-decoration: none; color: #24163F"><span style="flex-grow: 1; font-size: 16px; font-weight: 800">Kullanım Koşulları</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B4A7A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5 L16 12 L9 19"></path></svg></a>
+</div>
+
+<div style="margin-top: 22px; border-radius: 22px; background: #FFFFFF; border: 1px solid #EFE6DC">
+<button type="button" style="width: 100%; min-height: 56px; padding: 0 16px; border: none; border-bottom: 1px solid #F4EDE5; border-radius: 22px 22px 0 0; background: #FFFFFF; display: flex; align-items: center; font-family: inherit; font-size: 16px; font-weight: 800; color: #24163F; cursor: pointer">Çıkış yap</button>
+<a href="DeleteAccount.dc.html" style="min-height: 56px; padding: 0 16px; display: flex; align-items: center; text-decoration: none; font-size: 16px; font-weight: 800; color: #B42318">Hesabı sil</a>
+</div>
+
+<div style="margin-top: 20px; text-align: center; font-size: 13px; font-weight: 700; color: #5B4A7A">Gazla 1.0.0 · Diken selam söylüyor</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1420}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { hard: true, poke: true, theme: 0 };
+}
+renderVals() {
+const s = this.state;
+const themes = ['Açık', 'Koyu', 'Sistem'].map((label, i) => {
+const on = s.theme === i;
+return { label, checked: on ? 'true' : 'false', bg: on ? '#FFFFFF' : 'transparent', shadow: on ? '0 1px 3px rgba(36, 22, 63, 0.14)' : 'none', color: on ? '#24163F' : '#5B4A7A', pick: () => this.setState({ theme: i }) };
+});
+return {
+themes,
+hardOn: s.hard ? 'true' : 'false',
+hardBg: s.hard ? '#1F7A45' : '#CFC3B6',
+hardKnob: s.hard ? 23 : 3,
+toggleHard: () => this.setState({ hard: !this.state.hard }),
+pokeOn: s.poke ? 'true' : 'false',
+pokeBg: s.poke ? '#1F7A45' : '#CFC3B6',
+pokeKnob: s.poke ? 23 : 3,
+togglePoke: () => this.setState({ poke: !this.state.poke })
+};
+}
+}
+</script>
+</body>
+</html>

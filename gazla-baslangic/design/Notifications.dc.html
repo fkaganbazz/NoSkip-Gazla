@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Bildirim metinleri</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&amp;family=Nunito:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#FFF8F2;font-family:'Nunito',system-ui,sans-serif;color:#24163F}
+a{color:#1F7A45}a:hover{color:#165C34}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; box-sizing: border-box; padding: 52px 56px; display: flex; gap: 56px; background: #FFF8F2; font-family: 'Nunito', system-ui, sans-serif; color: #24163F">
+
+<div style="position: relative; width: 380px; flex-shrink: 0; border-radius: 48px; background: #2B1E47; box-shadow: inset 0 0 0 10px #150E26; overflow: hidden; box-sizing: border-box; padding: 70px 22px 22px; display: flex; flex-direction: column; align-items: center">
+<div style="position: absolute; left: -60px; bottom: -120px; width: 500px; height: 500px; border-radius: 50%; background: #33245A"></div>
+<div style="position: absolute; left: 40px; bottom: -40px; width: 300px; height: 300px; border-radius: 50%; background: #3A2966"></div>
+<div style="position: relative; font-size: 17px; font-weight: 700; color: #E4DBF2">Pazartesi 28 Eylül</div>
+<div style="position: relative; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 86px; line-height: 1; color: #FFF8F2">22:43</div>
+<div style="position: relative; margin-top: 30px; width: 100%; display: flex; flex-direction: column; gap: 10px">
+<sc-for list="{{pushes}}" as="p" hint-placeholder-count="3">
+<div style="padding: 12px 14px; border-radius: 22px; background: rgba(255, 248, 242, 0.92); display: flex; gap: 12px; align-items: flex-start">
+<svg width="38" height="38" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="flex-shrink: 0; border-radius: 10px; background: #24163F"><path d="M16 110 V58 C16 36 31 20 50 20 C69 20 84 36 84 58 V110 Z" fill="#3BAE6A"></path><path d="M58 21.5 C73 25 84 40 84 58 V110 H72 V60 C72 44 67 30 58 21.5 Z" fill="#2C9459"></path><path d="M50 20.5 L44 10 M50 20 L50 7 M50 20.5 L56 10" fill="none" stroke="#3BAE6A" stroke-width="4.5" stroke-linecap="round"></path><ellipse cx="38" cy="61" rx="8.5" ry="10" fill="#FFFFFF" stroke="#24163F" stroke-width="3"></ellipse><circle cx="41" cy="64" r="4.5" fill="#24163F"></circle><path d="M27.5 61 A10.5 12 0 0 1 48.5 61 Z" fill="#3BAE6A"></path><path d="M29 61 H47" fill="none" stroke="#24163F" stroke-width="3.5" stroke-linecap="round"></path><ellipse cx="62" cy="60" rx="9" ry="10.5" fill="#FFFFFF" stroke="#24163F" stroke-width="3"></ellipse><circle cx="65" cy="62" r="4.8" fill="#24163F"></circle><circle cx="66.7" cy="60" r="1.6" fill="#FFFFFF"></circle><path d="M29 49.5 L46 52 M54 45 Q62 36 71 42 M41 79 Q52 82 61 73" fill="none" stroke="#24163F" stroke-width="4" stroke-linecap="round"></path></svg>
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 800; letter-spacing: 0.4px; color: #5B4A7A"><span>GAZLA</span><span>{{p.time}}</span></div>
+<div style="font-size: 15px; font-weight: 800; color: #24163F">{{p.title}}</div>
+<div style="font-size: 14px; font-weight: 600; line-height: 1.35; color: #3F3358">{{p.body}}</div>
+</div>
+</div>
+</sc-for>
+</div>
+</div>
+
+<div style="flex-grow: 1; display: flex; flex-direction: column; gap: 22px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<h1 style="margin: 0; font-family: 'Baloo 2', 'Nunito', sans-serif; font-weight: 800; font-size: 56px; line-height: 1">Bildirim metinleri</h1>
+<p style="margin: 0; font-size: 18px; font-weight: 600; color: #3F3358">Hatırlatmalar Diken'in ağzından yazılır. Arkadaş bildirimleri kişinin adıyla gelir.</p>
+</div>
+<div style="display: flex; gap: 10px; flex-wrap: wrap">
+<span style="padding: 8px 14px; border-radius: 999px; background: #24163F; color: #FFF8F2; font-size: 14px; font-weight: 800">Diken günde en fazla 2 kez konuşur</span>
+<span style="padding: 8px 14px; border-radius: 999px; background: #EDE7F6; color: #4B3A78; font-size: 14px; font-weight: 800">Sessiz saatler 23:30–08:00</span>
+<span style="padding: 8px 14px; border-radius: 999px; background: #FFE3D2; color: #9A3412; font-size: 14px; font-weight: 800">Laf sokma sadece sert mod açıksa</span>
+</div>
+
+<div style="border-radius: 24px; background: #FFFFFF; border: 1px solid #EFE6DC; overflow: hidden">
+<div style="display: grid; grid-template-columns: 200px 190px minmax(0, 1fr); padding: 14px 20px; background: #F6EEE5; font-size: 13px; font-weight: 800; letter-spacing: 1px; color: #5B4A7A">
+<span>NE ZAMAN</span><span>BAŞLIK</span><span>METİN</span>
+</div>
+<sc-for list="{{rows}}" as="r" hint-placeholder-count="7">
+<div style="display: grid; grid-template-columns: 200px 190px minmax(0, 1fr); align-items: center; min-height: 62px; padding: 8px 20px; border-top: 1px solid #F4EDE5; font-size: 15px">
+<span style="font-weight: 800; color: #24163F; padding-right: 12px">{{r.when}}</span>
+<span style="font-weight: 800; color: {{r.titleColor}}; padding-right: 12px">{{r.title}}</span>
+<span style="font-weight: 600; line-height: 1.4; color: #3F3358">{{r.body}}</span>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+renderVals() {
+const pushes = [
+{ time: 'şimdi', title: 'Diken', body: 'Gün bitiyor, 2 görevin duruyor. Susuz kaldım burada.' },
+{ time: '5 dk önce', title: 'Ece sana laf soktu', body: '"Kaktüs bile senden hızlı büyüyor"' },
+{ time: '1 sa önce', title: 'Mert bitirdi', body: '10 gün şekersiz tamam. Tebrik etmek ister misin?' }
+];
+const diken = '#1F7A45';
+const friend = '#C2410C';
+const rows = [
+{ when: 'Günlük hatırlatma (seçilen saat)', title: 'Diken', titleColor: diken, body: 'Su yok mu su? Bugünkü görevlerin seni bekliyor.' },
+{ when: 'Gün bitimine 2 saat kala', title: 'Diken', titleColor: diken, body: 'Gün bitiyor, 2 görevin duruyor. Susuz kaldım burada.' },
+{ when: 'Arkadaşın gaz verdi', title: 'Selin sana gaz verdi', titleColor: friend, body: '"Beraber bitireceğiz"' },
+{ when: 'Arkadaşın laf soktu', title: 'Ece sana laf soktu', titleColor: friend, body: '"Kaktüs bile senden hızlı büyüyor"' },
+{ when: 'Arkadaşın challenge bitirdi', title: 'Mert bitirdi', titleColor: friend, body: '10 gün şekersiz tamam. Tebrik etmek ister misin?' },
+{ when: 'Seri koptu (ertesi sabah 09:00)', title: 'Diken', titleColor: diken, body: 'Dün kaçtı. Beni sulamak için 24 saatin var.' },
+{ when: 'Haftalık özet (Pazar 19:00)', title: 'Haftan', titleColor: diken, body: '7 günün 5\'ini tamamladın. Grupta 2. sıradasın.' }
+];
+return { pushes, rows };
+}
+}
+</script>
+</body>
+</html>

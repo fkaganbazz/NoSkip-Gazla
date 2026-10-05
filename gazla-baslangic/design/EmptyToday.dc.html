@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Bugün · boş durum</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&amp;family=Nunito:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#FFF8F2;font-family:'Nunito',system-ui,sans-serif;color:#24163F}
+a{color:#1F7A45}a:hover{color:#165C34}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; box-sizing: border-box; padding: 56px 20px 0; display: flex; flex-direction: column; background: #FFF8F2; font-family: 'Nunito', system-ui, sans-serif; color: #24163F">
+
+<div style="display: flex; align-items: flex-start; justify-content: space-between">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<div style="font-size: 14px; font-weight: 700; color: #5B4A7A">Pazartesi, 28 Eylül</div>
+<h1 style="margin: 0; font-family: 'Baloo 2', 'Nunito', sans-serif; font-weight: 800; font-size: 27px; line-height: 1.1">Merhaba, Deniz</h1>
+</div>
+<a href="Activity.dc.html" aria-label="Aktivite" style="width: 44px; height: 44px; flex-shrink: 0; box-sizing: border-box; border-radius: 22px; background: #FFFFFF; border: 1px solid #EFE6DC; display: flex; align-items: center; justify-content: center; color: #24163F"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16.5 V11 C6 7.7 8.7 5 12 5 C15.3 5 18 7.7 18 11 V16.5 L19.5 18 H4.5 Z"></path><path d="M10 20.5 C10.4 21.3 11.1 21.7 12 21.7 C12.9 21.7 13.6 21.3 14 20.5"></path></svg></a>
+</div>
+
+<div style="position: relative; margin-top: 16px; height: 310px; border-radius: 28px; overflow: hidden; background: #FFE9D6">
+<svg width="350" height="310" viewBox="0 0 350 310" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="position: absolute; left: 0; top: 0">
+<circle cx="286" cy="66" r="34" fill="#FFC83D"></circle>
+<circle cx="286" cy="66" r="48" fill="none" stroke="#FFC83D" stroke-width="4" opacity="0.35"></circle>
+<path d="M44 58 C54 52 66 52 74 58 C80 54 90 54 96 60" fill="none" stroke="#F3CFAE" stroke-width="5" stroke-linecap="round"></path>
+<path d="M0 238 C60 212 120 214 180 230 C240 246 300 240 350 222 V310 H0 Z" fill="#F6D4B1"></path>
+<path d="M0 270 C80 250 150 256 220 270 C270 280 310 276 350 266 V310 H0 Z" fill="#F0C39A"></path>
+<circle cx="64" cy="266" r="4" fill="#D9A77B"></circle>
+<circle cx="292" cy="258" r="3" fill="#D9A77B"></circle>
+<circle cx="250" cy="286" r="5" fill="#D9A77B"></circle>
+</svg>
+<div style="position: absolute; left: 80px; bottom: 6px">
+<dc-import name="Diken" mood="uykulu" stage="tam" size="190" hint-size="190px,238px"></dc-import>
+</div>
+</div>
+
+<div style="margin-top: 20px; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center">
+<h2 style="margin: 0; font-family: 'Baloo 2', 'Nunito', sans-serif; font-weight: 800; font-size: 29px; line-height: 1.05">Burası çöl gibi</h2>
+<p style="margin: 0; font-size: 15px; font-weight: 600; line-height: 1.45; color: #3F3358">Aktif challenge'ın yok. Diken sıkıntıdan uyuyakaldı.</p>
+</div>
+
+<div style="margin-top: 20px; display: flex; flex-direction: column; gap: 12px">
+<a href="Explore.dc.html" style="height: 56px; border-radius: 18px; background: #1F7A45; box-shadow: 0 4px 0 #165C34; color: #FFFFFF; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 17px; font-weight: 800">Challenge bul</a>
+<a href="Create.dc.html" style="height: 54px; box-sizing: border-box; border-radius: 18px; background: #FFFFFF; border: 2px solid #E3D8CC; box-shadow: 0 4px 0 #E3D8CC; color: #24163F; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 17px; font-weight: 800">Kendin oluştur</a>
+</div>
+
+<div style="position: absolute; left: 0; bottom: 0">
+<dc-import name="TabBar" active="bugun" hint-size="390px,88px"></dc-import>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

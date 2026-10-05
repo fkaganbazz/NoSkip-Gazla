@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Challenge detayı</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&amp;family=Nunito:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#FFF8F2;font-family:'Nunito',system-ui,sans-serif;color:#24163F}
+a{color:#1F7A45}a:hover{color:#165C34}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; box-sizing: border-box; padding: 56px 20px 0; display: flex; flex-direction: column; background: #FFF8F2; font-family: 'Nunito', system-ui, sans-serif; color: #24163F">
+
+<div style="display: flex; align-items: center; justify-content: space-between">
+<a href="Today.dc.html" aria-label="Geri" style="width: 44px; height: 44px; box-sizing: border-box; border-radius: 22px; background: #FFFFFF; border: 1px solid #EFE6DC; display: flex; align-items: center; justify-content: center; color: #24163F"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5 L8 12 L15 19"></path></svg></a>
+<button type="button" aria-label="Challenge seçenekleri" style="width: 44px; height: 44px; box-sizing: border-box; border-radius: 22px; background: #FFFFFF; border: 1px solid #EFE6DC; display: flex; align-items: center; justify-content: center; color: #24163F; cursor: pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"></circle><circle cx="12" cy="12" r="2"></circle><circle cx="19" cy="12" r="2"></circle></svg></button>
+</div>
+
+<div style="margin-top: 14px; display: flex; align-items: center; gap: 14px">
+<span style="width: 56px; height: 56px; flex-shrink: 0; border-radius: 18px; background: #EDE7F6; display: flex; align-items: center; justify-content: center; color: #4B3A78"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 H16 C17.1 3 18 3.9 18 5 V19 C18 20.1 17.1 21 16 21 H8 C6.9 21 6 20.1 6 19 V5 C6 3.9 6.9 3 8 3 Z M11 18 H13 M3.5 3.5 L20.5 20.5"></path></svg></span>
+<h1 style="margin: 0; font-family: 'Baloo 2', 'Nunito', sans-serif; font-weight: 800; font-size: 25px; line-height: 1.05">Uyanınca 1 saat telefonsuz</h1>
+</div>
+<div style="margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap">
+<span style="padding: 5px 11px; border-radius: 999px; background: #24163F; color: #FFF8F2; font-size: 13px; font-weight: 800">30 gün</span>
+<span style="padding: 5px 11px; border-radius: 999px; background: #EDE7F6; color: #4B3A78; font-size: 13px; font-weight: 800">Dijital detoks</span>
+<span style="padding: 5px 11px; border-radius: 999px; background: #FFE3D2; color: #9A3412; font-size: 13px; font-weight: 800">4 kişi</span>
+<span style="padding: 5px 11px; border-radius: 999px; background: #F6EEE5; color: #3F3358; font-size: 13px; font-weight: 800">Hatırlatma 08:00</span>
+</div>
+
+<div style="margin-top: 16px; padding: 16px; border-radius: 24px; background: #FFFFFF; border: 1px solid #EFE6DC; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; align-items: center; justify-content: space-between">
+<div style="display: flex; align-items: baseline; gap: 8px">
+<span style="font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 22px; line-height: 1">Gün 12/30</span>
+<span style="font-size: 13px; font-weight: 700; color: #5B4A7A">18 gün kaldı</span>
+</div>
+<span style="display: flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 999px; background: #DDF3E4; color: #165C34; font-size: 13px; font-weight: 800"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5 L10 17.5 L19 7"></path></svg>Bugün tamam</span>
+</div>
+<div style="display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 6px">
+<sc-for list="{{days}}" as="d" hint-placeholder-count="30">
+<sc-if value="{{d.done}}" hint-placeholder-val="{{ false }}">
+<div style="aspect-ratio: 1; border-radius: 9px; background: #3BAE6A; display: flex; align-items: center; justify-content: center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5 L10 17.5 L19 7"></path></svg></div>
+</sc-if>
+<sc-if value="{{d.saved}}" hint-placeholder-val="{{ false }}">
+<div style="aspect-ratio: 1; border-radius: 9px; background: #FFE3D2; display: flex; align-items: center; justify-content: center"><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 C15.4 7.4 17.6 10.6 17.6 14 C17.6 17.3 15.1 20 12 20 C8.9 20 6.4 17.3 6.4 14 C6.4 10.6 8.6 7.4 12 3 Z" fill="#FF5A1F"></path></svg></div>
+</sc-if>
+<sc-if value="{{d.today}}" hint-placeholder-val="{{ false }}">
+<div style="aspect-ratio: 1; box-sizing: border-box; border-radius: 9px; background: #1F7A45; box-shadow: 0 0 0 3px #FFC83D; display: flex; align-items: center; justify-content: center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5 L10 17.5 L19 7"></path></svg></div>
+</sc-if>
+<sc-if value="{{d.future}}" hint-placeholder-val="{{ true }}">
+<div style="aspect-ratio: 1; border-radius: 9px; background: #F4EDE5; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; color: #6B5E80">{{d.n}}</div>
+</sc-if>
+</sc-for>
+</div>
+<div style="display: flex; gap: 14px; font-size: 12px; font-weight: 700; color: #3F3358">
+<span style="display: flex; align-items: center; gap: 5px"><span style="width: 10px; height: 10px; border-radius: 3px; background: #3BAE6A"></span>Tamamlandı</span>
+<span style="display: flex; align-items: center; gap: 5px"><span style="width: 10px; height: 10px; border-radius: 3px; background: #FF5A1F"></span>Reklamla kurtarıldı</span>
+<span style="display: flex; align-items: center; gap: 5px"><span style="width: 10px; height: 10px; box-sizing: border-box; border-radius: 3px; border: 2px solid #FFC83D; background: #1F7A45"></span>Bugün</span>
+</div>
+</div>
+
+<div style="margin-top: 14px; border-radius: 24px; background: #FFFFFF; border: 1px solid #EFE6DC; overflow: hidden">
+<div style="padding: 14px 16px 6px; display: flex; align-items: baseline; justify-content: space-between">
+<h2 style="margin: 0; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 19px">Grup</h2>
+<span style="font-size: 13px; font-weight: 700; color: #5B4A7A">Seriye göre</span>
+</div>
+<div style="height: 54px; padding: 0 16px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #F4EDE5">
+<span style="width: 18px; font-size: 14px; font-weight: 800; color: #8A5A00">1</span>
+<span style="width: 36px; height: 36px; border-radius: 18px; background: #FFE3D2; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #9A3412">D</span>
+<span style="flex-grow: 1; font-size: 15px; font-weight: 800">Sen</span>
+<span style="font-size: 14px; font-weight: 800; color: #1F7A45">12 gün</span>
+</div>
+<div style="height: 54px; padding: 0 16px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #F4EDE5">
+<span style="width: 18px; font-size: 14px; font-weight: 800; color: #5B4A7A">2</span>
+<span style="width: 36px; height: 36px; border-radius: 18px; background: #FFD8C2; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #9A3412">M</span>
+<span style="flex-grow: 1; font-size: 15px; font-weight: 800">Mert</span>
+<span style="font-size: 14px; font-weight: 800; color: #1F7A45">12 gün</span>
+</div>
+<div style="height: 54px; padding: 0 16px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #F4EDE5">
+<span style="width: 18px; font-size: 14px; font-weight: 800; color: #5B4A7A">3</span>
+<span style="width: 36px; height: 36px; border-radius: 18px; background: #E4DBF2; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #4B3A78">E</span>
+<span style="flex-grow: 1; display: flex; flex-direction: column"><span style="font-size: 15px; font-weight: 800">Ece</span><span style="font-size: 12px; font-weight: 700; color: #C2410C">11 gün · bugün bekliyor</span></span>
+<a href="Poke.dc.html" style="height: 36px; padding: 0 14px; border-radius: 18px; background: #FF5A1F; box-shadow: 0 2px 0 #C2410C; color: #24163F; display: flex; align-items: center; text-decoration: none; font-size: 14px; font-weight: 800">Dürt</a>
+</div>
+<div style="height: 54px; padding: 0 16px; display: flex; align-items: center; gap: 12px">
+<span style="width: 18px; font-size: 14px; font-weight: 800; color: #5B4A7A">4</span>
+<span style="width: 36px; height: 36px; border-radius: 18px; background: #CDEBD8; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #1F6B40">C</span>
+<span style="flex-grow: 1; display: flex; flex-direction: column"><span style="font-size: 15px; font-weight: 800">Can</span><span style="font-size: 12px; font-weight: 700; color: #5B4A7A">Seri koptu, yeniden başladı</span></span>
+<span style="font-size: 14px; font-weight: 800; color: #5B4A7A">4 gün</span>
+</div>
+</div>
+
+<div style="position: absolute; left: 20px; right: 20px; bottom: 30px">
+<a href="Poke.dc.html" style="height: 56px; border-radius: 18px; background: #FF5A1F; box-shadow: 0 4px 0 #C2410C; color: #24163F; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; font-size: 17px; font-weight: 800"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 13 V6.5 C8 5.7 8.7 5 9.5 5 C10.3 5 11 5.7 11 6.5 V12 M11 11 V4.5 C11 3.7 11.7 3 12.5 3 C13.3 3 14 3.7 14 4.5 V11 M14 11 V6 C14 5.2 14.7 4.5 15.5 4.5 C16.3 4.5 17 5.2 17 6 V14 C17 18 14.5 21 11 21 C8 21 6.5 19.5 5 17 L3.5 14 C3 13 3.4 12 4.3 11.6 C5.2 11.2 6.2 11.6 6.7 12.4 L8 14.5"></path></svg>Ece'yi dürt</a>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+const days = [];
+for (let n = 1; n <= 30; n++) {
+days.push({ n, done: n < 12 && n !== 8, saved: n === 8, today: n === 12, future: n > 12 });
+}
+return { days };
+}
+}
+</script>
+</body>
+</html>

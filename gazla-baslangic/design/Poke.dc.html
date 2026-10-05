@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Dürt</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&amp;family=Nunito:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#8C8398;font-family:'Nunito',system-ui,sans-serif;color:#24163F}
+a{color:#1F7A45}a:hover{color:#165C34}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; background: #FFF8F2; font-family: 'Nunito', system-ui, sans-serif; color: #24163F">
+
+<div style="position: absolute; left: 20px; top: 56px; width: 350px; display: flex; flex-direction: column; gap: 14px">
+<div style="height: 44px; width: 180px; border-radius: 14px; background: #EFE6DC"></div>
+<div style="height: 48px; border-radius: 16px; background: #FFFFFF"></div>
+<div style="height: 92px; border-radius: 22px; background: #DDF3E4"></div>
+</div>
+<div style="position: absolute; inset: 0; background: rgba(36, 22, 63, 0.55)"></div>
+
+<div style="position: absolute; left: 150px; top: 120px; width: 200px">
+<div style="padding: 10px 12px; border-radius: 16px; background: #FFFFFF; font-size: 13px; font-weight: 800; line-height: 1.3; color: #24163F">Ece sert modu açmış. Acıma.</div>
+<svg width="16" height="22" viewBox="0 0 16 22" aria-hidden="true" style="position: absolute; left: -12px; top: 12px"><path d="M16 0 V22 L0 16 Z" fill="#FFFFFF"></path></svg>
+</div>
+<div style="position: absolute; left: 22px; top: 110px">
+<dc-import name="Diken" mood="laf" stage="tam" size="118" hint-size="118px,148px"></dc-import>
+</div>
+
+<div style="position: absolute; left: 0; bottom: 0; width: 390px; height: 610px; box-sizing: border-box; padding: 10px 20px 30px; border-radius: 28px 28px 0 0; background: #FFF8F2; display: flex; flex-direction: column">
+<div style="align-self: center; width: 44px; height: 5px; border-radius: 3px; background: #D8CCBF"></div>
+
+<div style="margin-top: 14px; display: flex; align-items: center; gap: 12px">
+<span style="width: 48px; height: 48px; flex-shrink: 0; box-sizing: border-box; border-radius: 24px; border: 2px dashed #FF7A3D; padding: 3px"><span style="width: 100%; height: 100%; border-radius: 50%; background: #E4DBF2; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #4B3A78">E</span></span>
+<div style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px">
+<div style="font-size: 17px; font-weight: 800">Ece bugün hâlâ yok</div>
+<div style="font-size: 13px; font-weight: 700; color: #5B4A7A">Uyanınca 1 saat telefonsuz · 11 gün seri</div>
+</div>
+<a href="Friends.dc.html" aria-label="Kapat" style="width: 44px; height: 44px; flex-shrink: 0; box-sizing: border-box; border-radius: 22px; background: #FFFFFF; border: 1px solid #EFE6DC; display: flex; align-items: center; justify-content: center; color: #24163F"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6 L18 18 M18 6 L6 18"></path></svg></a>
+</div>
+
+<div role="tablist" aria-label="Mesaj türü" style="margin-top: 18px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 16px; background: #EFE6DC">
+<button type="button" role="tab" aria-selected="{{hypeSel}}" onClick="{{showHype}}" style="height: 44px; border: none; border-radius: 12px; background: {{hypeBg}}; box-shadow: {{hypeShadow}}; font-family: inherit; font-size: 16px; font-weight: 800; color: {{hypeColor}}; cursor: pointer">Gaz ver</button>
+<button type="button" role="tab" aria-selected="{{roastSel}}" onClick="{{showRoast}}" style="height: 44px; border: none; border-radius: 12px; background: {{roastBg}}; box-shadow: {{roastShadow}}; font-family: inherit; font-size: 16px; font-weight: 800; color: {{roastColor}}; cursor: pointer">Laf sok</button>
+</div>
+
+<div style="margin-top: 12px; display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: #3F3358">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B4A7A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 L20 6 V12 C20 16.5 16.5 20 12 21 C7.5 20 4 16.5 4 12 V6 Z"></path></svg>
+<span>{{modeNote}}</span>
+</div>
+
+<div style="margin-top: 12px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+<sc-for list="{{messages}}" as="m" hint-placeholder-count="6">
+<button type="button" aria-pressed="{{m.pressed}}" onClick="{{m.pick}}" style="position: relative; min-height: 72px; box-sizing: border-box; padding: 12px 34px 12px 14px; border-radius: 18px; border: 2px solid {{m.border}}; background: #FFFFFF; font-family: inherit; font-size: 15px; font-weight: 800; line-height: 1.3; color: #24163F; text-align: left; cursor: pointer">{{m.text}}<sc-if value="{{m.selected}}" hint-placeholder-val="{{ false }}"><span style="position: absolute; top: 10px; right: 10px; width: 20px; height: 20px; border-radius: 10px; background: #24163F; display: flex; align-items: center; justify-content: center"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5 L10 17.5 L19 7"></path></svg></span></sc-if></button>
+</sc-for>
+</div>
+
+<a href="Friends.dc.html" style="margin-top: auto; height: 56px; border-radius: 18px; background: #1F7A45; box-shadow: 0 4px 0 #165C34; color: #FFFFFF; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; font-size: 17px; font-weight: 800"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12 L20 4 L14 20 L11 13 Z"></path></svg>Ece'ye gönder</a>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { tab: 'roast', picked: 1 };
+}
+renderVals() {
+const hype = ['Az kaldı, bırakma!', 'Serin çok iyi gidiyor', 'Beraber bitireceğiz', '5 dakikanı ayır, hallet', 'Seninle gurur duyuyorum', 'Diken seni bekliyor'];
+const roast = ['Kaktüs bile senden hızlı büyüyor', 'Telefon elinde, challenge nerede?', 'Diken susuz kaldı, haberin olsun', 'Bugün mü, yarın mı, seneye mi?', 'Serin şu an ağlıyor', 'Ben yaptım. Sen?'];
+const isRoast = this.state.tab === 'roast';
+const list = isRoast ? roast : hype;
+const messages = list.map((text, i) => {
+const selected = this.state.picked === i;
+return { text, selected, pressed: selected ? 'true' : 'false', border: selected ? '#24163F' : '#EFE6DC', pick: () => this.setState({ picked: i }) };
+});
+const on = { bg: '#FFFFFF', shadow: '0 1px 3px rgba(36, 22, 63, 0.12)' };
+const off = { bg: 'transparent', shadow: 'none' };
+return {
+messages,
+hypeSel: isRoast ? 'false' : 'true',
+roastSel: isRoast ? 'true' : 'false',
+hypeBg: isRoast ? off.bg : on.bg,
+roastBg: isRoast ? on.bg : off.bg,
+hypeShadow: isRoast ? off.shadow : on.shadow,
+roastShadow: isRoast ? on.shadow : off.shadow,
+hypeColor: isRoast ? '#5B4A7A' : '#1F7A45',
+roastColor: isRoast ? '#C2410C' : '#5B4A7A',
+modeNote: isRoast ? 'Ece sert modu açtı, laf sokabilirsin.' : 'Gaz mesajları herkese her zaman açık.',
+showHype: () => this.setState({ tab: 'hype', picked: 0 }),
+showRoast: () => this.setState({ tab: 'roast', picked: 1 })
+};
+}
+}
+</script>
+</body>
+</html>

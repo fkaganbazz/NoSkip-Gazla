@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Renk ve yazı</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&amp;family=Nunito:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#FFF8F2;font-family:'Nunito',system-ui,sans-serif;color:#24163F}
+a{color:#1F7A45}a:hover{color:#165C34}
+</style>
+</helmet>
+<div style="width: 1440px; height: 1080px; box-sizing: border-box; padding: 52px 56px; display: flex; flex-direction: column; gap: 26px; background: #FFF8F2; font-family: 'Nunito', system-ui, sans-serif; color: #24163F">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<h1 style="margin: 0; font-family: 'Baloo 2', 'Nunito', sans-serif; font-weight: 800; font-size: 56px; line-height: 1">Renk ve yazı</h1>
+<p style="margin: 0; font-size: 18px; font-weight: 600; color: #3F3358">Beyaz metin sadece aksiyon yeşilinin ve hata kırmızısının üstünde. Turuncu ve sarı zeminde metin her zaman gece moru.</p>
+</div>
+
+<div style="display: flex; gap: 40px">
+<div style="flex-grow: 1; display: flex; flex-direction: column; gap: 22px">
+<sc-for list="{{groups}}" as="g" hint-placeholder-count="5">
+<div style="display: flex; flex-direction: column; gap: 10px">
+<div style="font-size: 13px; font-weight: 800; letter-spacing: 1.5px; color: #5B4A7A">{{g.name}}</div>
+<div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px">
+<sc-for list="{{g.items}}" as="c" hint-placeholder-count="4">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<div style="height: 56px; box-sizing: border-box; border-radius: 16px; background: {{c.hex}}; border: 1px solid {{c.edge}}"></div>
+<div style="display: flex; flex-direction: column; gap: 1px">
+<span style="font-size: 14px; font-weight: 800">{{c.label}}</span>
+<span style="font-size: 12px; font-weight: 800; color: #5B4A7A">{{c.hex}}</span>
+<span style="font-size: 12px; font-weight: 600; line-height: 1.35; color: #3F3358">{{c.use}}</span>
+</div>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-for>
+</div>
+
+<div style="width: 440px; flex-shrink: 0; display: flex; flex-direction: column; gap: 16px">
+<div style="padding: 22px; border-radius: 24px; background: #FFFFFF; border: 1px solid #EFE6DC; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 800; letter-spacing: 1.5px; color: #5B4A7A"><span>YAZI ÖLÇEĞİ</span><span>Baloo 2 · Nunito</span></div>
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; font-weight: 800; color: #5B4A7A">Gösterim · Baloo 2 800 · 46</span><span style="font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 46px; line-height: 1">Bugün tamam!</span></div>
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; font-weight: 800; color: #5B4A7A">Başlık 1 · Baloo 2 800 · 30</span><span style="font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 30px; line-height: 1.1">İlk challenge'ını seç</span></div>
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; font-weight: 800; color: #5B4A7A">Başlık 2 · Baloo 2 800 · 21</span><span style="font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 21px; line-height: 1.2">Bugünkü görevler</span></div>
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; font-weight: 800; color: #5B4A7A">Kart başlığı · Nunito 800 · 16</span><span style="font-size: 16px; font-weight: 800">Uyanınca 1 saat telefonsuz</span></div>
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; font-weight: 800; color: #5B4A7A">Gövde · Nunito 600 · 15</span><span style="font-size: 15px; font-weight: 600; line-height: 1.45; color: #3F3358">Sonra istediğin kadar ekleyebilirsin. Arkadaşların da katılabilir.</span></div>
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; font-weight: 800; color: #5B4A7A">Etiket · Nunito 800 · 13</span><span style="font-size: 13px; font-weight: 800; letter-spacing: 0.6px; color: #5B4A7A">BUGÜN BEKLEYENLER · 2</span></div>
+<div style="padding: 12px 14px; border-radius: 14px; background: #F6EEE5; display: flex; justify-content: space-between; align-items: baseline"><span style="font-size: 12px; font-weight: 800; color: #5B4A7A">Türkçe karakter</span><span style="font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 22px">ğüşıöç İĞÜŞÖÇ</span></div>
+</div>
+
+<div style="padding: 22px; border-radius: 24px; background: #FFFFFF; border: 1px solid #EFE6DC; display: flex; flex-direction: column; gap: 14px">
+<div style="font-size: 13px; font-weight: 800; letter-spacing: 1.5px; color: #5B4A7A">BOŞLUK VE KÖŞE</div>
+<div style="display: flex; align-items: flex-end; gap: 10px">
+<div style="display: flex; flex-direction: column; align-items: center; gap: 4px"><span style="width: 4px; height: 4px; background: #3BAE6A"></span><span style="font-size: 12px; font-weight: 800">4</span></div>
+<div style="display: flex; flex-direction: column; align-items: center; gap: 4px"><span style="width: 8px; height: 8px; background: #3BAE6A"></span><span style="font-size: 12px; font-weight: 800">8</span></div>
+<div style="display: flex; flex-direction: column; align-items: center; gap: 4px"><span style="width: 12px; height: 12px; background: #3BAE6A"></span><span style="font-size: 12px; font-weight: 800">12</span></div>
+<div style="display: flex; flex-direction: column; align-items: center; gap: 4px"><span style="width: 16px; height: 16px; background: #3BAE6A"></span><span style="font-size: 12px; font-weight: 800">16</span></div>
+<div style="display: flex; flex-direction: column; align-items: center; gap: 4px"><span style="width: 20px; height: 20px; background: #3BAE6A"></span><span style="font-size: 12px; font-weight: 800">20</span></div>
+<div style="display: flex; flex-direction: column; align-items: center; gap: 4px"><span style="width: 24px; height: 24px; background: #3BAE6A"></span><span style="font-size: 12px; font-weight: 800">24</span></div>
+<div style="display: flex; flex-direction: column; align-items: center; gap: 4px"><span style="width: 32px; height: 32px; background: #3BAE6A"></span><span style="font-size: 12px; font-weight: 800">32</span></div>
+<span style="margin-left: auto; font-size: 13px; font-weight: 700; color: #3F3358">Kenar boşluğu 20</span>
+</div>
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px">
+<div style="display: flex; flex-direction: column; align-items: center; gap: 6px"><span style="width: 64px; height: 44px; border-radius: 999px; border: 2px solid #24163F"></span><span style="font-size: 12px; font-weight: 800">Çip · tam</span></div>
+<div style="display: flex; flex-direction: column; align-items: center; gap: 6px"><span style="width: 64px; height: 44px; border-radius: 18px; border: 2px solid #24163F"></span><span style="font-size: 12px; font-weight: 800">Buton · 18</span></div>
+<div style="display: flex; flex-direction: column; align-items: center; gap: 6px"><span style="width: 64px; height: 44px; border-radius: 22px; border: 2px solid #24163F"></span><span style="font-size: 12px; font-weight: 800">Kart · 22</span></div>
+<div style="display: flex; flex-direction: column; align-items: center; gap: 6px"><span style="width: 64px; height: 44px; border-radius: 28px 28px 0 0; border: 2px solid #24163F"></span><span style="font-size: 12px; font-weight: 800">Sayfa · 28</span></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1080}}'>
+class Component extends DCLogic {
+renderVals() {
+const edge = (hex) => (hex === '#FFFFFF' || hex === '#FFF8F2' ? '#E3D8CC' : 'transparent');
+const mk = (label, hex, use) => ({ label, hex, use, edge: edge(hex) });
+const groups = [
+{ name: 'MARKA', items: [mk('Diken yeşili', '#3BAE6A', 'Maskot, ilerleme'), mk('Aksiyon yeşili', '#1F7A45', 'Ana buton, beyaz metin'), mk('Basılı', '#165C34', 'Buton gölgesi'), mk('Yeşil 100', '#DDF3E4', 'Kart zemini'), mk('Yeşil 50', '#EEF8F1', 'Ekran zemini')] },
+{ name: 'MÜREKKEP', items: [mk('Gece moru', '#24163F', 'Başlık ve metin'), mk('Mürekkep 700', '#3F3358', 'Gövde metni'), mk('Mürekkep 500', '#5B4A7A', 'İkincil metin'), mk('Mürekkep 400', '#6B5E80', 'Yer tutucu')] },
+{ name: 'VURGU VE DURUM', items: [mk('Saksı turuncusu', '#FF5A1F', 'Dürt, saksı'), mk('Turuncu 700', '#C2410C', 'Turuncu metin'), mk('Çiçek sarısı', '#FFC83D', 'Kutlama, rozet'), mk('Hata', '#B42318', 'Silme, şikayet'), mk('Kurtarma', '#FFE3D2', 'Kurtarılan gün')] },
+{ name: 'ZEMİN', items: [mk('Kum', '#FFF8F2', 'Ekran zemini'), mk('Kart', '#FFFFFF', 'Kart ve sayfa'), mk('Çizgi', '#EFE6DC', 'Kart kenarı'), mk('Dolgu', '#F6EEE5', 'İkincil yüzey'), mk('Güçlü çizgi', '#E3D8CC', 'Form kenarı')] },
+{ name: 'KOYU MOD', items: [mk('Zemin', '#150E26', 'Ekran zemini'), mk('Yüzey', '#211538', 'Kartlar'), mk('Çizgi', '#33264F', 'Kart kenarı'), mk('İkincil metin', '#B7AACF', 'Açıklamalar'), mk('Aksiyon', '#3BAE6A', 'Buton, koyu metinle')] }
+];
+return { groups };
+}
+}
+</script>
+</body>
+</html>

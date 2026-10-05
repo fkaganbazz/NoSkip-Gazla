@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Seri koptu</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&amp;family=Nunito:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F1ECE2;font-family:'Nunito',system-ui,sans-serif;color:#24163F}
+a{color:#1F7A45}a:hover{color:#165C34}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; box-sizing: border-box; padding: 56px 20px 30px; display: flex; flex-direction: column; background: {{bg}}; font-family: 'Nunito', system-ui, sans-serif; color: #24163F">
+
+<div style="display: flex; align-items: center; justify-content: space-between">
+<sc-if value="{{lost}}" hint-placeholder-val="{{ true }}">
+<span style="display: flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 999px; background: #FFFFFF; font-size: 13px; font-weight: 800; color: #9A3412"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5 V12 L15 14"></path></svg>Kurtarmak için 21 sa 40 dk</span>
+</sc-if>
+<sc-if value="{{saved}}" hint-placeholder-val="{{ false }}">
+<span style="display: flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 999px; background: #FFFFFF; font-size: 13px; font-weight: 800; color: #165C34"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5 L10 17.5 L19 7"></path></svg>Seri kurtarıldı</span>
+</sc-if>
+<a href="Today.dc.html" aria-label="Kapat" style="width: 44px; height: 44px; border-radius: 22px; background: #FFFFFF; display: flex; align-items: center; justify-content: center; color: #24163F"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6 L18 18 M18 6 L6 18"></path></svg></a>
+</div>
+
+<div style="margin-top: 14px; display: flex; justify-content: center">
+<sc-if value="{{lost}}" hint-placeholder-val="{{ true }}">
+<dc-import name="Diken" mood="solgun" size="236" hint-size="236px,295px"></dc-import>
+</sc-if>
+<sc-if value="{{saved}}" hint-placeholder-val="{{ false }}">
+<dc-import name="Diken" mood="cosku" stage="tam" gear="bant" size="236" hint-size="236px,295px"></dc-import>
+</sc-if>
+</div>
+
+<div style="margin-top: 10px; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center">
+<h1 style="margin: 0; font-family: 'Baloo 2', 'Nunito', sans-serif; font-weight: 800; font-size: 36px; line-height: 1">{{title}}</h1>
+<p style="margin: 0; max-width: 320px; font-size: 16px; font-weight: 600; line-height: 1.45; color: #3F3358">{{sub}}</p>
+</div>
+
+<sc-if value="{{lost}}" hint-placeholder-val="{{ true }}">
+<div style="margin-top: 14px; align-self: center; display: flex; align-items: center; gap: 8px; padding: 8px 14px 8px 8px; border-radius: 999px; background: #FFFFFF; font-size: 14px; font-weight: 700; color: #3F3358">
+<span style="display: flex"><span style="width: 26px; height: 26px; box-sizing: border-box; border-radius: 13px; border: 2px solid #FFFFFF; background: #FFD8C2; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; color: #9A3412">M</span><span style="width: 26px; height: 26px; margin-left: -8px; box-sizing: border-box; border-radius: 13px; border: 2px solid #FFFFFF; background: #CDEBD8; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; color: #1F6B40">C</span></span>
+Mert ve Can hâlâ devam ediyor
+</div>
+</sc-if>
+
+<div style="margin-top: auto; display: flex; flex-direction: column; gap: 10px">
+<sc-if value="{{lost}}" hint-placeholder-val="{{ true }}">
+<button type="button" onClick="{{watch}}" style="height: 58px; border-radius: 18px; border: none; background: #1F7A45; box-shadow: 0 4px 0 #165C34; display: flex; align-items: center; justify-content: center; gap: 10px; font-family: inherit; font-size: 17px; font-weight: 800; color: #FFFFFF; cursor: pointer">
+<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 C15.4 7.4 17.6 10.6 17.6 14 C17.6 17.3 15.1 20 12 20 C8.9 20 6.4 17.3 6.4 14 C6.4 10.6 8.6 7.4 12 3 Z" fill="#8BE0AE"></path></svg>
+Reklam izle, Diken'i sula
+<span style="padding: 3px 8px; border-radius: 8px; background: rgba(255, 255, 255, 0.18); font-size: 12px; font-weight: 800">30 sn</span>
+</button>
+<button type="button" onClick="{{free}}" style="min-height: 56px; box-sizing: border-box; padding: 8px 16px; border-radius: 18px; border: 2px solid #E3D8CC; background: #FFFFFF; box-shadow: 0 4px 0 #E3D8CC; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; font-family: inherit; color: #24163F; cursor: pointer">
+<span style="font-size: 16px; font-weight: 800">Ücretsiz hakkımı kullan</span>
+<span style="font-size: 12px; font-weight: 700; color: #5B4A7A">Ayda 1 hak · bu ay 1 hakkın var</span>
+</button>
+<a href="Today.dc.html" style="height: 44px; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 16px; font-weight: 800; color: #24163F">Baştan başla</a>
+</sc-if>
+<sc-if value="{{saved}}" hint-placeholder-val="{{ false }}">
+<a href="Today.dc.html" style="height: 58px; border-radius: 18px; background: #1F7A45; box-shadow: 0 4px 0 #165C34; color: #FFFFFF; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 17px; font-weight: 800">Devam</a>
+<button type="button" onClick="{{reset}}" style="height: 44px; border: none; background: transparent; font-family: inherit; font-size: 15px; font-weight: 800; color: #3F3358; cursor: pointer">Önceki hali tekrar göster</button>
+</sc-if>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { phase: 'lost', via: 'ad' };
+}
+renderVals() {
+const lost = this.state.phase === 'lost';
+return {
+lost,
+saved: !lost,
+bg: lost ? '#F1ECE2' : '#EEF8F1',
+title: lost ? 'Serin koptu' : 'Diken sulandı!',
+sub: lost ? 'Dün "Uyanınca 1 saat telefonsuz" günü kaçtı. 12 günlük serin tehlikede.' : (this.state.via === 'ad' ? '12 günlük serin kaldığı yerden devam ediyor. Bugünü unutma.' : 'Ücretsiz hakkını kullandın. Serin 12. günden devam ediyor.'),
+watch: () => this.setState({ phase: 'saved', via: 'ad' }),
+free: () => this.setState({ phase: 'saved', via: 'free' }),
+reset: () => this.setState({ phase: 'lost' })
+};
+}
+}
+</script>
+</body>
+</html>
