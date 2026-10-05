@@ -36,6 +36,10 @@ export const layout = {
   buttonHeight: 56,
   /** Butonun altındaki düz gölgenin yüksekliği · 4 */
   buttonShadowOffset: 4,
+  /** Çip yüksekliği · 38 (Components.dc.html) */
+  chipHeight: 38,
+  /** Çip yatay iç boşluğu · 14 (Components.dc.html) */
+  chipPaddingX: 14,
 } as const;
 
 /** Kenar kalınlıkları — Components.dc.html: kart 1, form ve ikincil buton 2 */

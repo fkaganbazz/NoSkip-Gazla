@@ -65,6 +65,11 @@ export const typography = {
     fontSize: 15,
     lineHeight: lineHeight(15, 1.45),
   },
+  /** Çip · Nunito 800 · 14 (Components.dc.html) */
+  chip: {
+    fontFamily: fonts.extraBold,
+    fontSize: 14,
+  },
   /** Etiket · Nunito 800 · 13 · letter-spacing 0.6 — "BUGÜN BEKLEYENLER · 2" */
   label: {
     fontFamily: fonts.extraBold,

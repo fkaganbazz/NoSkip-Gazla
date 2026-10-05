@@ -3,6 +3,7 @@ import { useColorScheme } from 'react-native';
 import { darkColors, lightColors, type ColorRoles } from './colors';
 
 export { darkColors, lightColors, palette, type ColorRoles } from './colors';
+export { dikenColors } from './diken';
 export { borderWidth, layout, radius, spacing } from './spacing';
 export { fontAssets, fonts, typography, type TypographyVariant } from './typography';
 

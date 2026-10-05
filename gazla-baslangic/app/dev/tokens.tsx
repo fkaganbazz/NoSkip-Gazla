@@ -1,5 +1,4 @@
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
   borderWidth,
@@ -45,79 +44,77 @@ export default function TokensScreen() {
   const sectionLabel = [typography.label, { color: colors.textSecondary }];
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.header}>
-          <Text style={[typography.title1, { color: colors.text }]}>Renk ve yazı</Text>
-          <Text style={[typography.body, { color: colors.textBody }]}>
-            Beyaz metin sadece aksiyon yeşilinin ve hata kırmızısının üstünde. Turuncu ve sarı zeminde
-            metin her zaman gece moru.
-          </Text>
-        </View>
+    <ScrollView contentContainerStyle={styles.content}>
+      <View style={styles.header}>
+        <Text style={[typography.title1, { color: colors.text }]}>Renk ve yazı</Text>
+        <Text style={[typography.body, { color: colors.textBody }]}>
+          Beyaz metin sadece aksiyon yeşilinin ve hata kırmızısının üstünde. Turuncu ve sarı zeminde
+          metin her zaman gece moru.
+        </Text>
+      </View>
 
-        <View style={card}>
-          <Text style={sectionLabel}>YAZI ÖLÇEĞİ</Text>
-          {TYPE_SAMPLES.map(({ variant, caption, sample }) => (
-            <View key={variant} style={styles.sample}>
-              <Text style={sectionLabel}>{caption}</Text>
-              <Text
+      <View style={card}>
+        <Text style={sectionLabel}>YAZI ÖLÇEĞİ</Text>
+        {TYPE_SAMPLES.map(({ variant, caption, sample }) => (
+          <View key={variant} style={styles.sample}>
+            <Text style={sectionLabel}>{caption}</Text>
+            <Text
+              style={[
+                typography[variant],
+                { color: variant === 'body' ? colors.textBody : variant === 'label' ? colors.textSecondary : colors.text },
+              ]}>
+              {sample}
+            </Text>
+          </View>
+        ))}
+        <View style={[styles.turkish, { backgroundColor: colors.surfaceMuted }]}>
+          <Text style={sectionLabel}>Türkçe karakter</Text>
+          <Text style={[typography.title2, { color: colors.text }]}>ğüşıöç İĞÜŞÖÇ</Text>
+        </View>
+      </View>
+
+      <View style={card}>
+        <Text style={sectionLabel}>RENKLER · {scheme === 'dark' ? 'KOYU' : 'AÇIK'}</Text>
+        {colorEntries.map(([name, hex]) => (
+          <View key={name} style={styles.colorRow}>
+            <View style={[styles.swatch, { backgroundColor: hex, borderColor: colors.border }]} />
+            <Text style={[typography.cardTitle, styles.grow, { color: colors.text }]}>{name}</Text>
+            <Text style={[typography.label, { color: colors.textSecondary }]}>{hex}</Text>
+          </View>
+        ))}
+      </View>
+
+      <View style={card}>
+        <Text style={sectionLabel}>BOŞLUK VE KÖŞE</Text>
+        <View style={styles.spacingRow}>
+          {SPACING_STEPS.map(([name, value]) => (
+            <View key={name} style={styles.spacingStep}>
+              <View style={{ width: value, height: value, backgroundColor: colors.brand }} />
+              <Text style={[typography.label, { color: colors.text }]}>{value}</Text>
+            </View>
+          ))}
+        </View>
+        <Text style={[typography.body, { color: colors.textBody }]}>
+          Kenar boşluğu {layout.screenPadding}
+        </Text>
+        <View style={styles.radiusRow}>
+          {RADIUS_SAMPLES.map(({ label, value, sheet }) => (
+            <View key={label} style={styles.radiusSample}>
+              <View
                 style={[
-                  typography[variant],
-                  { color: variant === 'body' ? colors.textBody : variant === 'label' ? colors.textSecondary : colors.text },
-                ]}>
-                {sample}
-              </Text>
-            </View>
-          ))}
-          <View style={[styles.turkish, { backgroundColor: colors.surfaceMuted }]}>
-            <Text style={sectionLabel}>Türkçe karakter</Text>
-            <Text style={[typography.title2, { color: colors.text }]}>ğüşıöç İĞÜŞÖÇ</Text>
-          </View>
-        </View>
-
-        <View style={card}>
-          <Text style={sectionLabel}>RENKLER · {scheme === 'dark' ? 'KOYU' : 'AÇIK'}</Text>
-          {colorEntries.map(([name, hex]) => (
-            <View key={name} style={styles.colorRow}>
-              <View style={[styles.swatch, { backgroundColor: hex, borderColor: colors.border }]} />
-              <Text style={[typography.cardTitle, styles.grow, { color: colors.text }]}>{name}</Text>
-              <Text style={[typography.label, { color: colors.textSecondary }]}>{hex}</Text>
+                  styles.radiusShape,
+                  { borderColor: colors.text },
+                  sheet
+                    ? { borderTopLeftRadius: value, borderTopRightRadius: value }
+                    : { borderRadius: value },
+                ]}
+              />
+              <Text style={[typography.label, { color: colors.text }]}>{label}</Text>
             </View>
           ))}
         </View>
-
-        <View style={card}>
-          <Text style={sectionLabel}>BOŞLUK VE KÖŞE</Text>
-          <View style={styles.spacingRow}>
-            {SPACING_STEPS.map(([name, value]) => (
-              <View key={name} style={styles.spacingStep}>
-                <View style={{ width: value, height: value, backgroundColor: colors.brand }} />
-                <Text style={[typography.label, { color: colors.text }]}>{value}</Text>
-              </View>
-            ))}
-          </View>
-          <Text style={[typography.body, { color: colors.textBody }]}>
-            Kenar boşluğu {layout.screenPadding}
-          </Text>
-          <View style={styles.radiusRow}>
-            {RADIUS_SAMPLES.map(({ label, value, sheet }) => (
-              <View key={label} style={styles.radiusSample}>
-                <View
-                  style={[
-                    styles.radiusShape,
-                    { borderColor: colors.text },
-                    sheet
-                      ? { borderTopLeftRadius: value, borderTopRightRadius: value }
-                      : { borderRadius: value },
-                  ]}
-                />
-                <Text style={[typography.label, { color: colors.text }]}>{label}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+      </View>
+    </ScrollView>
   );
 }
 
