@@ -72,13 +72,18 @@ const LABELS: Record<DikenMood, string> = {
 };
 
 // Yüz ve efekt katmanlarının aşamaya göre yeri (tasarımdaki CSS transform'ların SVG karşılığı).
+// Tasarımdaki `none` için undefined değil birim dönüşüm verilir: react-native-svg, transform
+// kaldırıldığında native düğümün (iOS ve Android) eski matrisini sıfırlamıyor.
+const IDENTITY_TRANSFORM = 'translate(0 0)';
 const SPROUT_TRANSFORM = 'translate(120 204) scale(0.62) translate(-120 -122)';
 const FACE_TRANSFORM = {
+  none: IDENTITY_TRANSFORM,
   wilted: 'translate(126 126) rotate(12) translate(-120 -122)',
   young: 'translate(0 34)',
   sprout: SPROUT_TRANSFORM,
 } as const;
 const FX_TRANSFORM = {
+  none: IDENTITY_TRANSFORM,
   young: 'translate(-8 40)',
   sprout: SPROUT_TRANSFORM,
 } as const;
@@ -491,14 +496,16 @@ function Diken({
   size = DEFAULT_SIZE,
   pose,
 }: DikenProps) {
-  const width = size || DEFAULT_SIZE;
+  // react-native-svg genişliği parseInt ile keser; yükseklikle aynı tam sayı tabanını kullan.
+  const width = Math.round(size || DEFAULT_SIZE);
   const height = Math.round(width * ASPECT);
 
   const wilted = mood === 'solgun';
   const full = !wilted && (stage === 'tam' || stage === 'cicek');
   const young = !wilted && stage === 'genc';
   const sprout = !wilted && stage === 'filiz';
-  const armPose = pose ?? POSE_BY_MOOD[mood];
+  // Tasarımdaki geri dönüşler: tipler dışından gelen değerlerde (ör. sunucu verisi) de çizim bozulmasın.
+  const armPose = pose || POSE_BY_MOOD[mood] || 'relaxed';
 
   const faceTransform = wilted
     ? FACE_TRANSFORM.wilted
@@ -506,8 +513,8 @@ function Diken({
       ? FACE_TRANSFORM.young
       : sprout
         ? FACE_TRANSFORM.sprout
-        : undefined;
-  const fxTransform = young ? FX_TRANSFORM.young : sprout ? FX_TRANSFORM.sprout : undefined;
+        : FACE_TRANSFORM.none;
+  const fxTransform = young ? FX_TRANSFORM.young : sprout ? FX_TRANSFORM.sprout : FX_TRANSFORM.none;
 
   return (
     <Svg
@@ -516,7 +523,7 @@ function Diken({
       viewBox={VIEW_BOX}
       accessible
       accessibilityRole="image"
-      accessibilityLabel={`Diken, ${LABELS[mood]}`}>
+      accessibilityLabel={`Diken, ${LABELS[mood] ?? LABELS.mutlu}`}>
       {SHADOW}
 
       {full && armPose !== 'cross' && ARMS[armPose]}

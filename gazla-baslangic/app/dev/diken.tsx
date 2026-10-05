@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Diken, {
   DIKEN_GEARS,
@@ -11,7 +12,7 @@ import Diken, {
   type DikenPose,
   type DikenStage,
 } from '@/components/Diken';
-import { borderWidth, layout, radius, spacing, typography, useTheme } from '@/theme';
+import { borderWidth, layout, palette, radius, spacing, typography, useTheme } from '@/theme';
 
 // Geliştirme ekranı: design/Diken.dc.html, Moods.dc.html ve Evolution.dc.html'in mobil karşılığı.
 // Tüm ifade, aşama, aksesuar ve duruşları simülatörde kontrol etmek için.
@@ -75,7 +76,7 @@ const POSE_OPTIONS = [AUTO_POSE, ...DIKEN_POSES] as const;
 type ChipProps = { label: string; selected: boolean; onPress: () => void };
 
 function Chip({ label, selected, onPress }: ChipProps) {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   return (
     <Pressable
       onPress={onPress}
@@ -86,7 +87,11 @@ function Chip({ label, selected, onPress }: ChipProps) {
         styles.chip,
         selected
           ? { backgroundColor: colors.text, borderColor: colors.text }
-          : { backgroundColor: colors.surface, borderColor: colors.border },
+          : {
+              backgroundColor: colors.surface,
+              // Components.dc.html: çip kenarı güçlü çizgi; koyu karşılığı tasarlanmadı.
+              borderColor: isDark ? colors.border : palette.strongLine,
+            },
       ]}>
       <Text style={[typography.chip, { color: selected ? colors.background : colors.text }]}>
         {label}
@@ -128,6 +133,7 @@ function ChipRow<T extends string | number>({
 
 export default function DikenScreen() {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
 
   const [mood, setMood] = useState<DikenMood>('mutlu');
@@ -137,11 +143,17 @@ export default function DikenScreen() {
   const [size, setSize] = useState<(typeof SIZES)[number]>(240);
 
   const columnWidth = (width - layout.screenPadding * 2 - spacing.sm) / 2;
+  // Dar ekranlarda Diken kartın içinden taşmasın.
+  const gridDikenSize = Math.min(
+    GRID_DIKEN_SIZE,
+    columnWidth - spacing.md * 2 - borderWidth.thin * 2,
+  );
   const card = [styles.card, { backgroundColor: colors.surface, borderColor: colors.border }];
   const sectionTitle = [typography.title2, { color: colors.text }];
 
   return (
-    <ScrollView contentContainerStyle={styles.content}>
+    <ScrollView
+      contentContainerStyle={[styles.content, { paddingBottom: layout.screenPadding + insets.bottom }]}>
       {/* Oyun alanı: her prop tek tek */}
       <View style={card}>
         <View style={[styles.stage, { backgroundColor: colors.surfaceMuted }]}>
@@ -194,7 +206,7 @@ export default function DikenScreen() {
         {DIKEN_MOODS.map((m) => (
           <View key={m} style={[card, styles.moodCard, { width: columnWidth }]}>
             <View style={[styles.moodStage, { backgroundColor: colors.surfaceMuted }]}>
-              <Diken mood={m} stage="tam" size={GRID_DIKEN_SIZE} />
+              <Diken mood={m} stage="tam" size={gridDikenSize} />
             </View>
             <Text style={[typography.cardTitle, { color: colors.text }]}>{MOOD_INFO[m].name}</Text>
             <Text style={[typography.body, { color: colors.textBody }]}>{MOOD_INFO[m].use}</Text>
@@ -208,7 +220,7 @@ export default function DikenScreen() {
         {EVOLUTION.map((step) => (
           <View key={step.title} style={[card, styles.moodCard, { width: columnWidth }]}>
             <View style={[styles.moodStage, { backgroundColor: colors.surfaceMuted }]}>
-              <Diken mood={step.mood} stage={step.stage} gear={step.gear} size={GRID_DIKEN_SIZE} />
+              <Diken mood={step.mood} stage={step.stage} gear={step.gear} size={gridDikenSize} />
             </View>
             <Text style={[typography.cardTitle, { color: colors.text }]}>{step.title}</Text>
             <Text style={[typography.body, { color: colors.textBody }]}>{step.days}</Text>

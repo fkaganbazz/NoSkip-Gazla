@@ -1,4 +1,5 @@
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   borderWidth,
@@ -38,15 +39,16 @@ const RADIUS_SAMPLES: { label: string; value: number; sheet?: boolean }[] = [
 
 export default function TokensScreen() {
   const { colors, scheme } = useTheme();
+  const insets = useSafeAreaInsets();
   const colorEntries = Object.entries(colors) as [keyof ColorRoles, string][];
 
   const card = [styles.card, { backgroundColor: colors.surface, borderColor: colors.border }];
   const sectionLabel = [typography.label, { color: colors.textSecondary }];
 
   return (
-    <ScrollView contentContainerStyle={styles.content}>
+    <ScrollView
+      contentContainerStyle={[styles.content, { paddingBottom: layout.screenPadding + insets.bottom }]}>
       <View style={styles.header}>
-        <Text style={[typography.title1, { color: colors.text }]}>Renk ve yazı</Text>
         <Text style={[typography.body, { color: colors.textBody }]}>
           Beyaz metin sadece aksiyon yeşilinin ve hata kırmızısının üstünde. Turuncu ve sarı zeminde
           metin her zaman gece moru.

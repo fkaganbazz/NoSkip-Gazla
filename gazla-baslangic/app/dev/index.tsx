@@ -1,5 +1,6 @@
 import { Link, type Href } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { borderWidth, layout, radius, spacing, typography, useTheme } from '@/theme';
 
@@ -10,9 +11,11 @@ const SCREENS: { href: Href; title: string; detail: string }[] = [
 
 export default function DevIndex() {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
 
   return (
-    <ScrollView contentContainerStyle={styles.content}>
+    <ScrollView
+      contentContainerStyle={[styles.content, { paddingBottom: layout.screenPadding + insets.bottom }]}>
       {SCREENS.map((screen) => (
         <Link key={screen.title} href={screen.href} asChild>
           <Pressable
