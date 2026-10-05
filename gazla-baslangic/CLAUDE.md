@@ -47,3 +47,15 @@ profiles, friendships, blocks, reports, challenge_templates, challenges, challen
 - Her seferinde tek ekran veya tek özellik. Bitince simülatörde kontrol edilecek.
 - Önce mock veriyle UI, sonra Supabase bağlantısı.
 - Yeni renk/ölçü uydurma; `src/theme` dışından sabit değer yazma.
+
+## Kurulum ve komutlar
+- Expo SDK 57, route'lar kökteki `app/` altında (`src/app` açma; açılırsa Expo Router onu kök sayar). Diğer kod `src/`, import kısayolu `@/` → `src/`.
+- `npm run android` / `npm run ios`: development build'i derleyip kurar (`expo run:*`). Sonraki açılışlarda `npm start` (dev client).
+- Bulut derleme: `npx eas-cli build --profile development` (iOS simülatör için `development-simulator`).
+- Paket eklerken `npx expo install <paket>` kullan. Bitirmeden önce `npm run typecheck`.
+
+## Tema kullanımı
+- `import { useTheme, typography, spacing, radius, layout, borderWidth, palette } from '@/theme'`.
+- Renk: `useTheme().colors` (açık/koyu anlamsal roller). Koyu karşılığı tasarlanmamış renkler sadece `palette`te.
+- Yazı: `typography.display | title1 | title2 | cardTitle | body | label`. Ağırlık `fontFamily` ile seçilir, `fontWeight` yazma.
+- `app/dev/tokens.tsx`: token önizleme ekranı (font ve renk kontrolü).
