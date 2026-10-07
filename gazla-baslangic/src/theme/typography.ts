@@ -72,11 +72,6 @@ export const typography = {
     lineHeight: lineHeight(15, 1.45),
   },
   // Ekranlarda sık geçen Nunito stilleri (boyut · ağırlık)
-  /** Nunito 800 · 15 — görev başlığı, liste satırı */
-  bodyStrong: {
-    fontFamily: fonts.extraBold,
-    fontSize: 15,
-  },
   /** Nunito 700 · 14 — tarih, açıklama satırı */
   caption: {
     fontFamily: fonts.bold,
@@ -107,7 +102,8 @@ export const typography = {
     fontFamily: fonts.extraBold,
     fontSize: 11,
   },
-  /** Bölüm başlığı · Baloo 2 800 · 21, satır yüksekliği normal ("Bugünkü görevler") */
+  /** Bölüm başlığı · Baloo 2 800 · 21, satır yüksekliği normal — ekran tasarımlarındaki h2
+   *  ("Bugünkü görevler"). Tokens.dc.html'deki örnek (title2) line-height 1.2 ile çizilmiş. */
   sectionTitle: {
     fontFamily: fonts.heading,
     fontSize: 21,

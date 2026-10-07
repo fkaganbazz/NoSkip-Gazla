@@ -97,6 +97,7 @@ export const todayMetrics = {
 
   // Kahraman kartı
   heroMarginTop: 14,
+  /** Kart yüksekliği · 164 (içerik sığmazsa uzar; tasarım "hepsi tamam" durumunda kırpıyordu) */
   heroHeight: 164,
   heroPaddingTop: 16,
   heroPaddingX: 18,
@@ -106,6 +107,8 @@ export const todayMetrics = {
   heroCircleRight: -30,
   heroCircleTop: -26,
   heroColumnWidth: 196,
+  /** Sütunun sağında Diken için ayrılan alan · 118 (390 genişlikte iç alan 314 − sütun 196) */
+  heroColumnReserve: 118,
   heroGap: 6,
   streakChipGap: 6,
   streakChipPaddingY: 5,
@@ -128,10 +131,14 @@ export const todayMetrics = {
 
   // Görev kartı
   taskGap: 8,
+  /** Kart yüksekliği · 72 (büyük yazıda içerikle uzar) */
   taskHeight: 72,
   taskPaddingLeft: 14,
   taskPaddingRight: 12,
   taskRadius: 22,
+  /** Kart gölgesi (açık mod): 0 1px 2px */
+  taskShadowY: 1,
+  taskShadowBlur: 2,
   taskInnerGap: 12,
   taskTextGap: 5,
   taskIconTile: 44,
@@ -158,8 +165,10 @@ export const todayMetrics = {
   inviteRing: 2,
   inviteIconSize: 22,
   inviteIconStrokeWidth: 2.6,
+  /** Tik rozeti: iç ölçü 20 + 2'lik kenar (tasarımda content-box, dış ölçü 24), köşe 10 */
   friendBadgeSize: 20,
   friendBadgeBorder: 2,
+  friendBadgeRadius: 10,
   friendBadgeRight: -4,
   friendBadgeBottom: -3,
   friendBadgeIconSize: 11,

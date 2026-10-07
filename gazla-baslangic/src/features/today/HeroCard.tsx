@@ -62,7 +62,7 @@ export default function HeroCard({ done, total, hero }: Props) {
 const styles = StyleSheet.create({
   card: {
     marginTop: m.heroMarginTop,
-    height: m.heroHeight,
+    minHeight: m.heroHeight,
     paddingTop: m.heroPaddingTop,
     paddingHorizontal: m.heroPaddingX,
     paddingBottom: m.heroPaddingBottom,
@@ -77,9 +77,11 @@ const styles = StyleSheet.create({
     height: m.heroCircleSize,
     borderRadius: m.heroCircleSize / 2,
   },
+  // 390 genişlikte tasarımdaki 196; daha dar ekranlarda Diken'in altına girmeden daralır.
   column: {
     flex: 1,
-    width: m.heroColumnWidth,
+    maxWidth: m.heroColumnWidth,
+    marginRight: m.heroColumnReserve,
     gap: m.heroGap,
   },
   chip: {

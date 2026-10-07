@@ -51,14 +51,18 @@ profiles, friendships, blocks, reports, challenge_templates, challenges, challen
 ## Kurulum ve komutlar
 - Expo SDK 57, route'lar kökteki `app/` altında (`src/app` açma; açılırsa Expo Router onu kök sayar). Diğer kod `src/`, import kısayolu `@/` → `src/`.
 - Uygulama sekmelerle açılır: `app/(tabs)/` (Bugün `index`, Keşfet `explore`, Arkadaşlar `friends`, Bahçem `garden`); ortadaki + `app/create.tsx`'i tam ekran modal açar. Alt menü `src/components/TabBar.tsx` (TabBar.dc.html), `Tabs` `expo-router/js-tabs`'tan.
-- Geliştirme ekranları `app/dev/` (token önizleme, Diken). Geliştirme sürümünde yer tutucu ekranlardaki "Geliştirme ekranları" bağlantısıyla açılır.
+- Geliştirme ekranları `app/dev/` (token önizleme, Diken). Geliştirme sürümünde henüz yer tutucu olan sekmelerdeki (Keşfet, Arkadaşlar, Bahçem) "Geliştirme ekranları" bağlantısıyla açılır.
+- Klasörler: `src/components` (ortak bileşenler, `icons`), `src/features/<ekran>` (ekrana özel bileşenler, mantık, tipler; ör. `src/features/today`), `src/mocks` (Supabase gelene kadar örnek veri), `src/theme`.
 - `npm run android` / `npm run ios`: development build'i derleyip kurar (`expo run:*`). Sonraki açılışlarda `npm start` (dev client).
 - Bulut derleme: `npx eas-cli build --profile development` (iOS simülatör için `development-simulator`).
 - Paket eklerken `npx expo install <paket>` kullan. Bitirmeden önce `npm run typecheck`.
 
 ## Tema kullanımı
 - `import { useTheme, typography, spacing, radius, layout, borderWidth, iconMetrics, palette } from '@/theme'`.
-- Renk: `useTheme().colors` (açık/koyu anlamsal roller). Koyu karşılığı tasarlanmamış renkler sadece `palette`te. Bileşene özel renkler: `dikenColors` (maskot), `tabBarColors[scheme]` ve `tabBarMetrics` (alt menü).
-- Yazı: `typography.display | title1 | screenTitle | title2 | cardTitle | body | chip | tabLabel | tabLabelActive | label`. Ağırlık `fontFamily` ile seçilir, `fontWeight` yazma.
+- Renk: `useTheme().colors` (açık/koyu anlamsal roller). Koyu karşılığı tasarlanmamış renkler sadece `palette`te. Bileşene/ekrana özel token'lar: `dikenColors` (maskot), `tabBarColors[scheme]`/`tabBarMetrics` (alt menü), `todayColors[scheme]`/`todayMetrics`/`todayTypography` (Bugün). Veriye bağlı avatar ve challenge renkleri: `avatarTints`, `challengeTints` (açık/koyu).
+- Yazı: `typography.display | title1 | screenTitle | title2 | sectionTitle | cardTitle | body | caption | captionStrong | chip | meta | metaStrong | smallStrong | micro | tabLabel | tabLabelActive | label`. Ağırlık `fontFamily` ile seçilir, `fontWeight` yazma.
+- Kutu modeli: tasarımda `box-sizing` yazmayan kenarlı öğeler content-box'tır; RN ölçüsü kenarı içerir (dış ölçü = iç + 2 × kenar).
+- Ekran üstü: içerik güvenli alanın `layout.screenTopGap` (9) altından başlar (tasarımdaki 56 px üst boşluk).
+- Tok buton gölgesi (`box-shadow: 0 Ypx 0`): `src/components/FlatShadow` (`flatShadowStyle` + `FlatShadowUnderlay`; Android 9 altında View ile çizer).
 - İkonlar: `src/components/icons` (çizgi SVG; boyut ve çizgi kalınlığı tema token'larından).
 - `Link asChild` + `Pressable` stil fonksiyonu birlikte kullanma (Slot stil fonksiyonunu düşürüyor); `router.push`/`navigate` kullan.

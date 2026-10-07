@@ -44,7 +44,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    paddingTop: spacing.xs,
+    paddingTop: layout.screenTopGap,
   },
   close: {
     width: layout.minTouchTarget,

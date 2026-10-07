@@ -1,7 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { AddIcon, CheckIcon } from '@/components/icons';
-import type { TodayFriend } from '@/mocks/today';
 import {
   avatarTints,
   todayColors,
@@ -10,6 +9,11 @@ import {
   typography,
   useTheme,
 } from '@/theme';
+
+import type { TodayFriend } from './types';
+
+/** Rozetin dış ölçüsü (RN ölçüsü kenarı içerir) */
+const BADGE_OUTER = m.friendBadgeSize + m.friendBadgeBorder * 2;
 
 type Props = {
   friends: TodayFriend[];
@@ -112,9 +116,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: m.friendBadgeRight,
     bottom: m.friendBadgeBottom,
-    width: m.friendBadgeSize,
-    height: m.friendBadgeSize,
-    borderRadius: m.friendBadgeSize / 2,
+    width: BADGE_OUTER,
+    height: BADGE_OUTER,
+    borderRadius: m.friendBadgeRadius,
     borderWidth: m.friendBadgeBorder,
     alignItems: 'center',
     justifyContent: 'center',

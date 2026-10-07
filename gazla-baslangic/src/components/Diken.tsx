@@ -6,6 +6,7 @@
  * tasarımdakiyle aynı (kavuşturulmuş kollar gövdenin önünde, saksı yüzün önünde).
  */
 import { memo, type ReactElement } from 'react';
+import { Platform } from 'react-native';
 import Svg, { Circle, Ellipse, G, Path, Rect } from 'react-native-svg';
 
 import { dikenColors as c } from '@/theme';
@@ -521,7 +522,8 @@ function Diken({
       width={width}
       height={height}
       viewBox={VIEW_BOX}
-      accessible
+      // Web'de react-native-svg `accessible`ı DOM'a geçiriyor (React uyarısı); rol ve etiket yeterli.
+      accessible={Platform.OS === 'web' ? undefined : true}
       accessibilityRole="image"
       accessibilityLabel={`Diken, ${LABELS[mood] ?? LABELS.mutlu}`}>
       {SHADOW}

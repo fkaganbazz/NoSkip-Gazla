@@ -3,7 +3,6 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { FlatShadowUnderlay, flatShadowStyle } from '@/components/FlatShadow';
 import { AddIcon, CameraIcon, CheckIcon, challengeIcons } from '@/components/icons';
-import type { TodayTask } from '@/mocks/today';
 import {
   borderWidth,
   challengeTints,
@@ -13,6 +12,8 @@ import {
   typography,
   useTheme,
 } from '@/theme';
+
+import type { TodayTask } from './types';
 
 type Props = {
   task: TodayTask;
@@ -34,7 +35,9 @@ function TaskCard({ task, done, onToggle }: Props) {
         {
           backgroundColor: colors.surface,
           borderColor: colors.border,
-          boxShadow: c.taskCardShadow ? `0 1px 2px ${c.taskCardShadow}` : undefined,
+          boxShadow: c.taskCardShadow
+            ? `0 ${m.taskShadowY}px ${m.taskShadowBlur}px ${c.taskCardShadow}`
+            : undefined,
         },
       ]}>
       {/* Detay / kanıt ekranları gelince bağlanacak */}
@@ -107,7 +110,7 @@ export default memo(TaskCard);
 
 const styles = StyleSheet.create({
   card: {
-    height: m.taskHeight,
+    minHeight: m.taskHeight,
     paddingLeft: m.taskPaddingLeft,
     paddingRight: m.taskPaddingRight,
     borderRadius: m.taskRadius,

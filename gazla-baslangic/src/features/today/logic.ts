@@ -76,6 +76,10 @@ export function heroState(done: number, total: number, streakDays: number, minut
       streak: streakDays + 1,
     };
   }
+  const countdown = `${remaining} görev kaldı. Günün bitmesine ${formatDuration(minutesLeft)} var.`;
+  if (done === 0) {
+    return { title: 'Diken susadı', sub: countdown, mood: 'endise', streak: streakDays };
+  }
   if (remaining === 1) {
     return {
       title: 'Az kaldı, bırakma',
@@ -84,10 +88,5 @@ export function heroState(done: number, total: number, streakDays: number, minut
       streak: streakDays,
     };
   }
-  return {
-    title: done === 0 ? 'Diken susadı' : 'Diken hâlâ susuz',
-    sub: `${remaining} görev kaldı. Günün bitmesine ${formatDuration(minutesLeft)} var.`,
-    mood: 'endise',
-    streak: streakDays,
-  };
+  return { title: 'Diken hâlâ susuz', sub: countdown, mood: 'endise', streak: streakDays };
 }

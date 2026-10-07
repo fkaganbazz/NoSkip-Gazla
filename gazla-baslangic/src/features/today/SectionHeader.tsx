@@ -15,7 +15,9 @@ export default function SectionHeader({ title, detail, detailColor, style }: Pro
   const { colors } = useTheme();
   return (
     <View style={[styles.row, style]}>
-      <Text accessibilityRole="header" style={[typography.sectionTitle, { color: colors.text }]}>
+      <Text
+        accessibilityRole="header"
+        style={[typography.sectionTitle, styles.title, { color: colors.text }]}>
         {title}
       </Text>
       {detail ? (
@@ -32,5 +34,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'baseline',
     justifyContent: 'space-between',
+  },
+  // CSS'teki gibi başlık daralabilsin (RN'de flexShrink varsayılanı 0)
+  title: {
+    flexShrink: 1,
   },
 });
