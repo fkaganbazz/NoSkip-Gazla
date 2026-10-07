@@ -1,0 +1,726 @@
+-- Gazla veri modeli · 7/10 — yazma RPC'leri (istemcinin çağırdığı işlemler).
+--
+-- Her public fonksiyon çağıranı auth.uid() ile sabitler; zamanı now() ile alır (istemci zamanı
+-- değiştiremez). Zamanı parametre alan app.* sürümleri testler ve zamanlanmış işler içindir ve
+-- API rollerine kapalıdır.
+
+-- Ortak yardımcılar -------------------------------------------------------------------------
+
+create function app.require_user() returns uuid
+language plpgsql stable set search_path = '' as $$
+declare
+  v_uid uuid := auth.uid();
+begin
+  if v_uid is null then
+    raise exception 'Oturum açman gerekiyor' using errcode = '42501';
+  end if;
+  if not exists (select 1 from public.profiles p where p.id = v_uid) then
+    raise exception 'Önce profilini tamamla' using errcode = 'P0001';
+  end if;
+  return v_uid;
+end
+$$;
+
+-- URL'de güvenle kullanılabilen rastgele kod (A–Z, a–z, 0–9)
+create function app.random_code(p_length integer) returns text
+language plpgsql volatile set search_path = '' as $$
+declare
+  v_alphabet constant text := 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+  v_bytes bytea := extensions.gen_random_bytes(p_length);
+  v_out text := '';
+begin
+  for i in 0 .. p_length - 1 loop
+    v_out := v_out || substr(v_alphabet, 1 + (get_byte(v_bytes, i) % length(v_alphabet)), 1);
+  end loop;
+  return v_out;
+end
+$$;
+
+-- Profil ------------------------------------------------------------------------------------
+
+create function public.is_username_available(p_username text) returns boolean
+language sql stable security definer set search_path = '' as $$
+  with u as (select lower(btrim(ltrim(btrim(p_username), '@'))) as name)
+  select u.name ~ '^[a-z0-9][a-z0-9._]{1,18}[a-z0-9]$'
+     and not app.is_reserved_username(u.name)
+     and not exists (
+       select 1 from public.profiles p
+       where p.username = u.name::extensions.citext and p.id is distinct from auth.uid()
+     )
+  from u
+$$;
+
+-- Onboarding'in Profil adımı: profil ve ayarları birlikte oluşturur (ya da günceller).
+create function public.complete_profile(
+  p_username text,
+  p_display_name text,
+  p_birth_year integer,
+  p_timezone text default null,
+  p_locale text default 'tr'
+) returns public.profiles
+language plpgsql security definer set search_path = '' as $$
+declare
+  v_uid uuid := auth.uid();
+  v_row public.profiles;
+begin
+  if v_uid is null then
+    raise exception 'Oturum açman gerekiyor' using errcode = '42501';
+  end if;
+
+  insert into public.profiles (id, username, display_name, avatar_tint)
+  values (
+    v_uid,
+    lower(btrim(ltrim(btrim(p_username), '@'))),
+    btrim(p_display_name),
+    (array['peach', 'lavender', 'mint', 'butter'])[1 + abs(hashtext(v_uid::text)) % 4]
+  )
+  on conflict (id) do update
+    set username = excluded.username, display_name = excluded.display_name
+  returning * into v_row;
+
+  insert into public.user_settings (user_id, birth_year, timezone, locale)
+  values (v_uid, p_birth_year, coalesce(p_timezone, app.default_timezone()), coalesce(p_locale, 'tr'))
+  on conflict (user_id) do update
+    set timezone = excluded.timezone, locale = excluded.locale;
+
+  return v_row;
+end
+$$;
+
+-- Kullanıcı adıyla arama: yalnızca "Beni herkes bulabilir" diyenler (ya da zaten ilişkili olanlar),
+-- iki yönde de engel yoksa; yalnızca herkese açık alanlar.
+create function public.search_profiles(p_query text, p_limit integer default 20)
+returns table (
+  id uuid, username text, display_name text, avatar_path text, avatar_tint text,
+  is_friend boolean, request_pending boolean
+)
+language sql stable security definer set search_path = '' as $$
+  with q as (select lower(btrim(ltrim(btrim(p_query), '@'))) as term, auth.uid() as viewer)
+  select p.id, p.username::text, p.display_name, p.avatar_path, p.avatar_tint,
+         app.are_friends(q.viewer, p.id),
+         app.has_friendship_row(q.viewer, p.id) and not app.are_friends(q.viewer, p.id)
+  from q
+  join public.profiles p on p.username::text like replace(replace(q.term, '_', '\_'), '%', '\%') || '%'
+  left join public.user_settings s on s.user_id = p.id
+  where q.viewer is not null
+    and char_length(q.term) >= 2
+    and p.id <> q.viewer
+    and not app.is_blocked(q.viewer, p.id)
+    and (coalesce(s.discoverability, 'everyone') = 'everyone' or app.can_see_profile(q.viewer, p.id))
+  order by p.username
+  limit least(greatest(p_limit, 1), 50)
+$$;
+
+-- Arkadaşlık --------------------------------------------------------------------------------
+
+create function public.send_friend_request(p_user uuid) returns public.friendships
+language plpgsql security definer set search_path = '' as $$
+declare
+  v_uid uuid := app.require_user();
+  v_row public.friendships;
+begin
+  if p_user = v_uid then
+    raise exception 'Kendine istek gönderemezsin' using errcode = 'P0001';
+  end if;
+  if not exists (select 1 from public.profiles p where p.id = p_user) or app.is_blocked(v_uid, p_user) then
+    raise exception 'Kullanıcı bulunamadı' using errcode = 'P0002';
+  end if;
+
+  select * into v_row from public.friendships f
+  where least(f.requester_id, f.addressee_id) = least(v_uid, p_user)
+    and greatest(f.requester_id, f.addressee_id) = greatest(v_uid, p_user);
+
+  if found then
+    -- Karşı taraf zaten istek göndermişse kabul edilmiş sayılır
+    if v_row.status = 'pending' and v_row.addressee_id = v_uid then
+      update public.friendships f set status = 'accepted', accepted_at = now()
+      where f.id = v_row.id returning * into v_row;
+    end if;
+    return v_row;
+  end if;
+
+  if not (
+    coalesce((select s.discoverability from public.user_settings s where s.user_id = p_user), 'everyone') = 'everyone'
+    or app.are_co_members(v_uid, p_user)
+  ) then
+    raise exception 'Kullanıcı bulunamadı' using errcode = 'P0002';
+  end if;
+
+  insert into public.friendships (requester_id, addressee_id)
+  values (v_uid, p_user)
+  returning * into v_row;
+  return v_row;
+end
+$$;
+
+create function public.accept_friend_request(p_friendship uuid) returns public.friendships
+language plpgsql security definer set search_path = '' as $$
+declare
+  v_uid uuid := app.require_user();
+  v_row public.friendships;
+begin
+  update public.friendships f
+  set status = 'accepted', accepted_at = now()
+  where f.id = p_friendship and f.addressee_id = v_uid and f.status = 'pending'
+  returning * into v_row;
+  if not found then
+    raise exception 'İstek bulunamadı' using errcode = 'P0002';
+  end if;
+  return v_row;
+end
+$$;
+
+-- Dürtme ------------------------------------------------------------------------------------
+
+create function app.do_send_poke(
+  p_sender uuid, p_recipient uuid, p_tone public.poke_tone, p_message_key text,
+  p_challenge uuid, p_at timestamptz
+) returns public.pokes
+language plpgsql security definer set search_path = '' as $$
+declare
+  v_row public.pokes;
+  v_day_start timestamptz;
+begin
+  if p_recipient = p_sender then
+    raise exception 'Kendini dürtemezsin' using errcode = 'P0001';
+  end if;
+  if app.is_blocked(p_sender, p_recipient) then
+    raise exception 'Bu kişiyi dürtemezsin' using errcode = 'P0001';
+  end if;
+
+  if p_challenge is not null then
+    if not (app.is_active_member(p_sender, p_challenge) and app.is_active_member(p_recipient, p_challenge)) then
+      raise exception 'Bu kişiyi dürtemezsin' using errcode = 'P0001';
+    end if;
+  elsif not app.are_friends(p_sender, p_recipient) then
+    raise exception 'Bu kişiyi dürtemezsin' using errcode = 'P0001';
+  end if;
+
+  -- Laf sokma yalnızca alıcının sert modu açıksa
+  if p_tone = 'roast'
+     and not coalesce((select p.harsh_mode from public.profiles p where p.id = p_recipient), false) then
+    raise exception 'Sert modu kapalı; sadece gaz verebilirsin' using errcode = 'P0001';
+  end if;
+
+  if not exists (
+    select 1 from public.poke_messages pm
+    where pm.key = p_message_key and pm.tone = p_tone and pm.is_active
+  ) then
+    raise exception 'Geçersiz mesaj' using errcode = '22023';
+  end if;
+
+  -- Aynı kişiye gönderenin yerel gününde en fazla N dürtme
+  v_day_start := (app.local_date(p_sender, p_at)::timestamp) at time zone app.user_timezone(p_sender);
+  if (
+    select count(*) from public.pokes k
+    where k.sender_id = p_sender and k.recipient_id = p_recipient
+      and k.created_at >= v_day_start and k.created_at <= p_at
+  ) >= app.poke_daily_limit() then
+    raise exception 'Bugün bu kişiyi yeterince dürttün' using errcode = 'P0001';
+  end if;
+
+  insert into public.pokes (sender_id, recipient_id, challenge_id, tone, message_key, created_at)
+  values (p_sender, p_recipient, p_challenge, p_tone, p_message_key, p_at)
+  returning * into v_row;
+  return v_row;
+end
+$$;
+
+create function public.send_poke(
+  p_recipient uuid, p_tone public.poke_tone, p_message_key text, p_challenge uuid default null
+) returns public.pokes
+language sql security definer set search_path = '' as $$
+  select * from app.do_send_poke(app.require_user(), p_recipient, p_tone, p_message_key, p_challenge, now())
+$$;
+
+-- Şikayet -----------------------------------------------------------------------------------
+
+create function public.submit_report(
+  p_user uuid,
+  p_reason public.report_reason,
+  p_details text default null,
+  p_also_block boolean default true,
+  p_target public.report_target default 'user',
+  p_checkin uuid default null,
+  p_challenge uuid default null
+) returns uuid
+language plpgsql security definer set search_path = '' as $$
+declare
+  v_uid uuid := app.require_user();
+  v_id uuid;
+begin
+  if p_user = v_uid then
+    raise exception 'Kendini şikayet edemezsin' using errcode = 'P0001';
+  end if;
+  if not app.can_see_profile(v_uid, p_user) then
+    raise exception 'Kullanıcı bulunamadı' using errcode = 'P0002';
+  end if;
+
+  if p_target = 'photo' then
+    if p_checkin is null or not exists (
+      select 1 from public.checkins k
+      where k.id = p_checkin and k.user_id = p_user and k.photo_path is not null
+        and app.can_see_member_activity(v_uid, k.user_id, k.challenge_id)
+    ) then
+      raise exception 'Fotoğraf bulunamadı' using errcode = 'P0002';
+    end if;
+  elsif p_target = 'challenge' then
+    if p_challenge is null or not app.is_member(v_uid, p_challenge) then
+      raise exception 'Challenge bulunamadı' using errcode = 'P0002';
+    end if;
+  end if;
+
+  insert into public.reports (reporter_id, reported_user_id, target_type, checkin_id, challenge_id,
+                              reason, details, also_blocked)
+  values (v_uid, p_user, p_target,
+          case when p_target = 'photo' then p_checkin end,
+          case when p_target = 'challenge' then p_challenge end,
+          p_reason, nullif(btrim(p_details), ''), coalesce(p_also_block, false))
+  returning id into v_id;
+
+  if coalesce(p_also_block, false) then
+    insert into public.blocks (blocker_id, blocked_id) values (v_uid, p_user)
+    on conflict do nothing;
+  end if;
+  return v_id;
+end
+$$;
+
+-- Bildirimler ve push token -------------------------------------------------------------------
+
+-- "Tümü okundu" (p_ids null) ya da seçilenler
+create function public.mark_notifications_read(p_ids uuid[] default null) returns integer
+language plpgsql security definer set search_path = '' as $$
+declare
+  v_count integer;
+begin
+  update public.notifications n
+  set read_at = now()
+  where n.recipient_id = auth.uid() and n.read_at is null
+    and (p_ids is null or n.id = any (p_ids));
+  get diagnostics v_count = row_count;
+  return v_count;
+end
+$$;
+
+create function public.register_push_token(p_token text, p_platform text) returns void
+language plpgsql security definer set search_path = '' as $$
+declare
+  v_uid uuid := app.require_user();
+begin
+  insert into public.push_tokens (token, user_id, platform)
+  values (p_token, v_uid, p_platform)
+  on conflict (token) do update
+    set user_id = excluded.user_id, platform = excluded.platform, last_seen_at = now();
+end
+$$;
+
+-- Challenge oluşturma, davet, katılma ----------------------------------------------------------
+
+create function app.active_member_count(p_challenge uuid) returns integer
+language sql stable security definer set search_path = '' as $$
+  select count(*)::int from public.challenge_members m
+  where m.challenge_id = p_challenge and m.status = 'active'
+$$;
+
+create function app.assert_challenge_open(p_user uuid, p_challenge uuid, p_at timestamptz) returns void
+language plpgsql stable security definer set search_path = '' as $$
+begin
+  if (select c.end_date from public.challenges c where c.id = p_challenge) < app.local_date(p_user, p_at) then
+    raise exception 'Bu challenge bitti' using errcode = 'P0001';
+  end if;
+end
+$$;
+
+-- Arkadaşları davet eder (davetli olarak; "Katıl" ile aktif olurlar)
+create function app.do_invite(p_inviter uuid, p_challenge uuid, p_users uuid[], p_at timestamptz)
+returns integer
+language plpgsql security definer set search_path = '' as $$
+declare
+  v_user uuid;
+  v_count integer := 0;
+  v_status public.member_status;
+begin
+  if not app.is_active_member(p_inviter, p_challenge) then
+    raise exception 'Bu challenge''a davet edemezsin' using errcode = '42501';
+  end if;
+  perform app.assert_challenge_open(p_inviter, p_challenge, p_at);
+
+  foreach v_user in array coalesce(p_users, '{}'::uuid[]) loop
+    if v_user = p_inviter or not app.are_friends(p_inviter, v_user) or app.is_blocked(p_inviter, v_user) then
+      raise exception 'Yalnızca arkadaşlarını davet edebilirsin' using errcode = 'P0001';
+    end if;
+
+    select m.status into v_status from public.challenge_members m
+    where m.challenge_id = p_challenge and m.user_id = v_user;
+
+    if v_status in ('active', 'invited') then
+      continue;
+    end if;
+
+    if (select count(*) from public.challenge_members m
+        where m.challenge_id = p_challenge and m.status in ('active', 'invited')) >= app.max_members() then
+      raise exception 'Grup dolu' using errcode = 'P0001';
+    end if;
+
+    if v_status is null then
+      insert into public.challenge_members (challenge_id, user_id, status, invited_by)
+      values (p_challenge, v_user, 'invited', p_inviter);
+    else
+      -- Daha önce reddetmiş ya da ayrılmış: yeniden davet
+      update public.challenge_members m
+      set status = 'invited', invited_by = p_inviter, left_on = null
+      where m.challenge_id = p_challenge and m.user_id = v_user;
+      insert into public.notifications (recipient_id, kind, actor_id, challenge_id, local_date)
+      values (v_user, 'challenge_invite', p_inviter, p_challenge, app.local_date(v_user, p_at));
+    end if;
+    v_count := v_count + 1;
+  end loop;
+  return v_count;
+end
+$$;
+
+create function app.do_create_challenge(
+  p_user uuid,
+  p_template uuid,
+  p_title text,
+  p_task_type public.task_type,
+  p_duration_days integer,
+  p_start_date date,
+  p_reminder_time time,
+  p_invite_message text,
+  p_number_unit text,
+  p_number_base_target numeric,
+  p_number_daily_increment numeric,
+  p_number_step numeric,
+  p_number_max numeric,
+  p_invitees uuid[],
+  p_at timestamptz
+) returns public.challenges
+language plpgsql security definer set search_path = '' as $$
+declare
+  v_t public.challenge_templates;
+  v_today date := app.local_date(p_user, p_at);
+  v_start date := coalesce(p_start_date, v_today);
+  v_locale text := coalesce((select s.locale from public.user_settings s where s.user_id = p_user), 'tr');
+  v_row public.challenges;
+begin
+  -- Başlangıç bugün ya da en fazla 7 gün sonra ("Yarın başlıyor")
+  if v_start < v_today or v_start > v_today + 7 then
+    raise exception 'Başlangıç günü bugün ile 7 gün sonrası arasında olmalı' using errcode = '22023';
+  end if;
+
+  if p_template is not null then
+    select * into v_t from public.challenge_templates t where t.id = p_template and t.is_active;
+    if not found then
+      raise exception 'Şablon bulunamadı' using errcode = 'P0002';
+    end if;
+    insert into public.challenges (
+      template_id, created_by, title, short_title, task_type, duration_days, start_date,
+      reminder_time, invite_message, category, icon, tint,
+      number_unit, number_base_target, number_daily_increment, number_step, number_max
+    ) values (
+      v_t.id, p_user,
+      case when v_locale = 'en' then coalesce(v_t.title_en, v_t.title_tr) else v_t.title_tr end,
+      case when v_locale = 'en' then coalesce(v_t.short_title_en, v_t.short_title_tr) else v_t.short_title_tr end,
+      v_t.task_type, coalesce(p_duration_days, v_t.default_duration_days), v_start,
+      p_reminder_time, nullif(btrim(p_invite_message), ''), v_t.category, v_t.icon, v_t.tint,
+      v_t.number_unit, v_t.number_base_target, v_t.number_daily_increment, v_t.number_step, v_t.number_max
+    ) returning * into v_row;
+  else
+    if p_title is null or p_task_type is null or p_duration_days is null then
+      raise exception 'Ad, süre ve tamamlama şekli gerekli' using errcode = '22023';
+    end if;
+    insert into public.challenges (
+      created_by, title, task_type, duration_days, start_date, reminder_time, invite_message,
+      number_unit, number_base_target, number_daily_increment, number_step, number_max
+    ) values (
+      p_user, btrim(p_title), p_task_type, p_duration_days, v_start, p_reminder_time,
+      nullif(btrim(p_invite_message), ''),
+      p_number_unit, p_number_base_target, coalesce(p_number_daily_increment, 0), p_number_step, p_number_max
+    ) returning * into v_row;
+  end if;
+
+  insert into public.challenge_members (challenge_id, user_id, role, status, joined_at, joined_on)
+  values (v_row.id, p_user, 'owner', 'active', p_at, v_today);
+
+  if coalesce(array_length(p_invitees, 1), 0) > 0 then
+    perform app.do_invite(p_user, v_row.id, p_invitees, p_at);
+  end if;
+  return v_row;
+end
+$$;
+
+create function public.create_challenge(
+  p_template uuid default null,
+  p_title text default null,
+  p_task_type public.task_type default null,
+  p_duration_days integer default null,
+  p_start_date date default null,
+  p_reminder_time time default null,
+  p_invite_message text default null,
+  p_number_unit text default null,
+  p_number_base_target numeric default null,
+  p_number_daily_increment numeric default 0,
+  p_number_step numeric default null,
+  p_number_max numeric default null,
+  p_invitees uuid[] default '{}'
+) returns public.challenges
+language sql security definer set search_path = '' as $$
+  select * from app.do_create_challenge(
+    app.require_user(), p_template, p_title, p_task_type, p_duration_days, p_start_date,
+    p_reminder_time, p_invite_message, p_number_unit, p_number_base_target,
+    p_number_daily_increment, p_number_step, p_number_max, p_invitees, now()
+  )
+$$;
+
+create function public.invite_to_challenge(p_challenge uuid, p_users uuid[]) returns integer
+language sql security definer set search_path = '' as $$
+  select app.do_invite(app.require_user(), p_challenge, p_users, now())
+$$;
+
+create function app.do_respond_to_invite(p_user uuid, p_challenge uuid, p_accept boolean, p_at timestamptz)
+returns public.challenge_members
+language plpgsql security definer set search_path = '' as $$
+declare
+  v_row public.challenge_members;
+begin
+  select * into v_row from public.challenge_members m
+  where m.challenge_id = p_challenge and m.user_id = p_user and m.status = 'invited'
+  for update;
+  if not found then
+    raise exception 'Davet bulunamadı' using errcode = 'P0002';
+  end if;
+
+  if p_accept then
+    perform app.assert_challenge_open(p_user, p_challenge, p_at);
+    if app.active_member_count(p_challenge) >= app.max_members() then
+      raise exception 'Grup dolu' using errcode = 'P0001';
+    end if;
+    update public.challenge_members m
+    set status = 'active', joined_at = p_at, joined_on = app.local_date(p_user, p_at), left_on = null
+    where m.challenge_id = p_challenge and m.user_id = p_user
+    returning * into v_row;
+  else
+    update public.challenge_members m set status = 'declined'
+    where m.challenge_id = p_challenge and m.user_id = p_user
+    returning * into v_row;
+  end if;
+  return v_row;
+end
+$$;
+
+create function public.respond_to_invite(p_challenge uuid, p_accept boolean) returns public.challenge_members
+language sql security definer set search_path = '' as $$
+  select * from app.do_respond_to_invite(app.require_user(), p_challenge, p_accept, now())
+$$;
+
+create function app.do_leave_challenge(p_user uuid, p_challenge uuid, p_at timestamptz)
+returns public.challenge_members
+language plpgsql security definer set search_path = '' as $$
+declare
+  v_row public.challenge_members;
+begin
+  update public.challenge_members m
+  set status = 'left', left_on = app.local_date(p_user, p_at)
+  where m.challenge_id = p_challenge and m.user_id = p_user and m.status = 'active'
+  returning * into v_row;
+  if not found then
+    raise exception 'Bu challenge''da değilsin' using errcode = 'P0002';
+  end if;
+  return v_row;
+end
+$$;
+
+create function public.leave_challenge(p_challenge uuid) returns public.challenge_members
+language sql security definer set search_path = '' as $$
+  select * from app.do_leave_challenge(app.require_user(), p_challenge, now())
+$$;
+
+-- Davet linki: her üyenin challenge başına bir kodu
+create function public.create_invite(p_challenge uuid) returns text
+language plpgsql security definer set search_path = '' as $$
+declare
+  v_uid uuid := app.require_user();
+  v_code text;
+begin
+  if not app.is_active_member(v_uid, p_challenge) then
+    raise exception 'Bu challenge''a davet edemezsin' using errcode = '42501';
+  end if;
+  perform app.assert_challenge_open(v_uid, p_challenge, now());
+
+  select i.code into v_code from public.challenge_invites i
+  where i.challenge_id = p_challenge and i.inviter_id = v_uid and i.revoked_at is null;
+  if found then
+    return v_code;
+  end if;
+
+  loop
+    v_code := app.random_code(10);
+    begin
+      insert into public.challenge_invites (code, challenge_id, inviter_id)
+      values (v_code, p_challenge, v_uid);
+      return v_code;
+    exception when unique_violation then
+      -- Çok düşük olasılıklı kod çakışması: yeniden dene
+    end;
+  end loop;
+end
+$$;
+
+create function public.revoke_invite(p_challenge uuid) returns void
+language sql security definer set search_path = '' as $$
+  update public.challenge_invites i set revoked_at = now()
+  where i.challenge_id = p_challenge and i.inviter_id = app.require_user() and i.revoked_at is null
+$$;
+
+create function app.do_join_by_invite(p_user uuid, p_code text, p_at timestamptz)
+returns public.challenge_members
+language plpgsql security definer set search_path = '' as $$
+declare
+  v_inv public.challenge_invites;
+  v_row public.challenge_members;
+begin
+  select * into v_inv from public.challenge_invites i where i.code = p_code and i.revoked_at is null;
+  if not found or app.is_blocked(p_user, v_inv.inviter_id)
+     or not app.is_active_member(v_inv.inviter_id, v_inv.challenge_id) then
+    raise exception 'Davet linki geçersiz' using errcode = 'P0002';
+  end if;
+  perform app.assert_challenge_open(p_user, v_inv.challenge_id, p_at);
+
+  select * into v_row from public.challenge_members m
+  where m.challenge_id = v_inv.challenge_id and m.user_id = p_user
+  for update;
+  if found and v_row.status = 'active' then
+    return v_row;
+  end if;
+
+  if app.active_member_count(v_inv.challenge_id) >= app.max_members() then
+    raise exception 'Grup dolu' using errcode = 'P0001';
+  end if;
+
+  insert into public.challenge_members (challenge_id, user_id, status, invited_by, invite_code, joined_at, joined_on)
+  values (v_inv.challenge_id, p_user, 'active', v_inv.inviter_id, v_inv.code, p_at, app.local_date(p_user, p_at))
+  on conflict (challenge_id, user_id) do update
+    set status = 'active', invited_by = excluded.invited_by, invite_code = excluded.invite_code,
+        joined_at = excluded.joined_at, joined_on = excluded.joined_on, left_on = null
+  returning * into v_row;
+  return v_row;
+end
+$$;
+
+create function public.join_challenge_by_invite(p_code text) returns public.challenge_members
+language sql security definer set search_path = '' as $$
+  select * from app.do_join_by_invite(app.require_user(), p_code, now())
+$$;
+
+-- İşaretleme --------------------------------------------------------------------------------
+
+create function app.do_checkin(
+  p_user uuid, p_challenge uuid, p_value numeric, p_photo_path text, p_note text,
+  p_local_date date, p_at timestamptz
+) returns public.checkins
+language plpgsql security definer set search_path = '' as $$
+declare
+  v_c public.challenges;
+  v_open date[] := app.open_dates(p_user, p_at);
+  v_day date := coalesce(p_local_date, v_open[1]);
+  v_range record;
+  v_row public.checkins;
+begin
+  if not app.is_active_member(p_user, p_challenge) then
+    raise exception 'Bu challenge''da değilsin' using errcode = '42501';
+  end if;
+  if not (v_day = any (v_open)) then
+    raise exception 'Bu gün artık işaretlenemez' using errcode = 'P0001';
+  end if;
+
+  select * into v_range from app.member_range(p_user, p_challenge);
+  if v_day < v_range.range_start or v_day > v_range.range_end then
+    raise exception 'Challenge bu gün sürmüyor' using errcode = 'P0001';
+  end if;
+
+  select * into v_c from public.challenges c where c.id = p_challenge;
+  case v_c.task_type
+    when 'check' then
+      if p_value is not null or p_photo_path is not null then
+        raise exception 'Bu görev tek dokunuşla işaretlenir' using errcode = '22023';
+      end if;
+    when 'number' then
+      if p_value is null or p_value < 0 or (v_c.number_max is not null and p_value > v_c.number_max) then
+        raise exception 'Geçersiz değer' using errcode = '22023';
+      end if;
+      if p_photo_path is not null then
+        raise exception 'Bu görev sayı ile işaretlenir' using errcode = '22023';
+      end if;
+    when 'photo' then
+      if p_photo_path is null or p_photo_path not like p_user::text || '/' || p_challenge::text || '/%' then
+        raise exception 'Fotoğraf kanıtı gerekli' using errcode = '22023';
+      end if;
+      if p_value is not null then
+        raise exception 'Bu görev fotoğrafla işaretlenir' using errcode = '22023';
+      end if;
+  end case;
+
+  -- Aynı gün tekrar gönderilirse (çevrimdışı kuyruk, değer düzeltme) günceller
+  insert into public.checkins (user_id, challenge_id, local_date, value, photo_path, note, created_at)
+  values (p_user, p_challenge, v_day, p_value, p_photo_path, nullif(btrim(p_note), ''), p_at)
+  on conflict (user_id, challenge_id, local_date) do update
+    set value = excluded.value, photo_path = excluded.photo_path, note = excluded.note
+  returning * into v_row;
+  return v_row;
+end
+$$;
+
+create function public.checkin(
+  p_challenge uuid,
+  p_value numeric default null,
+  p_photo_path text default null,
+  p_note text default null,
+  p_local_date date default null
+) returns public.checkins
+language sql security definer set search_path = '' as $$
+  select * from app.do_checkin(app.require_user(), p_challenge, p_value, p_photo_path, p_note, p_local_date, now())
+$$;
+
+create function app.do_undo_checkin(p_user uuid, p_challenge uuid, p_local_date date, p_at timestamptz)
+returns boolean
+language plpgsql security definer set search_path = '' as $$
+declare
+  v_open date[] := app.open_dates(p_user, p_at);
+  v_day date := coalesce(p_local_date, v_open[1]);
+begin
+  if not (v_day = any (v_open)) then
+    raise exception 'Geçmiş günler değiştirilemez' using errcode = 'P0001';
+  end if;
+  delete from public.checkins k
+  where k.user_id = p_user and k.challenge_id = p_challenge and k.local_date = v_day;
+  return found;
+end
+$$;
+
+create function public.undo_checkin(p_challenge uuid, p_local_date date default null) returns boolean
+language sql security definer set search_path = '' as $$
+  select app.do_undo_checkin(app.require_user(), p_challenge, p_local_date, now())
+$$;
+
+-- Seri kurtarma ----------------------------------------------------------------------------------
+
+-- Ücretsiz hak (ayda 1). Reklamla kurtarma yalnızca sunucuda doğrulanmış ödülle (grant_ad_rescue).
+create function public.rescue_streak(p_challenge uuid, p_missed_date date) returns public.streak_rescues
+language sql security definer set search_path = '' as $$
+  select * from app.apply_rescue(app.require_user(), p_challenge, p_missed_date, 'free', null, now())
+$$;
+
+-- AdMob sunucu doğrulamasından (SSV) sonra Edge Function çağırır; yalnızca service role.
+create function public.grant_ad_rescue(
+  p_user uuid, p_challenge uuid, p_missed_date date, p_ad_reward_id text
+) returns public.streak_rescues
+language plpgsql security definer set search_path = '' as $$
+begin
+  if p_ad_reward_id is null or char_length(p_ad_reward_id) < 8 then
+    raise exception 'Geçersiz ödül kimliği' using errcode = '22023';
+  end if;
+  return app.apply_rescue(p_user, p_challenge, p_missed_date, 'ad', p_ad_reward_id, now());
+end
+$$;
