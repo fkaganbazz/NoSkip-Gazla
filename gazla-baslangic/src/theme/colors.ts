@@ -48,6 +48,10 @@ export const palette = {
   darkActionText: '#8BE0AE', // TabBar koyu: aktif sekme metni
   darkActionTint: '#1F4D33', // TabBar koyu: aktif sekme hapı
 
+  // ALT MENÜ — Tokens'ta yok, TabBar.dc.html'den
+  fabShadow: '#0E0820', // TabBar açık: + butonunun gölgesi
+  darkTabBar: '#1D1233', // TabBar koyu: menü zemini
+
   white: '#FFFFFF',
 } as const;
 

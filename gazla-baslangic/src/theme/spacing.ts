@@ -47,3 +47,9 @@ export const borderWidth = {
   thin: 1,
   thick: 2,
 } as const;
+
+/** İkon ölçüleri — kapat butonu: Create.dc.html (18, çizgi 2.8) */
+export const iconMetrics = {
+  closeSize: 18,
+  closeStrokeWidth: 2.8,
+} as const;

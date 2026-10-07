@@ -10,6 +10,11 @@ import { fontAssets, useTheme } from '@/theme';
 // Fontlar yüklenene kadar açılış ekranı açık kalsın.
 SplashScreen.preventAutoHideAsync();
 
+// Derin bağlantıyla doğrudan /create açılsa da altında sekmeler olsun.
+export const unstable_settings = {
+  anchor: '(tabs)',
+};
+
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts(fontAssets);
   const { colors } = useTheme();
@@ -35,8 +40,14 @@ export default function RootLayout() {
         screenOptions={{
           headerShown: false,
           contentStyle: { backgroundColor: colors.background },
-        }}
-      />
+        }}>
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen
+          name="create"
+          options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }}
+        />
+        <Stack.Screen name="dev" />
+      </Stack>
     </>
   );
 }

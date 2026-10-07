@@ -4,7 +4,8 @@ import { darkColors, lightColors, type ColorRoles } from './colors';
 
 export { darkColors, lightColors, palette, type ColorRoles } from './colors';
 export { dikenColors } from './diken';
-export { borderWidth, layout, radius, spacing } from './spacing';
+export { borderWidth, iconMetrics, layout, radius, spacing } from './spacing';
+export { tabBarColors, tabBarMetrics, type TabBarColors } from './tabBar';
 export { fontAssets, fonts, typography, type TypographyVariant } from './typography';
 
 export type ColorScheme = 'light' | 'dark';

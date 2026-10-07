@@ -70,6 +70,16 @@ export const typography = {
     fontFamily: fonts.extraBold,
     fontSize: 14,
   },
+  /** Alt menü etiketi · Nunito 700 · 12 (TabBar.dc.html); seçili sekmede `tabLabelActive` */
+  tabLabel: {
+    fontFamily: fonts.bold,
+    fontSize: 12,
+  },
+  /** Alt menü seçili sekme etiketi · Nunito 800 · 12 */
+  tabLabelActive: {
+    fontFamily: fonts.extraBold,
+    fontSize: 12,
+  },
   /** Etiket · Nunito 800 · 13 · letter-spacing 0.6 — "BUGÜN BEKLEYENLER · 2" */
   label: {
     fontFamily: fonts.extraBold,
