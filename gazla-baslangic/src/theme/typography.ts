@@ -71,6 +71,47 @@ export const typography = {
     fontSize: 15,
     lineHeight: lineHeight(15, 1.45),
   },
+  // Ekranlarda sık geçen Nunito stilleri (boyut · ağırlık)
+  /** Nunito 800 · 15 — görev başlığı, liste satırı */
+  bodyStrong: {
+    fontFamily: fonts.extraBold,
+    fontSize: 15,
+  },
+  /** Nunito 700 · 14 — tarih, açıklama satırı */
+  caption: {
+    fontFamily: fonts.bold,
+    fontSize: 14,
+  },
+  /** Nunito 800 · 14 — bölüm sağındaki sayaç, vurgulu kısa metin */
+  captionStrong: {
+    fontFamily: fonts.extraBold,
+    fontSize: 14,
+  },
+  /** Nunito 700 · 13 — kart alt bilgisi ("Gün 12/30 · Grup 4 kişi") */
+  meta: {
+    fontFamily: fonts.bold,
+    fontSize: 13,
+  },
+  /** Nunito 800 · 13 — kısa vurgulu etiket (arkadaş adı, "1/3 su") */
+  metaStrong: {
+    fontFamily: fonts.extraBold,
+    fontSize: 13,
+  },
+  /** Nunito 800 · 12 — küçük hap ("Dürt") */
+  smallStrong: {
+    fontFamily: fonts.extraBold,
+    fontSize: 12,
+  },
+  /** Nunito 800 · 11 — sayı rozeti */
+  micro: {
+    fontFamily: fonts.extraBold,
+    fontSize: 11,
+  },
+  /** Bölüm başlığı · Baloo 2 800 · 21, satır yüksekliği normal ("Bugünkü görevler") */
+  sectionTitle: {
+    fontFamily: fonts.heading,
+    fontSize: 21,
+  },
   /** Çip · Nunito 800 · 14 (Components.dc.html) */
   chip: {
     fontFamily: fonts.extraBold,

@@ -12,6 +12,7 @@ import {
 import { useContext } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { FlatShadowUnderlay, flatShadowStyle } from '@/components/FlatShadow';
 import { PlusIcon } from '@/components/icons';
 import { borderWidth, tabBarColors, tabBarMetrics as m, typography, useTheme } from '@/theme';
 
@@ -21,9 +22,6 @@ const ROW_HEIGHT = m.height - borderWidth.thin - m.paddingTop - m.paddingBottom;
 const FAB_OUTER = m.fabSize + m.fabBorderWidth * 2;
 /** + butonu ızgaradaki üçüncü sütun */
 const FAB_COLUMN = 2;
-/** RN boxShadow Android 9 (API 28) altında çizilmiyor; orada düz gölge arkadaki bir View ile çizilir. */
-const SHADOW_AS_VIEW =
-  Platform.OS === 'android' && typeof Platform.Version === 'number' && Platform.Version < 28;
 
 /** `href: null` ile gizlenen rotalar (expo-router bunu tabBarItemStyle/tabBarButton'a çevirir) */
 function isHidden(options: BottomTabNavigationOptions) {
@@ -107,9 +105,12 @@ export default function TabBar({ state, descriptors, navigation, insets }: Botto
       {/* + butonu sekme listesinin dışında (tablist yalnızca sekme içerir), ortadaki sütunun üstünde. */}
       <View style={styles.fabOverlay}>
         <View style={styles.fabFrame}>
-          {SHADOW_AS_VIEW && (
-            <View style={[styles.fabShadow, { backgroundColor: colors.fabShadow }]} />
-          )}
+          <FlatShadowUnderlay
+            offset={m.fabShadowOffset}
+            color={colors.fabShadow}
+            size={FAB_OUTER}
+            radius={FAB_OUTER / 2}
+          />
           <Pressable
             onPress={() => router.navigate('/create')}
             accessibilityRole="button"
@@ -118,7 +119,7 @@ export default function TabBar({ state, descriptors, navigation, insets }: Botto
               styles.fab,
               { backgroundColor: colors.fab, borderColor: colors.background },
               // Tasarım: box-shadow 0 4px 0 (düz alt gölge)
-              !SHADOW_AS_VIEW && { boxShadow: `0 ${m.fabShadowOffset}px 0 ${colors.fabShadow}` },
+              flatShadowStyle(m.fabShadowOffset, colors.fabShadow),
             ]}>
             <PlusIcon
               color={colors.fabIcon}
@@ -176,14 +177,6 @@ const styles = StyleSheet.create({
     width: FAB_OUTER,
     height: FAB_OUTER,
     marginTop: -m.fabLift,
-  },
-  fabShadow: {
-    position: 'absolute',
-    top: m.fabShadowOffset,
-    left: 0,
-    width: FAB_OUTER,
-    height: FAB_OUTER,
-    borderRadius: FAB_OUTER / 2,
   },
   fab: {
     width: FAB_OUTER,

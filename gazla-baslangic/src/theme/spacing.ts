@@ -30,6 +30,8 @@ export const radius = {
 export const layout = {
   /** Ekran kenar boşluğu · 20 */
   screenPadding: spacing.lg,
+  /** İçeriğin üst güvenli alandan uzaklığı · 9 (tasarımda üst boşluk 56; referans iPhone'da durum çubuğu 47) */
+  screenTopGap: 9,
   /** En küçük dokunma alanı · 44 */
   minTouchTarget: 44,
   /** Ana buton yüksekliği · 56 */
