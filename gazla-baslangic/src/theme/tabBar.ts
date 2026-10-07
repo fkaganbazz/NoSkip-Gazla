@@ -1,7 +1,7 @@
 /**
  * Alt menü token'ları — kaynak: design/TabBar.dc.html (390×88, açık/koyu).
  */
-import { palette } from './colors';
+import { darkColors, lightColors, palette } from './colors';
 
 export type TabBarColors = {
   /** Menü zemini; + butonunun kenar halkası da bu renk */
@@ -24,24 +24,24 @@ export type TabBarColors = {
 
 export const tabBarColors: Record<'light' | 'dark', TabBarColors> = {
   light: {
-    background: palette.card,
-    border: palette.line,
-    active: palette.actionGreen,
-    inactive: palette.ink500,
-    activePill: palette.green100,
-    fab: palette.nightPurple,
+    background: lightColors.surface,
+    border: lightColors.border,
+    active: lightColors.actionText,
+    inactive: lightColors.textSecondary,
+    activePill: lightColors.actionTint,
+    fab: lightColors.text,
     fabShadow: palette.fabShadow,
-    fabIcon: palette.sand,
+    fabIcon: lightColors.background,
   },
   dark: {
     background: palette.darkTabBar,
-    border: palette.darkLine,
-    active: palette.darkActionText,
-    inactive: palette.darkTextSecondary,
-    activePill: palette.darkActionTint,
-    fab: palette.darkAction,
-    fabShadow: palette.actionGreen,
-    fabIcon: palette.darkBackground,
+    border: darkColors.border,
+    active: darkColors.actionText,
+    inactive: darkColors.textSecondary,
+    activePill: darkColors.actionTint,
+    fab: darkColors.action,
+    fabShadow: darkColors.actionShadow,
+    fabIcon: darkColors.onAction,
   },
 };
 

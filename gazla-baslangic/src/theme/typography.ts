@@ -48,6 +48,12 @@ export const typography = {
     fontSize: 30,
     lineHeight: lineHeight(30, 1.1),
   },
+  /** Ekran başlığı · Baloo 2 800 · 26 · line-height 1.1 — Create, Garden, Detail… başlık satırları */
+  screenTitle: {
+    fontFamily: fonts.heading,
+    fontSize: 26,
+    lineHeight: lineHeight(26, 1.1),
+  },
   /** Başlık 2 · Baloo 2 800 · 21 — "Bugünkü görevler" */
   title2: {
     fontFamily: fonts.heading,

@@ -26,7 +26,7 @@ export default function CreateScreen() {
             strokeWidth={iconMetrics.closeStrokeWidth}
           />
         </Pressable>
-        <Text style={[typography.title1, styles.title, { color: colors.text }]}>Yeni challenge</Text>
+        <Text style={[typography.screenTitle, styles.title, { color: colors.text }]}>Yeni challenge</Text>
       </View>
       <Text style={[typography.body, styles.body, { color: colors.textBody }]}>
         Form sıradaki adımlarda Create.dc.html dosyasına göre uygulanacak.

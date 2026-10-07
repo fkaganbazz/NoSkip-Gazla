@@ -4,7 +4,12 @@
  * Sekme etiketleri `options.title`, ikonlar `options.tabBarIcon` ile (app/(tabs)/_layout.tsx).
  */
 import { useRouter } from 'expo-router';
-import type { BottomTabBarProps } from 'expo-router/js-tabs';
+import {
+  BottomTabBarHeightCallbackContext,
+  type BottomTabBarProps,
+  type BottomTabNavigationOptions,
+} from 'expo-router/js-tabs';
+import { useContext } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { PlusIcon } from '@/components/icons';
@@ -16,10 +21,19 @@ const ROW_HEIGHT = m.height - borderWidth.thin - m.paddingTop - m.paddingBottom;
 const FAB_OUTER = m.fabSize + m.fabBorderWidth * 2;
 /** + butonu ızgaradaki üçüncü sütun */
 const FAB_COLUMN = 2;
+/** RN boxShadow Android 9 (API 28) altında çizilmiyor; orada düz gölge arkadaki bir View ile çizilir. */
+const SHADOW_AS_VIEW =
+  Platform.OS === 'android' && typeof Platform.Version === 'number' && Platform.Version < 28;
+
+/** `href: null` ile gizlenen rotalar (expo-router bunu tabBarItemStyle/tabBarButton'a çevirir) */
+function isHidden(options: BottomTabNavigationOptions) {
+  return StyleSheet.flatten(options.tabBarItemStyle)?.display === 'none';
+}
 
 export default function TabBar({ state, descriptors, navigation, insets }: BottomTabBarProps) {
   const { scheme } = useTheme();
   const router = useRouter();
+  const onHeightChange = useContext(BottomTabBarHeightCallbackContext);
   const colors = tabBarColors[scheme];
 
   // iOS'ta alt güvenli alan yalnızca ev göstergesi; tasarımın 24'lük alt boşluğu onu karşılıyor.
@@ -27,8 +41,11 @@ export default function TabBar({ state, descriptors, navigation, insets }: Botto
   const paddingBottom =
     Platform.OS === 'android' ? Math.max(m.paddingBottom, insets.bottom) : m.paddingBottom;
 
-  const tabs = state.routes.map((route, index) => {
+  const tabs = state.routes.flatMap((route, index) => {
     const { options } = descriptors[route.key];
+    if (isHidden(options)) {
+      return [];
+    }
     const focused = state.index === index;
     const color = focused ? colors.active : colors.inactive;
     const label = options.title ?? route.name;
@@ -52,16 +69,21 @@ export default function TabBar({ state, descriptors, navigation, insets }: Botto
         key={route.key}
         onPress={onPress}
         onLongPress={onLongPress}
-        accessibilityRole="tab"
-        accessibilityState={{ selected: focused }}
+        // iOS'ta 'tab' rolünün karşılığı yok; kütüphanenin kendi sekme öğesi gibi button.
+        role={Platform.select({ ios: 'button', default: 'tab' })}
+        aria-selected={focused}
         accessibilityLabel={options.tabBarAccessibilityLabel ?? label}
+        accessibilityLargeContentTitle={label}
+        accessibilityShowsLargeContentViewer
         testID={options.tabBarButtonTestID}
         style={styles.tab}>
         <View style={[styles.pill, focused && { backgroundColor: colors.activePill }]}>
           {options.tabBarIcon?.({ focused, color, size: m.iconSize })}
         </View>
+        {/* Menü yüksekliği sabit (88); etiket sistem yazı boyutuyla büyümez.
+            iOS'ta uzun basınca büyük içerik görüntüleyici etiketi gösterir. */}
         <Text
-          numberOfLines={1}
+          allowFontScaling={false}
           style={[focused ? typography.tabLabelActive : typography.tabLabel, { color }]}>
           {label}
         </Text>
@@ -69,37 +91,42 @@ export default function TabBar({ state, descriptors, navigation, insets }: Botto
     );
   });
 
-  const fab = (
-    <View key="create" style={styles.fabColumn}>
-      <Pressable
-        onPress={() => router.push('/create')}
-        accessibilityRole="button"
-        accessibilityLabel="Yeni challenge oluştur"
-        style={[
-          styles.fab,
-          {
-            backgroundColor: colors.fab,
-            borderColor: colors.background,
-            boxShadow: `0 ${m.fabShadowOffset}px 0 ${colors.fabShadow}`,
-          },
-        ]}>
-        <PlusIcon color={colors.fabIcon} size={m.fabIconSize} strokeWidth={m.fabIconStrokeWidth} />
-      </Pressable>
-    </View>
-  );
-
   return (
     <View
-      accessibilityRole="tablist"
-      accessibilityLabel="Ana menü"
+      onLayout={(e) => onHeightChange?.(e.nativeEvent.layout.height)}
       style={[
         styles.bar,
         { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom },
       ]}>
-      <View style={styles.row}>
+      <View role="tablist" accessibilityLabel="Ana menü" style={styles.row}>
         {tabs.slice(0, FAB_COLUMN)}
-        {fab}
+        <View style={styles.fabColumn} />
         {tabs.slice(FAB_COLUMN)}
+      </View>
+
+      {/* + butonu sekme listesinin dışında (tablist yalnızca sekme içerir), ortadaki sütunun üstünde. */}
+      <View style={styles.fabOverlay}>
+        <View style={styles.fabFrame}>
+          {SHADOW_AS_VIEW && (
+            <View style={[styles.fabShadow, { backgroundColor: colors.fabShadow }]} />
+          )}
+          <Pressable
+            onPress={() => router.navigate('/create')}
+            accessibilityRole="button"
+            accessibilityLabel="Yeni challenge oluştur"
+            style={[
+              styles.fab,
+              { backgroundColor: colors.fab, borderColor: colors.background },
+              // Tasarım: box-shadow 0 4px 0 (düz alt gölge)
+              !SHADOW_AS_VIEW && { boxShadow: `0 ${m.fabShadowOffset}px 0 ${colors.fabShadow}` },
+            ]}>
+            <PlusIcon
+              color={colors.fabIcon}
+              size={m.fabIconSize}
+              strokeWidth={m.fabIconStrokeWidth}
+            />
+          </Pressable>
+        </View>
       </View>
     </View>
   );
@@ -132,12 +159,35 @@ const styles = StyleSheet.create({
   },
   fabColumn: {
     flex: 1,
+  },
+  // Satırla aynı kutu; menü simetrik olduğundan satırın ortası ortadaki sütunun ortası.
+  fabOverlay: {
+    position: 'absolute',
+    top: m.paddingTop,
+    left: m.paddingHorizontal,
+    right: m.paddingHorizontal,
+    height: ROW_HEIGHT,
     alignItems: 'center',
+    justifyContent: 'center',
+    pointerEvents: 'box-none',
+  },
+  // Tasarımdaki gibi: margin kutusu (64 − 30) satırda ortalanır, buton 30 yukarı taşar.
+  fabFrame: {
+    width: FAB_OUTER,
+    height: FAB_OUTER,
+    marginTop: -m.fabLift,
+  },
+  fabShadow: {
+    position: 'absolute',
+    top: m.fabShadowOffset,
+    left: 0,
+    width: FAB_OUTER,
+    height: FAB_OUTER,
+    borderRadius: FAB_OUTER / 2,
   },
   fab: {
     width: FAB_OUTER,
     height: FAB_OUTER,
-    marginTop: -m.fabLift,
     borderRadius: FAB_OUTER / 2,
     borderWidth: m.fabBorderWidth,
     alignItems: 'center',

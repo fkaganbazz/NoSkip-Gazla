@@ -1,8 +1,13 @@
-import { Tabs } from 'expo-router/js-tabs';
+import { Tabs, type BottomTabNavigationOptions } from 'expo-router/js-tabs';
+import type { ComponentType } from 'react';
 
 import TabBar from '@/components/TabBar';
-import { CompassIcon, FriendsIcon, HomeIcon, SproutIcon } from '@/components/icons';
+import { CompassIcon, FriendsIcon, HomeIcon, SproutIcon, type IconProps } from '@/components/icons';
 import { tabBarMetrics, useTheme } from '@/theme';
+
+const tabIcon =
+  (Icon: ComponentType<IconProps>): BottomTabNavigationOptions['tabBarIcon'] =>
+  ({ color, size }) => <Icon color={color} size={size} strokeWidth={tabBarMetrics.iconStrokeWidth} />;
 
 // Sekmeler: Bugün, Keşfet, (ortada + → /create), Arkadaşlar, Bahçem. Görünüm: design/TabBar.dc.html.
 export default function TabsLayout() {
@@ -17,39 +22,19 @@ export default function TabsLayout() {
       }}>
       <Tabs.Screen
         name="index"
-        options={{
-          title: 'Bugün',
-          tabBarIcon: ({ color }) => (
-            <HomeIcon color={color} size={tabBarMetrics.iconSize} strokeWidth={tabBarMetrics.iconStrokeWidth} />
-          ),
-        }}
+        options={{ title: 'Bugün', tabBarIcon: tabIcon(HomeIcon) }}
       />
       <Tabs.Screen
         name="explore"
-        options={{
-          title: 'Keşfet',
-          tabBarIcon: ({ color }) => (
-            <CompassIcon color={color} size={tabBarMetrics.iconSize} strokeWidth={tabBarMetrics.iconStrokeWidth} />
-          ),
-        }}
+        options={{ title: 'Keşfet', tabBarIcon: tabIcon(CompassIcon) }}
       />
       <Tabs.Screen
         name="friends"
-        options={{
-          title: 'Arkadaşlar',
-          tabBarIcon: ({ color }) => (
-            <FriendsIcon color={color} size={tabBarMetrics.iconSize} strokeWidth={tabBarMetrics.iconStrokeWidth} />
-          ),
-        }}
+        options={{ title: 'Arkadaşlar', tabBarIcon: tabIcon(FriendsIcon) }}
       />
       <Tabs.Screen
         name="garden"
-        options={{
-          title: 'Bahçem',
-          tabBarIcon: ({ color }) => (
-            <SproutIcon color={color} size={tabBarMetrics.iconSize} strokeWidth={tabBarMetrics.iconStrokeWidth} />
-          ),
-        }}
+        options={{ title: 'Bahçem', tabBarIcon: tabIcon(SproutIcon) }}
       />
     </Tabs>
   );

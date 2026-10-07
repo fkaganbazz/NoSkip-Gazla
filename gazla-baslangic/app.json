@@ -36,6 +36,12 @@
             "backgroundColor": "#150E26"
           }
         }
+      ],
+      [
+        "expo-navigation-bar",
+        {
+          "enforceContrast": false
+        }
       ]
     ],
     "experiments": {

@@ -1,4 +1,5 @@
 import { useFonts } from 'expo-font';
+import { NavigationBar } from 'expo-navigation-bar';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -36,6 +37,8 @@ export default function RootLayout() {
   return (
     <>
       <StatusBar style="auto" />
+      {/* Android: gezinme çubuğu tuşları açık/koyu temayla birlikte değişsin (menü çubuğun altına uzanıyor). */}
+      <NavigationBar style="auto" />
       <Stack
         screenOptions={{
           headerShown: false,
