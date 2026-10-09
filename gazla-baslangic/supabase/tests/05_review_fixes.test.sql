@@ -10,7 +10,7 @@
 --
 -- Run:  supabase test db   (or the local testbed: ./test.sh supabase/tests/05_review_fixes.test.sql)
 begin;
-select plan(95);
+select plan(100);
 -- This file tests behaviour, not privileges (01_rls_privileges does).
 grant execute on all functions in schema app to authenticated;
 
@@ -539,6 +539,30 @@ select results_eq(
   format($$select local_date from app.today_tasks(%L, '2026-09-11 02:00+03')$$, :'gu'),
   $$values ('2026-09-11'::date)$$,
   'from 02:00 only today');
+
+-- Clocks falling back over midnight (Azores 2026-10-25, Havana 2026-11-01): the day still closes
+-- exactly when it stops being open, so there is no hour where it can be neither checked nor rescued
+select pg_temp.mk_user('tz_azores', 'Atlantic/Azores') as taz \gset
+select pg_temp.mk_user('tz_havana', 'America/Havana') as thv \gset
+select ok(('2026-10-24'::date = any (app.open_dates(:'taz', app.day_closes_at(:'taz', '2026-10-24') - interval '1 microsecond')))
+          and not ('2026-10-24'::date = any (app.open_dates(:'taz', app.day_closes_at(:'taz', '2026-10-24')))),
+  'Azores: day close and open days agree on the fall-back night');
+select ok(('2026-10-31'::date = any (app.open_dates(:'thv', app.day_closes_at(:'thv', '2026-10-31') - interval '1 microsecond')))
+          and not ('2026-10-31'::date = any (app.open_dates(:'thv', app.day_closes_at(:'thv', '2026-10-31')))),
+  'Havana: day close and open days agree on the fall-back night');
+
+-- A day under the timezone floor counts as closed everywhere: not listed, breaks, rescuable
+select pg_temp.mk_user('floor_u') as flu \gset
+select pg_temp.mk_ch('Taban', '2026-09-01', 30) as ch_floor \gset
+select pg_temp.add_member(:'ch_floor', :'flu', '2026-09-01') as _x \gset
+select pg_temp.ci(:'flu', :'ch_floor', '2026-09-01', '2026-09-09') as _x \gset
+update public.user_settings set timezone = 'America/New_York' where user_id = :'flu';
+update public.user_settings set checkin_floor = '2026-09-11' where user_id = :'flu';
+select is_empty(format($$select 1 from app.today_tasks(%L, '2026-09-11 03:00+03')$$, :'flu'),
+  'New York 09-10 is below the floor: no uncheckable task is offered');
+select is(app.user_streak(:'flu', '2026-09-11 03:00+03'), 0, 'the missed day under the floor already breaks the streak');
+select results_eq(format($$select missed_date, streak_before from app.pending_rescues(%L, '2026-09-11 03:00+03')$$, :'flu'),
+  $$values ('2026-09-10'::date, 9)$$, 'and its rescue is offered right away');
 
 select * from finish();
 rollback;

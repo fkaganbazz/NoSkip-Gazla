@@ -143,11 +143,29 @@ language sql stable set search_path = '' as $$
   select (p_at at time zone app.user_timezone(p_user))::date
 $$;
 
+-- Yerel günün başladığı an (o günün ilk anı). PostgreSQL belirsiz duvar saatini (saat geri
+-- alınırken iki kez yaşanan saat) SONRAKİ ana çevirir; saatin gece yarısının üstünden geri alındığı
+-- bölgelerde (America/Havana, Atlantic/Azores) gün ÖNCEKİ 00:00'da başlar: 00:00'ı bir gün önceki
+-- farkla oku ve gerçekten o günün 00:00'ını gösteriyor ve daha erkense onu al.
+create function app.local_day_start(p_tz text, p_day date) returns timestamptz
+language sql stable set search_path = '' as $$
+  with t as (select p_day::timestamp at time zone p_tz as later),
+  e as (
+    select t.later,
+           (p_day::timestamp - (((t.later - interval '1 day') at time zone p_tz)
+                                - ((t.later - interval '1 day') at time zone 'UTC'))) at time zone 'UTC' as earlier
+    from t
+  )
+  select case when e.earlier < e.later and (e.earlier at time zone p_tz) = p_day::timestamp
+              then e.earlier else e.later end
+  from e
+$$;
+
 -- Bir günün kapandığı an: ertesi günün yerel gece yarısından 2 saat (geçen süre) sonra.
 -- Geçen süreyle tanımlı olduğu için yaz saati gecelerinde de tam 2 saattir.
 create function app.day_closes_at(p_user uuid, p_day date) returns timestamptz
 language sql stable set search_path = '' as $$
-  select ((p_day + 1)::timestamp at time zone app.user_timezone(p_user)) + app.grace_period()
+  select app.local_day_start(app.user_timezone(p_user), p_day + 1) + app.grace_period()
 $$;
 
 -- Hâlâ işaretlenebilen günler (yeniden eskiye): bugün ve kapanmamışsa dün.
@@ -172,6 +190,14 @@ language sql stable security definer set search_path = '' as $$
                         '-infinity'::date)
     order by d desc
   )
+$$;
+
+-- Bundan sonra işaretlenebilecek ilk gün (katılma günü): bugün; saat dilimi tabanı bugünden
+-- ilerideyse (bugün eski dilimde kapanmışsa) taban
+create function app.first_checkin_date(p_user uuid, p_at timestamptz) returns date
+language sql stable security definer set search_path = '' as $$
+  select greatest(app.local_date(p_user, p_at),
+                  (select s.checkin_floor from public.user_settings s where s.user_id = p_user))
 $$;
 
 -- RLS ---------------------------------------------------------------------------------------

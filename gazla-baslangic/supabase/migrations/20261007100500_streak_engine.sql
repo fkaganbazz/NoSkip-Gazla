@@ -68,7 +68,7 @@ language sql stable security definer set search_path = '' as $$
   with r as (select * from app.member_range(p_user, p_challenge)),
   t as (
     select least(app.local_date(p_user, p_at), r.range_end) as anchor,
-           app.open_dates(p_user, p_at) as open
+           app.checkin_dates(p_user, p_at) as open
     from r
   ),
   days as materialized (
@@ -101,7 +101,8 @@ language sql stable security definer set search_path = '' as $$
     join public.challenges c on c.id = m.challenge_id
     where m.user_id = p_user and m.status in ('active', 'left') and m.joined_on is not null
   ),
-  t as materialized (select app.local_date(p_user, p_at) as today, app.open_dates(p_user, p_at) as open),
+  -- Açık gün: hâlâ işaretlenebilen gün (saat dilimi tabanının altındaki gün kapanmış sayılır)
+  t as materialized (select app.local_date(p_user, p_at) as today, app.checkin_dates(p_user, p_at) as open),
   days as (
     select g::date as day, g::date = any (t.open) as is_open
     from t, generate_series((select min(s) from ranges), t.today, interval '1 day') as g
@@ -182,11 +183,13 @@ $$;
 create function app.pending_rescues(p_user uuid, p_at timestamptz)
 returns table (challenge_id uuid, missed_date date, streak_before integer, expires_at timestamptz)
 language sql stable security definer set search_path = '' as $$
+  -- Kapanmış = artık işaretlenemeyen: kapanış anı geçmiş ya da saat dilimi tabanının altında
+  -- (taban bugünü de kapatabilir)
   with t as (
     select x.d, app.day_closes_at(p_user, x.d) + app.rescue_window() as expires_at
-    from (select app.local_date(p_user, p_at) as today) as l
-    cross join lateral unnest(array[l.today - 1, l.today - 2]) as x(d)
-    where app.day_closes_at(p_user, x.d) <= p_at
+    from (select app.local_date(p_user, p_at) as today, app.checkin_dates(p_user, p_at) as checkable) as l
+    cross join lateral unnest(array[l.today, l.today - 1, l.today - 2]) as x(d)
+    where not (x.d = any (l.checkable))
       and p_at < app.day_closes_at(p_user, x.d) + app.rescue_window()
   ),
   candidates as (
@@ -200,12 +203,20 @@ language sql stable security definer set search_path = '' as $$
       and not exists (select 1 from public.streak_rescues r
                       where r.user_id = p_user and r.challenge_id = m.challenge_id
                         and r.rescued_date = t.d - 1)
-  )
+  ),
+  s as materialized (select * from app.user_day_status(p_user, p_at))
   select x.challenge_id, x.d, x.run, x.expires_at
   from (
     select c.challenge_id, c.d, c.expires_at,
+           -- İlk gün: d'den önce biten genel seri (d − 1 kapandığı andaki genel seri). d'den önceki
+           -- günler kapanmış olduğundan her eksik gün kırılmadır; d'nin kendisi hesaba girmez.
            case when c.d = c.first_day
-                then app.user_streak(p_user, app.day_closes_at(p_user, c.d - 1))
+                then (select count(*)::int from s
+                      where s.day < c.d and s.required > 0 and s.covered = s.required
+                        and s.day > coalesce((select max(b.day) from s b
+                                              where b.day < c.d and b.required > 0
+                                                and b.covered < b.required),
+                                             '-infinity'::date))
                 else app.covered_run_ending(p_user, c.challenge_id, c.d - 1) end as run
     from candidates c
   ) as x

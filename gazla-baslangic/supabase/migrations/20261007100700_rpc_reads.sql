@@ -342,8 +342,8 @@ language sql stable security definer set search_path = '' as $$
      and (
        select count(*) from public.notifications n
        where n.recipient_id = p_user and n.actor_id is null
-         and n.pushed_at >= (t.local_ts::date::timestamp at time zone t.tz)
-         and n.pushed_at < ((t.local_ts::date + 1)::timestamp at time zone t.tz)
+         and n.pushed_at >= app.local_day_start(t.tz, t.local_ts::date)
+         and n.pushed_at < app.local_day_start(t.tz, t.local_ts::date + 1)
      ) < app.diken_daily_limit()
   from t
 $$;

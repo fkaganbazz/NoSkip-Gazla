@@ -20,7 +20,7 @@ tablolara yalnızca politikası olan yerlerde doğrudan dokunur, geri kalan her 
 | `20261007100800_storage.sql` | `proofs` (özel) ve `avatars` (açık) kovaları, Storage politikaları |
 | `20261007100900_reference_data.sql` | 12 hazır dürtme mesajı, 8 challenge şablonu (prod'da da gerekli) |
 
-Testler (`tests/`, pgTAP, 970 doğrulama):
+Testler (`tests/`, pgTAP, 975 doğrulama):
 
 | Dosya | Kapsam |
 |---|---|
@@ -46,7 +46,7 @@ fonksiyonlarını kullanır (`tests.create_supabase_user`, `tests.authenticate_a
 verisini oluşturur ve `rollback` ile geri alır.
 
 Bu şema ve testler PostgreSQL 16 üzerinde, Supabase rolleri, `auth` ve `storage` şemalarıyla aynı
-davranan bir test ortamında doğrulandı (970/970). Gerçek Supabase'de ilk `supabase test db`
+davranan bir test ortamında doğrulandı (975/975). Gerçek Supabase'de ilk `supabase test db`
 çalıştırmasında farklılık çıkarsa önce Storage tablolarına doğrudan yazan testlere bakın (Storage
 sürümleri `storage.objects` üzerinde ek tetikleyiciler getirebiliyor).
 
@@ -59,12 +59,14 @@ zamanlanmış işler içindir, API rollerine kapalıdır.
 ### Yerel gün ve tolerans
 - Her kullanıcının saat dilimi `user_settings.timezone` (varsayılan `Europe/Istanbul`).
 - Gün `d`, ertesi günün yerel gece yarısından **2 saat sonra** kapanır (`app.day_closes_at`). Süre
-  geçen zamanla ölçülür; yaz saati gecelerinde de tam 2 saattir.
+  geçen zamanla ölçülür; yaz saati gecelerinde de tam 2 saattir. Saatin gece yarısının üstünden
+  geri alındığı bölgelerde gün ilk 00:00'da başlar (`app.local_day_start`).
 - İşaretlenebilen günler `app.open_dates`: bugün, gün kapanmadıysa dün. Yarın işaretlenemez.
   `my_today` her işaretlenebilen gün için satır döner: 00:00–02:00 arası dünün görevleri de
   (`local_date` = dün) listelenir; istemci işaretlerken `p_local_date` gönderir.
 - Saat dilimi değişince eski dilimde kapanmış günler yeniden açılmaz (`user_settings.checkin_floor`).
-  Bu taban yalnızca işaretleme ve geri almayı etkiler (`app.checkin_dates`).
+  Tabanın altındaki gün her yerde kapanmış sayılır (`app.checkin_dates`): işaretlenemez, Bugün'de
+  listelenmez, kapsanmadıysa seriyi bozar ve kurtarması hemen açılır. Katılma günü de en erken taban.
 
 ### Seri (CLAUDE.md: "Seri hesabı sunucuda")
 - Kapsanan gün: o challenge için işaretleme ya da kurtarma olan gün. Sayı görevinde hedefin altı da
@@ -248,9 +250,5 @@ Tasarımda ya da CLAUDE.md'de açık olmayan noktalarda verilen kararlar:
 - Aynı cihazda başka hesapla `register_push_token` çağrılırsa token yeni hesaba geçer (cihaz el
   değiştirince doğru davranış). Çıkışta istemci kendi token satırını silmeli.
 - `template_stats` "şu an yapıyor" sayısını sunucu gününe göre (±1 gün) hesaplar.
-- Gece yarısı yaz saati geçişi yapan bölgelerde (ör. America/Havana) yılda bir gece 1 saat boyunca
-  bir gün ne işaretlenebilir ne kurtarılabilir.
-- Saat dilimi değişikliğinden hemen sonra tabanın altında kalan gün birkaç saat Bugün'de görünmez,
-  seri motoru onu yeni dilimde kapanana kadar açık sayar; kapanınca normal kurtarma akışı başlar.
 - Storage dosya adlarını uygulama üretir (`{uuid}.jpg` gibi; harf, rakam, `.`, `_`, `-`); galeri
   dosya adıyla yükleme reddedilir.

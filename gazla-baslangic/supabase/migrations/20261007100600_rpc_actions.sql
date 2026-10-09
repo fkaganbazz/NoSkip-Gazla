@@ -239,8 +239,8 @@ begin
   if (
     select count(*) from app.poke_log l
     where l.sender_id = p_sender and l.recipient_id = p_recipient
-      and l.created_at >= (v_day::timestamp at time zone v_tz)
-      and l.created_at < ((v_day + 1)::timestamp at time zone v_tz)
+      and l.created_at >= app.local_day_start(v_tz, v_day)
+      and l.created_at < app.local_day_start(v_tz, v_day + 1)
   ) >= app.poke_daily_limit() then
     raise exception 'Bugün bu kişiyi yeterince dürttün' using errcode = 'P0001';
   end if;
@@ -422,7 +422,8 @@ $$;
 create function app.assert_challenge_open(p_user uuid, p_challenge uuid, p_at timestamptz) returns void
 language plpgsql stable security definer set search_path = '' as $$
 begin
-  if (select c.end_date from public.challenges c where c.id = p_challenge) < app.local_date(p_user, p_at) then
+  -- Kullanıcının işaretleyebileceği gün kalmadıysa (saat dilimi tabanı dahil) bitmiş sayılır
+  if (select c.end_date from public.challenges c where c.id = p_challenge) < app.first_checkin_date(p_user, p_at) then
     raise exception 'Bu challenge bitti' using errcode = 'P0001';
   end if;
 end
@@ -572,7 +573,7 @@ begin
   end if;
 
   insert into public.challenge_members (challenge_id, user_id, role, status, joined_at, joined_on)
-  values (v_row.id, p_user, 'owner', 'active', p_at, v_today);
+  values (v_row.id, p_user, 'owner', 'active', p_at, app.first_checkin_date(p_user, p_at));
 
   if coalesce(array_length(p_invitees, 1), 0) > 0 then
     perform app.do_invite(p_user, v_row.id, p_invitees, p_at);
@@ -635,7 +636,7 @@ begin
     end if;
     perform app.assert_can_take_challenge(p_user, p_at);
     update public.challenge_members m
-    set status = 'active', joined_at = p_at, joined_on = app.local_date(p_user, p_at)
+    set status = 'active', joined_at = p_at, joined_on = app.first_checkin_date(p_user, p_at)
     where m.challenge_id = p_challenge and m.user_id = p_user
     returning * into v_row;
   else
@@ -786,7 +787,7 @@ begin
 
   -- Yeni üye ya da bekleyen/reddedilmiş davetli
   insert into public.challenge_members (challenge_id, user_id, status, invited_by, joined_at, joined_on)
-  values (v_inv.challenge_id, p_user, 'active', v_inv.inviter_id, p_at, app.local_date(p_user, p_at))
+  values (v_inv.challenge_id, p_user, 'active', v_inv.inviter_id, p_at, app.first_checkin_date(p_user, p_at))
   on conflict (challenge_id, user_id) do update
     set status = 'active', invited_by = excluded.invited_by,
         joined_at = excluded.joined_at, joined_on = excluded.joined_on
