@@ -37,6 +37,10 @@ revoke all on app.friend_request_log from public, anon, authenticated;
 create table public.blocks (
   blocker_id uuid not null references public.profiles (id) on delete cascade,
   blocked_id uuid not null references public.profiles (id) on delete cascade,
+  -- Engelleme anında engelleyen bu profili görebiliyor muydu (arkadaşlık satırı, ortak challenge ya
+  -- da aramada bulunabilir). Engellenenler listesi yalnızca bunları gösterir: rastgele bir uuid'i
+  -- engelleyerek profil okunamasın. Tetikleyici doldurur; istemcinin verdiği değer yok sayılır.
+  profile_visible boolean not null default false,
   created_at timestamptz not null default now(),
   primary key (blocker_id, blocked_id),
   constraint blocks_not_self check (blocker_id <> blocked_id)
@@ -95,8 +99,28 @@ create trigger blocks_after_insert
   after insert on public.blocks
   for each row execute function app.blocks_after_insert();
 
+-- profile_visible: karşı taraf zaten engellediyse (geri engelleme) görünmez. Arkadaşlık bu
+-- tetikleyiciden sonra (AFTER) silinir. app.are_co_members sonraki migration'da oluşur.
+create function app.blocks_before_insert() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  new.profile_visible := not app.is_blocked(new.blocker_id, new.blocked_id) and (
+    app.has_friendship_row(new.blocker_id, new.blocked_id)
+    or app.are_co_members(new.blocker_id, new.blocked_id)
+    or coalesce((select s.discoverability from public.user_settings s where s.user_id = new.blocked_id),
+                'everyone') = 'everyone'
+  );
+  return new;
+end
+$$;
+
+create trigger blocks_before_insert
+  before insert on public.blocks
+  for each row execute function app.blocks_before_insert();
+
 -- Şikayet ----------------------------------------------------------------------------------
--- Raporlar hesap silinse de moderasyon için anonimleşerek kalır (kişi alanları null olur).
+-- Raporlar hesap silinse de moderasyon için anonimleşerek kalır: kişi alanları null olur; şikayet
+-- edilen silinirse kanıttaki kişisel veriler (kullanıcı adı, ad, avatar, not, fotoğraf yolu) de silinir.
 
 create table public.reports (
   id uuid primary key default gen_random_uuid(),
@@ -122,6 +146,27 @@ create table public.reports (
 comment on table public.reports is 'Şikayetler; ekip 24 saat içinde inceler. Kullanıcılar okuyamaz.';
 
 create index reports_pending_idx on public.reports (review_due_at) where status = 'pending';
+-- submit_report sınırı ve yinelenen şikayet kontrolü
+create index reports_reporter_idx on public.reports (reporter_id, created_at desc);
+
+-- Şikayet edilenin hesabı silinince kişi alanlarını ve kanıttaki kişisel verileri tek güncellemede
+-- boşalt (BEFORE: zincirleme set null'dan önce; checkin_id de burada boşalır, yoksa aynı işlemde
+-- değişmiş satırın FK denetimi silinmiş işaretlemeye takılır). Challenge başlığı, gün, değer kalır.
+create function app.reports_anonymize_reported() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  update public.reports r
+     set reported_user_id = null,
+         checkin_id = null,
+         evidence = r.evidence - array['username', 'display_name', 'avatar_path', 'note', 'photo_path']
+   where r.reported_user_id = old.id;
+  return old;
+end
+$$;
+
+create trigger profiles_anonymize_reports
+  before delete on public.profiles
+  for each row execute function app.reports_anonymize_reported();
 
 -- Hazır dürtme mesajları (serbest metin yok) -----------------------------------------------
 
@@ -226,6 +271,30 @@ $$;
 create trigger pokes_notify
   after insert on public.pokes
   for each row execute function app.notify_poke();
+
+-- Gönderilen dürtme kaydı: dürtme geri alınsa (silinse) de kalır; günlük sınır buradan sayılır
+-- (gönder + geri al döngüsüyle bildirim/push yağdırılamasın). app şemasında: API'ye kapalı.
+create table app.poke_log (
+  sender_id uuid not null references public.profiles (id) on delete cascade,
+  recipient_id uuid not null references public.profiles (id) on delete cascade,
+  created_at timestamptz not null
+);
+create index poke_log_pair_idx on app.poke_log (sender_id, recipient_id, created_at desc);
+alter table app.poke_log enable row level security;
+revoke all on app.poke_log from public, anon, authenticated;
+
+create function app.log_poke() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  insert into app.poke_log (sender_id, recipient_id, created_at)
+  values (new.sender_id, new.recipient_id, new.created_at);
+  return new;
+end
+$$;
+
+create trigger pokes_log
+  after insert on public.pokes
+  for each row execute function app.log_poke();
 
 -- RLS ---------------------------------------------------------------------------------------
 

@@ -542,12 +542,12 @@ select tests.authenticate_as('selin');
 select lives_ok(format($$select public.join_challenge_by_invite(%L)$$, :'code_o2'), 'a stranger joins with a valid link');
 reset role;
 select results_eq(
-  format($$select status::text, role::text, invited_by, invite_code, joined_on from public.challenge_members
+  format($$select status::text, role::text, invited_by, joined_on from public.challenge_members
            where challenge_id = %L and user_id = %L$$, :'ch_main', :'s'),
-  format($$values ('active'::text, 'member'::text, %L::uuid, %L::text, %L::date)$$, :'o', :'code_o2', :'today'),
-  'link join: active member, invited_by = inviter, invite code recorded, joined today');
+  format($$values ('active'::text, 'member'::text, %L::uuid, %L::date)$$, :'o', :'today'),
+  'link join: active member, invited_by = inviter, joined today');
 select tests.authenticate_as('selin');
-select is((select invite_code from public.join_challenge_by_invite(:'code_m')), :'code_o2',
+select is((select invited_by from public.join_challenge_by_invite(:'code_m')), :'o'::uuid,
   'joining again (even with another member''s link) is a no-op returning the existing membership');
 select throws_ok(format($$select public.join_challenge_by_invite(%L)$$, :'code_o'),
   'P0002', 'Davet linki geçersiz', 'a revoked code cannot be used');
@@ -718,8 +718,8 @@ select throws_ok(format($$select public.checkin(%L, p_value => 'Infinity')$$, :'
   null, null, 'number task without a max rejects Infinity');
 reset role;
 select results_eq(
-  format($$select app.is_covered(%L, %L, %L), (select target from app.today_tasks(%L, now()) where challenge_id = %L)$$,
-         :'o', :'ch_num', :'today', :'o', :'ch_num'),
+  format($$select app.is_covered(%L, %L, %L), (select target from app.today_tasks(%L, now()) where challenge_id = %L and local_date = %L)$$,
+         :'o', :'ch_num', :'today', :'o', :'ch_num', :'today'),
   $$values (true, 60::numeric)$$,
   'below-target value (10 < 60) still covers the day');
 

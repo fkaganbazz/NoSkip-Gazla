@@ -13,7 +13,9 @@ returns table (
   member_count integer
 )
 language sql stable security definer set search_path = '' as $$
-  with t as (select (app.open_dates(p_user, p_at))[1] as today)
+  -- İşaretlenebilen her gün için bir satır: bugün, 2 saatlik toleransta dün de (local_date ile).
+  -- Saat dilimi tabanının altındaki gün listelenmez (işaretlenemez).
+  with t as (select d as today from unnest(app.checkin_dates(p_user, p_at)) as d)
   select c.id, c.title, c.short_title, c.task_type, c.icon, c.tint, t.today,
          (t.today - c.start_date + 1)::int,
          c.duration_days::int,
@@ -28,7 +30,7 @@ language sql stable security definer set search_path = '' as $$
   left join public.checkins k
     on k.user_id = p_user and k.challenge_id = c.id and k.local_date = t.today
   where t.today between greatest(c.start_date, m.joined_on) and c.end_date
-  order by m.joined_at, c.id
+  order by t.today desc, m.joined_at, c.id
 $$;
 
 create function public.my_today()
@@ -59,6 +61,7 @@ language sql stable security definer set search_path = '' as $$
   today as (
     select count(*)::int as total, (count(*) filter (where tt.done))::int as done
     from app.today_tasks(p_user, p_at) tt
+    where tt.local_date = app.local_date(p_user, p_at)
   )
   select s.cur,
          greatest(app.user_longest_streak(p_user, p_at), s.cur),
@@ -147,8 +150,10 @@ language sql stable security definer set search_path = '' as $$
   ),
   stats as (
     select fr.friend_id,
-           (select count(*)::int from app.today_tasks(fr.friend_id, p_at)) as total,
-           (select count(*)::int from app.today_tasks(fr.friend_id, p_at) tt where tt.done) as done
+           (select count(*)::int from app.today_tasks(fr.friend_id, p_at) tt
+            where tt.local_date = app.local_date(fr.friend_id, p_at)) as total,
+           (select count(*)::int from app.today_tasks(fr.friend_id, p_at) tt
+            where tt.local_date = app.local_date(fr.friend_id, p_at) and tt.done) as done
     from friends fr
     where not app.is_blocked(p_viewer, fr.friend_id)
   )
@@ -226,12 +231,14 @@ language sql stable security definer set search_path = '' as $$
   order by s.day
 $$;
 
--- Arkadaş profili (FriendProfile): seri, tamamlanan sayısı, ortak challenge'lar. Profili
--- görebilen (arkadaş, ortak üye) ve aralarında engel olmayan biri için; aksi halde null.
+-- Arkadaş profili (FriendProfile): seri, tamamlanan sayısı, ortak challenge'lar. Yalnızca arkadaş
+-- ya da ortak üye için (aralarında engel yoksa); aksi halde null. Bekleyen istek profil satırını
+-- gösterir (RLS) ama etkinliği göstermez: herkes istek gönderebilir.
 create function public.friend_profile(p_user uuid) returns jsonb
 language sql stable security definer set search_path = '' as $$
   with v as (select app.require_user() as uid)
-  select case when app.can_see_profile(v.uid, p.id) and not app.is_blocked(v.uid, p.id) then
+  select case when not app.is_blocked(v.uid, p.id)
+                   and (app.are_friends(v.uid, p.id) or app.are_co_members(v.uid, p.id)) then
     jsonb_build_object(
       'user_id', p.id, 'username', p.username::text, 'display_name', p.display_name,
       'avatar_path', p.avatar_path, 'avatar_tint', p.avatar_tint, 'harsh_mode', p.harsh_mode,
@@ -242,7 +249,9 @@ language sql stable security definer set search_path = '' as $$
         select jsonb_agg(jsonb_build_object(
                  'challenge_id', c.id, 'title', c.title, 'icon', c.icon, 'tint', c.tint,
                  'duration_days', c.duration_days,
-                 'day_index', least(app.local_date(p.id, now()) - c.start_date + 1, c.duration_days),
+                 -- 0: henüz başlamadı
+                 'day_index', greatest(least(app.local_date(p.id, now()) - c.start_date + 1,
+                                             c.duration_days), 0),
                  'days_done', app.days_done(p.id, c.id)
                ) order by b.joined_at)
         from public.challenge_members a

@@ -231,14 +231,16 @@ begin
   -- Aynı kişiye, alıcının yerel gününde en fazla N dürtme. Sınır alıcıyı korur; gönderen kendi
   -- saat dilimini değiştirerek pencereyi sıfırlayamaz. Çift için kilit: eşzamanlı gönderimler
   -- sınırı aşamaz.
+  -- Geri alınan dürtme de sayılır (bildirimi ve push'u çoktan gitti): sayım app.poke_log'dan.
   -- Sayım alıcının bütün günü üzerinden (p_at işlemin başlangıcıdır; kilidi önce alan daha geç
   -- başlamış bir işlemin dürtmesini kaçırmamak için üst sınır p_at değil, günün sonu).
   perform pg_advisory_xact_lock(hashtextextended('poke:' || p_sender::text || '>' || p_recipient::text, 0));
+  delete from app.poke_log l where l.sender_id = p_sender and l.created_at < p_at - interval '2 days';
   if (
-    select count(*) from public.pokes k
-    where k.sender_id = p_sender and k.recipient_id = p_recipient
-      and k.created_at >= (v_day::timestamp at time zone v_tz)
-      and k.created_at < ((v_day + 1)::timestamp at time zone v_tz)
+    select count(*) from app.poke_log l
+    where l.sender_id = p_sender and l.recipient_id = p_recipient
+      and l.created_at >= (v_day::timestamp at time zone v_tz)
+      and l.created_at < ((v_day + 1)::timestamp at time zone v_tz)
   ) >= app.poke_daily_limit() then
     raise exception 'Bugün bu kişiyi yeterince dürttün' using errcode = 'P0001';
   end if;
@@ -274,9 +276,22 @@ language plpgsql security definer set search_path = '' as $$
 declare
   v_uid uuid := app.require_user();
   v_via_invite boolean := false;
+  v_inv public.challenge_invites;
   v_evidence jsonb;
   v_id uuid;
 begin
+  -- Davet linkinden: istemci (InviteLanding) challenge ve davet edenin id'sini bilmez; ikisi de
+  -- koddan alınır. Verilmişlerse koddakiyle aynı olmalı.
+  if p_target = 'challenge' and p_invite_code is not null then
+    select * into v_inv from public.challenge_invites i where i.code = p_invite_code;
+    if found and coalesce(p_challenge, v_inv.challenge_id) = v_inv.challenge_id
+       and coalesce(p_user, v_inv.inviter_id) = v_inv.inviter_id then
+      p_challenge := v_inv.challenge_id;
+      p_user := v_inv.inviter_id;
+      v_via_invite := true;
+    end if;
+  end if;
+
   if p_user is null or not exists (select 1 from public.profiles p where p.id = p_user) then
     raise exception 'Kullanıcı bulunamadı' using errcode = 'P0002';
   end if;
@@ -284,17 +299,10 @@ begin
     raise exception 'Kendini şikayet edemezsin' using errcode = 'P0001';
   end if;
 
-  if p_target = 'challenge' and p_invite_code is not null then
-    v_via_invite := exists (
-      select 1 from public.challenge_invites i
-      where i.code = p_invite_code and i.challenge_id = p_challenge and i.inviter_id = p_user
-    );
-  end if;
-
-  -- Engel iki yönde de şikayeti engellemez: taciz eden, önce engelleyerek şikayetten kaçamaz
-  if not (v_via_invite or app.can_see_profile(v_uid, p_user) or app.is_blocked(v_uid, p_user)) then
-    raise exception 'Kullanıcı bulunamadı' using errcode = 'P0002';
-  end if;
+  -- Görünürlük kapısı yok: engel iki yönde de şikayeti engellemez (taciz eden, önce engelleyerek ya
+  -- da arkadaşlıktan çıkarak şikayetten kaçamaz) ve sonuç engele bağlı olmamalı; yoksa şikayet,
+  -- engellenene engellendiğini söyleyen bir sorgu olurdu. Fotoğraf ve challenge dalları kendi
+  -- (engelden bağımsız) ilişki kontrollerini yapar; kötüye kullanıma karşı günlük sınır var.
 
   if p_target = 'photo' then
     -- Şikayet eden o challenge'da aktif ya da ayrılmış üye (engel sonrası da şikayet edebilsin)
@@ -338,13 +346,33 @@ begin
     from public.profiles p where p.id = p_user;
   end if;
 
-  insert into public.reports (reporter_id, reported_user_id, target_type, checkin_id, challenge_id,
-                              reason, details, also_blocked, evidence)
-  values (v_uid, p_user, p_target,
-          case when p_target = 'photo' then p_checkin end,
-          case when p_target = 'challenge' then p_challenge end,
-          p_reason, nullif(btrim(p_details), ''), coalesce(p_also_block, false), v_evidence)
-  returning id into v_id;
+  -- Kuyruk doldurulamasın: aynı hedefe açık şikayet tekrarlanmaz (mevcut olan döner, engel yine
+  -- uygulanır); 24 saatte en fazla N yeni şikayet. Kilit: eşzamanlı çağrılar sınırı aşamaz.
+  perform pg_advisory_xact_lock(hashtextextended('report:' || v_uid::text, 0));
+  select r.id into v_id
+  from public.reports r
+  where r.reporter_id = v_uid and r.reported_user_id = p_user and r.target_type = p_target
+    and r.status in ('pending', 'reviewing')
+    and r.checkin_id is not distinct from case when p_target = 'photo' then p_checkin end
+    and r.challenge_id is not distinct from case when p_target = 'challenge' then p_challenge end
+  limit 1;
+
+  if v_id is null then
+    if (
+      select count(*) from public.reports r
+      where r.reporter_id = v_uid and r.created_at > now() - interval '24 hours'
+    ) >= app.report_daily_limit() then
+      raise exception 'Bugün çok fazla şikayet gönderdin' using errcode = 'P0001';
+    end if;
+
+    insert into public.reports (reporter_id, reported_user_id, target_type, checkin_id, challenge_id,
+                                reason, details, also_blocked, evidence)
+    values (v_uid, p_user, p_target,
+            case when p_target = 'photo' then p_checkin end,
+            case when p_target = 'challenge' then p_challenge end,
+            p_reason, nullif(btrim(p_details), ''), coalesce(p_also_block, false), v_evidence)
+    returning id into v_id;
+  end if;
 
   if coalesce(p_also_block, false) then
     insert into public.blocks (blocker_id, blocked_id) values (v_uid, p_user)
@@ -443,6 +471,16 @@ begin
     if v_status in ('active', 'invited', 'left') then
       continue;
     end if;
+    -- Reddedilen davet hemen yeniden gönderilip bildirim yağdırılamasın: challenge başına kişiye
+    -- 24 saatte en fazla N davet bildirimi (ilk davet dahil); fazlası sessizce atlanır. Challenge
+    -- kilidi altında sayılır; bildirimleri alıcı silemez.
+    if v_status = 'declined' and (
+      select count(*) from public.notifications n
+      where n.recipient_id = v_user and n.kind = 'challenge_invite' and n.challenge_id = p_challenge
+        and n.created_at > p_at - interval '24 hours'
+    ) >= app.challenge_invite_daily_limit() then
+      continue;
+    end if;
 
     if (select count(*) from public.challenge_members m
         where m.challenge_id = p_challenge and m.status in ('active', 'invited')) >= app.max_members() then
@@ -491,6 +529,11 @@ declare
   v_locale text := coalesce((select s.locale from public.user_settings s where s.user_id = p_user), 'tr');
   v_row public.challenges;
 begin
+  -- Sayı ayarları 4 ondalığa yuvarlanır (JS kayan nokta kırıntısı)
+  p_number_base_target := trim_scale(round(p_number_base_target, 4));
+  p_number_daily_increment := trim_scale(round(p_number_daily_increment, 4));
+  p_number_step := trim_scale(round(p_number_step, 4));
+  p_number_max := trim_scale(round(p_number_max, 4));
   -- Başlangıç bugün ya da en fazla 7 gün sonra ("Yarın başlıyor")
   if v_start < v_today or v_start > v_today + 7 then
     raise exception 'Başlangıç günü bugün ile 7 gün sonrası arasında olmalı' using errcode = '22023';
@@ -615,6 +658,13 @@ language plpgsql security definer set search_path = '' as $$
 declare
   v_row public.challenge_members;
 begin
+  -- Kilit sırası: önce challenge (eşzamanlı kabul/katılma ile sıralı)
+  perform 1 from public.challenges c where c.id = p_challenge for no key update;
+  -- Son günü geçmiş challenge'dan ayrılınmaz: sonuç (bitiş, bahçe, sıra) kaydedilecek
+  if (select c.end_date from public.challenges c where c.id = p_challenge) < app.local_date(p_user, p_at)
+     and app.is_active_member(p_user, p_challenge) then
+    raise exception 'Bu challenge bitti' using errcode = 'P0001';
+  end if;
   -- Bitmiş (sonucu kaydedilmiş) üyelikten ayrılınmaz: sonuç ve bahçe geçmişi korunur
   update public.challenge_members m
   set status = 'left', left_on = app.local_date(p_user, p_at)
@@ -707,12 +757,15 @@ declare
   v_inv public.challenge_invites;
   v_row public.challenge_members;
 begin
+  -- Önce kilit, sonra doğrulama: son üyenin ayrılması (linkleri kapatır) ile yarışmasın
+  perform 1 from public.challenges c
+  where c.id = (select i.challenge_id from public.challenge_invites i where i.code = p_code)
+  for no key update;
   select * into v_inv from public.challenge_invites i where i.code = p_code and i.revoked_at is null;
   if not found or app.is_blocked(p_user, v_inv.inviter_id)
      or not app.is_active_member(v_inv.inviter_id, v_inv.challenge_id) then
     raise exception 'Davet linki geçersiz' using errcode = 'P0002';
   end if;
-  perform 1 from public.challenges c where c.id = v_inv.challenge_id for no key update;
   perform app.assert_challenge_open(p_user, v_inv.challenge_id, p_at);
 
   select * into v_row from public.challenge_members m
@@ -732,10 +785,10 @@ begin
   perform app.assert_can_take_challenge(p_user, p_at);
 
   -- Yeni üye ya da bekleyen/reddedilmiş davetli
-  insert into public.challenge_members (challenge_id, user_id, status, invited_by, invite_code, joined_at, joined_on)
-  values (v_inv.challenge_id, p_user, 'active', v_inv.inviter_id, v_inv.code, p_at, app.local_date(p_user, p_at))
+  insert into public.challenge_members (challenge_id, user_id, status, invited_by, joined_at, joined_on)
+  values (v_inv.challenge_id, p_user, 'active', v_inv.inviter_id, p_at, app.local_date(p_user, p_at))
   on conflict (challenge_id, user_id) do update
-    set status = 'active', invited_by = excluded.invited_by, invite_code = excluded.invite_code,
+    set status = 'active', invited_by = excluded.invited_by,
         joined_at = excluded.joined_at, joined_on = excluded.joined_on
   returning * into v_row;
   return v_row;
@@ -760,6 +813,8 @@ declare
   v_range record;
   v_row public.checkins;
 begin
+  -- JS sayılarındaki kayan nokta kırıntısı (0.30000000000000004) reddedilmesin: 4 ondalığa yuvarla
+  p_value := trim_scale(round(p_value, 4));
   if not app.is_active_member(p_user, p_challenge) then
     raise exception 'Bu challenge''da değilsin' using errcode = '42501';
   end if;

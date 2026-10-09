@@ -66,13 +66,21 @@ language sql immutable parallel safe as $$ select 20 $$;
 create function app.max_active_challenges() returns integer
 language sql immutable parallel safe as $$ select 20 $$;
 
--- Aynı kişiye, alıcının yerel gününde en fazla dürtme
+-- Aynı kişiye, alıcının yerel gününde en fazla dürtme (geri alınanlar dahil)
 create function app.poke_daily_limit() returns integer
 language sql immutable parallel safe as $$ select 3 $$;
 
 -- Aynı kişiye 24 saatte en fazla arkadaşlık isteği (geri çekip yeniden gönderme dahil)
 create function app.friend_request_daily_limit() returns integer
 language sql immutable parallel safe as $$ select 3 $$;
+
+-- Aynı challenge için aynı kişiye 24 saatte en fazla davet bildirimi (ilk davet + reddedilince yeniden)
+create function app.challenge_invite_daily_limit() returns integer
+language sql immutable parallel safe as $$ select 3 $$;
+
+-- Bir kullanıcının 24 saatte gönderebileceği en fazla yeni şikayet (inceleme kuyruğu doldurulamasın)
+create function app.report_daily_limit() returns integer
+language sql immutable parallel safe as $$ select 10 $$;
 
 -- Gönderilen dürtmeyi geri alma süresi ("Geri al" tostu)
 create function app.poke_undo_window() returns interval

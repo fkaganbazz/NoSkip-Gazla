@@ -579,8 +579,8 @@ select throws_ok($$update public.reports set status = 'dismissed'$$, '42501', nu
 select throws_ok($$delete from public.reports$$, '42501', null, 'reports cannot be deleted by users');
 select throws_ok($$select public.submit_report(auth.uid(), 'other')$$,
   'P0001', 'Kendini şikayet edemezsin', 'submit_report: not yourself');
-select throws_ok(format($$select public.submit_report(%L, 'harassment', null, false)$$, :'s'),
-  'P0002', 'Kullanıcı bulunamadı', 'submit_report: not a user you cannot see');
+select lives_ok(format($$select public.submit_report(%L, 'harassment', null, false)$$, :'s'),
+  'submit_report: a user I cannot see can be reported too (the answer must not reveal a block)');
 select throws_ok(format($$select public.submit_report(%L, 'inappropriate_photo', null, false, 'photo', %L)$$, :'e', :'e_checkin'),
   'P0002', 'Fotoğraf bulunamadı', 'submit_report: a photo report needs a check-in with a photo');
 select throws_ok(format($$select public.submit_report(%L, 'dangerous_challenge', null, false, 'challenge', null, %L)$$, :'m', :'c2'),
@@ -742,8 +742,8 @@ select throws_ok(format($$select public.invite_to_challenge(%L, array[]::uuid[])
 select tests.authenticate_as('bora');
 select results_eq($$select id from public.challenges$$, array[:'c1'::uuid], 'a blocked co-member still reads the challenge');
 select set_eq(format($$select user_id from public.challenge_members where challenge_id = %L$$, :'c1'),
-  array[:'b'::uuid, :'m'::uuid, :'e'::uuid, :'c'::uuid, :'d'::uuid],
-  'a blocked co-member does not see the blocker''s membership');
+  array[:'b'::uuid, :'m'::uuid, :'e'::uuid, :'d'::uuid],
+  'a blocked co-member does not see the blocker''s membership, nor a pending invitee he did not invite');
 select is(public.get_invite_preview('OlcayCode1'), null, 'get_invite_preview returns nothing to a user blocked by the inviter');
 
 select tests.authenticate_as('ece');

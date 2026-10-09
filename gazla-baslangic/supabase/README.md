@@ -20,7 +20,7 @@ tablolara yalnızca politikası olan yerlerde doğrudan dokunur, geri kalan her 
 | `20261007100800_storage.sql` | `proofs` (özel) ve `avatars` (açık) kovaları, Storage politikaları |
 | `20261007100900_reference_data.sql` | 12 hazır dürtme mesajı, 8 challenge şablonu (prod'da da gerekli) |
 
-Testler (`tests/`, pgTAP, 944 doğrulama):
+Testler (`tests/`, pgTAP, 970 doğrulama):
 
 | Dosya | Kapsam |
 |---|---|
@@ -28,7 +28,7 @@ Testler (`tests/`, pgTAP, 944 doğrulama):
 | `02_streak_engine.test.sql` | yerel gün, tolerans, yaz saati, seriler, kurtarma, bitiş, bahçe |
 | `03_social_rpcs.test.sql` | profil, arama, arkadaşlık, engel, şikayet, dürtme, bildirim, push token |
 | `04_challenge_rpcs.test.sql` | challenge oluşturma, davet, link, katılma, ayrılma, işaretleme |
-| `05_review_fixes.test.sql` | inceleme sonrası eklenen kurallar (saat dilimi tabanı, ilk gün kurtarma, bitiş, şikayet kanıtı, Diken push, sınırlar, hesap silme) |
+| `05_review_fixes.test.sql` | iki inceleme turunda eklenen kurallar (saat dilimi tabanı, ilk gün kurtarma, bitiş ve sıra, şikayet, engel, Diken push, sınırlar, dosya adları, tolerans, hesap silme) |
 
 ## Uygulama ve test
 
@@ -46,7 +46,7 @@ fonksiyonlarını kullanır (`tests.create_supabase_user`, `tests.authenticate_a
 verisini oluşturur ve `rollback` ile geri alır.
 
 Bu şema ve testler PostgreSQL 16 üzerinde, Supabase rolleri, `auth` ve `storage` şemalarıyla aynı
-davranan bir test ortamında doğrulandı (944/944). Gerçek Supabase'de ilk `supabase test db`
+davranan bir test ortamında doğrulandı (970/970). Gerçek Supabase'de ilk `supabase test db`
 çalıştırmasında farklılık çıkarsa önce Storage tablolarına doğrudan yazan testlere bakın (Storage
 sürümleri `storage.objects` üzerinde ek tetikleyiciler getirebiliyor).
 
@@ -61,6 +61,8 @@ zamanlanmış işler içindir, API rollerine kapalıdır.
 - Gün `d`, ertesi günün yerel gece yarısından **2 saat sonra** kapanır (`app.day_closes_at`). Süre
   geçen zamanla ölçülür; yaz saati gecelerinde de tam 2 saattir.
 - İşaretlenebilen günler `app.open_dates`: bugün, gün kapanmadıysa dün. Yarın işaretlenemez.
+  `my_today` her işaretlenebilen gün için satır döner: 00:00–02:00 arası dünün görevleri de
+  (`local_date` = dün) listelenir; istemci işaretlerken `p_local_date` gönderir.
 - Saat dilimi değişince eski dilimde kapanmış günler yeniden açılmaz (`user_settings.checkin_floor`).
   Bu taban yalnızca işaretleme ve geri almayı etkiler (`app.checkin_dates`).
 
@@ -78,6 +80,8 @@ zamanlanmış işler içindir, API rollerine kapalıdır.
 ### Kurtarma
 - Kaçırılan gün, kapanışından itibaren **24 saat** kurtarılabilir (`app.pending_rescues`), öncesinde
   challenge serisi > 0 ise. Üyenin o challenge'daki ilk günüyse genel seri > 0 olması yeter.
+- Kurtarılmış günün ertesi kurtarılamaz: art arda kurtarmayla (reklamla) challenge işaretlemeden
+  bitirilemez.
 - Ücretsiz hak: kullanıcının yerel takvim ayında 1 (`public.rescue_streak`).
 - Reklamla kurtarma yalnızca sunucuda doğrulanmış ödülle: `public.grant_ad_rescue` (service role).
   Aynı ödül kimliği tekrar gelirse mevcut kayıt döner; başka bir gün için kullanılamaz.
@@ -87,17 +91,17 @@ zamanlanmış işler içindir, API rollerine kapalıdır.
   **her aktif üyenin** saat diliminde kapandıktan ve o challenge için kimsenin bekleyen kurtarması
   kalmadıktan sonra kaydedilir. Böylece son günü kurtaran da sonuca girer ve sıralar tutarlıdır.
 - Kendi tüm günlerini kapsayan üye bitirmiş sayılır: bahçeye kaktüs eklenir, arkadaşlarına bildirim
-  gider. Sonradan katılanın günleri katıldığı günden sayılır. Son aktif üye sonuçlanınca sıralar
-  kayıtlı sonuçlardan yeniden yazılır (aynı sırayı iki kişi almaz).
+  gider (bildirimde kendi gün sayısı). Sonradan katılanın günleri katıldığı günden sayılır. Son
+  aktif üye sonuçlanınca sıralar kayıtlı sonuçlardan yeniden yazılır (aynı sırayı iki kişi almaz).
 - Kayıt ya kullanıcı Bugün'ü açınca (`my_today`), ya da saatlik işle (`finish_due_challenges`) olur.
 
 ### Challenge ve üyelik
 - Hazır süreler 7/10/30; şablonsuz challenge 3–60 gün. Başlangıç bugün ile 7 gün sonrası arası.
 - Grupta en çok 20 aktif üye; bir kullanıcı aynı anda en çok 20 süren challenge'da.
-- Davet yalnızca arkadaşa. Davet linki her üyenin challenge başına bir kodu; challenge sahibi
-  herhangi bir üyenin linkini kapatabilir.
+- Davet yalnızca arkadaşa. Reddedilen davet aynı gün en çok 3 kez tekrarlanır. Davet linki her
+  üyenin challenge başına bir kodu; challenge sahibi herhangi bir üyenin linkini kapatabilir.
 - Ayrılmak kalıcıdır (geri katılma ya da yeniden davet yok; dönüş kaçırılan günleri seriden
-  silerdi). Bitmiş üyelikten ayrılınmaz.
+  silerdi). Son günü geçmiş challenge'dan ayrılınmaz (sonuç kaydedilecek).
 - Sahip ayrılırsa ya da hesabını silerse sahiplik en eski aktif üyeye geçer. Aktif üye kalmazsa
   bekleyen davetler düşer, linkler kapanır, challenge geçmiş için sahipsiz kalır. Hiç üye satırı
   kalmazsa silinir.
@@ -105,7 +109,8 @@ zamanlanmış işler içindir, API rollerine kapalıdır.
 ### Dürtme
 - Yalnızca hazır mesajlar (`poke_messages`). Arkadaşa ya da süren bir ortak challenge'daki üyeye.
 - "Laf sok" (`roast`) yalnızca alıcının sert modu açıksa.
-- Aynı kişiye günde en çok 3, alıcının yerel gününe göre. Gönderen 30 saniye içinde geri alabilir.
+- Aynı kişiye günde en çok 3, alıcının yerel gününe göre; geri alınanlar da sayılır (bildirim
+  çoktan gitti). Gönderen 30 saniye içinde geri alabilir.
 
 ### Diken bildirimleri
 - Günde en çok 2 (gönderim anının yerel gününe göre), sessiz saatler 23:30–08:00 (kullanıcının
@@ -113,23 +118,30 @@ zamanlanmış işler içindir, API rollerine kapalıdır.
 
 ### Engelleme, şikayet, hesap silme
 - Engel iki yönde de görünürlüğü keser: profil, grup listesi, işaretlemeler, kanıt fotoğrafları,
-  bildirimler. Engelleyen, engellediklerini listesinde görür; engellenen engellendiğini öğrenmez.
-  Engel arkadaşlığı ve aralarındaki bekleyen davetleri siler.
-- Şikayet `public.submit_report`: kullanıcı, fotoğraf ya da challenge. Engel şikayeti engellemez.
-  Davet linkinden görülen challenge, kod verilerek şikayet edilebilir. Şikayet anındaki kanıt
-  `reports.evidence`'ta saklanır; incelenen fotoğraf Storage'dan silinemez. İnceleme süresi
-  `review_due_at` (24 saat). Kullanıcılar şikayetleri okuyamaz.
+  bildirimler. Engelleyen, engellerken görebildiği kişileri listesinde görmeye devam eder (rastgele
+  bir kişiyi engelleyerek profili açılmaz); iki taraf da engellediyse ikisi de görmez. Engellenen
+  engellendiğini öğrenmez. Engel arkadaşlığı ve aralarındaki bekleyen davetleri siler.
+- Şikayet `public.submit_report`: kullanıcı, fotoğraf ya da challenge. Sonuç engele bağlı değildir
+  (şikayet, engellendiğini öğrenmenin yolu olmasın). Davet linkinden görülen challenge yalnızca kodla
+  şikayet edilir (`p_target => 'challenge', p_invite_code`). Aynı hedefe açık şikayet tekrarlanmaz;
+  günde en çok 10 yeni şikayet. Şikayet anındaki kanıt `reports.evidence`'ta saklanır; incelenen
+  fotoğraf Storage'dan silinemez. İnceleme süresi `review_due_at` (24 saat). Kullanıcılar
+  şikayetleri okuyamaz.
 - Hesap silme: `auth.users` satırı silinince her şey zincirleme silinir. Şikayetler moderasyon için
-  kişi alanları boşaltılarak kalır.
+  kişi alanları boşaltılarak kalır; şikayet edilenin kanıttaki kişisel verileri de silinir. Hiç üye
+  satırı kalmayan challenge silinir.
+- Görünen ad maskot, marka ya da destek ekibi gibi olamaz ("Diken", "Gazla Destek").
 
 ### Gizlilik
-- Profil: kendisi, arkadaşlık satırı olanlar (bekleyen dahil), aktif ortak üyeler. Yalnızca davet
-  edilmiş biri, gruba linkle katılan yabancılara görünmez.
+- Profil: kendisi, arkadaşlık satırı olanlar (bekleyen dahil), aktif ortak üyeler. Bekleyen davetli
+  grupta yalnızca onu davet edene görünür (linkle katılan yabancıya görünmez).
+- Arkadaş profili (`friend_profile`: seri, tamamlanan, ortak challenge'lar) yalnızca arkadaş ya da
+  ortak üyeye; bekleyen istek yalnızca profil satırını gösterir.
 - Doğum yılı, saat dilimi ve bildirim tercihleri yalnızca sahibinde (`user_settings`).
 - İşaretleme ve kanıt fotoğrafı: kendisi ve aynı challenge'ın aktif üyeleri (engel yoksa). Grup
   yalnızca bir işaretlemeye bağlı fotoğrafı görür. Kapanmış günün fotoğrafı değiştirilemez.
 - Kurtarma yöntemi (reklam/ücretsiz) kişiseldir; grup yalnızca seriyi görür.
-- Davet kodu yalnızca linkin sahibine görünür.
+- Davet kodu yalnızca linkin sahibine görünür (`challenge_invites`).
 
 ### Yetkiler
 - Fonksiyonlar varsayılan olarak kapalıdır. `app.*` fonksiyonlarını yalnızca `service_role`
@@ -148,12 +160,12 @@ zamanlanmış işler içindir, API rollerine kapalıdır.
 | Today | `my_today`, `my_streak`, `checkin`, `undo_checkin`, `friends_today` |
 | Completion | `my_streak`, `my_recent_days` |
 | NumberEntry | `my_today` (`target`, `number_unit`), `checkin(p_value)` |
-| PhotoProof | Storage `proofs/{uid}/{challenge}/{dosya}` yükle, sonra `checkin(p_photo_path)` |
+| PhotoProof | Storage `proofs/{uid}/{challenge}/{uuid}.jpg` yükle, sonra `checkin(p_photo_path)` |
 | StreakLost | `my_pending_rescues`, `rescue_streak` (ücretsiz), reklam → sunucu `grant_ad_rescue` |
 | Detail | `challenge_board`, `challenges`, `challenge_members` |
 | Create / PickChallenge | `challenge_templates`, `create_challenge`, `invite_to_challenge` |
 | InviteFriends | `search_profiles`, `send_friend_request`, `create_invite`, `revoke_invite` |
-| InviteLanding | `get_invite_preview` (anon), `join_challenge_by_invite` |
+| InviteLanding | `get_invite_preview` (anon), `join_challenge_by_invite`, şikayet: `submit_report(p_target => 'challenge', p_invite_code)` |
 | Explore / ChallengePreview | `challenge_templates`, `template_stats` |
 | Friends | `friends_today`, `friendships`, `accept_friend_request`, `send_friend_request` |
 | FriendProfile | `friend_profile` |
@@ -190,14 +202,17 @@ Tasarımda ya da CLAUDE.md'de açık olmayan noktalarda verilen kararlar:
 
 1. En küçük yaş 13 (doğum yılıyla). Profil yalnızca `complete_profile` ile oluşur.
 2. Grup en çok 20 aktif üye; kullanıcı aynı anda en çok 20 süren challenge.
-3. Dürtme: çift başına günde 3 (alıcının günü), 30 saniye geri alma. Challenge bağlamı yalnızca
-   challenge sürerken.
-4. Arkadaşlık isteği: aynı kişiye 24 saatte en çok 3 (geri çekip yeniden gönderme dahil).
+3. Dürtme: çift başına günde 3 (alıcının günü, geri alınanlar dahil), 30 saniye geri alma.
+   Challenge bağlamı yalnızca challenge sürerken.
+4. Arkadaşlık isteği: aynı kişiye 24 saatte en çok 3 (geri çekip yeniden gönderme dahil). Reddedilen
+   challenge daveti aynı gün en çok 3 kez. Şikayet: günde en çok 10 yeni.
 5. Şablonsuz süre 3–60 gün; başlangıç bugün ile +7 gün arası.
 6. Gün kapanışı yerel gece yarısı + 2 saat; kurtarma kapanıştan sonra 24 saat.
-7. Ücretsiz kurtarma kullanıcının yerel takvim ayına bağlı.
+7. Ücretsiz kurtarma kullanıcının yerel takvim ayına bağlı. Kurtarılmış günün ertesi kurtarılamaz
+   (reklam sınırsız değil; ürün kararı olarak değiştirilebilir).
 8. Genel seri o günün tüm challenge'larını ister; challenge'sız gün seriyi dondurur.
-9. Sayı görevinde hedefin altı da günü tamamlar; günlük hedef `number_max`'ı aşmaz.
+9. Sayı görevinde hedefin altı da günü tamamlar; günlük hedef `number_max`'ı aşmaz. Sayılar 4
+   ondalığa yuvarlanır.
 10. Ayrılmak kalıcı; son aktif üye ayrılınca challenge geçmiş için sahipsiz kalır.
 11. Sonradan katılan, kendi günlerini tamamlarsa bitirmiş sayılır; kaktüs aşaması kendi gün
     sayısına göre.
@@ -219,6 +234,8 @@ Tasarımda ya da CLAUDE.md'de açık olmayan noktalarda verilen kararlar:
 - **Explore "Mert ve Kerem yapıyor"**: arkadaşın ortak olmayan challenge'ı görünsün mü? Şu an
   `template_stats` yalnızca arkadaş adlarını ve sayıyı döner, challenge'ı göstermez.
 - **Sonradan katılma**: süren challenge'a son güne kadar katılınabiliyor. Bir sınır gerekir mi?
+- **Art arda kurtarma**: şu an kurtarılmış günün ertesi kurtarılamıyor. Reklam geliri için art arda
+  kurtarmaya izin verilsin mi?
 - **Challenge düzenleme/silme**: sahip yalnızca ad, kısa ad, hatırlatma saati ve davet mesajını
   değiştirebiliyor. Süre/başlangıç değişikliği ve silme yok.
 - **Şikayet aracı**: inceleme ekibinin arayüzü (Supabase Studio mu, ayrı bir panel mi?).
@@ -231,3 +248,9 @@ Tasarımda ya da CLAUDE.md'de açık olmayan noktalarda verilen kararlar:
 - Aynı cihazda başka hesapla `register_push_token` çağrılırsa token yeni hesaba geçer (cihaz el
   değiştirince doğru davranış). Çıkışta istemci kendi token satırını silmeli.
 - `template_stats` "şu an yapıyor" sayısını sunucu gününe göre (±1 gün) hesaplar.
+- Gece yarısı yaz saati geçişi yapan bölgelerde (ör. America/Havana) yılda bir gece 1 saat boyunca
+  bir gün ne işaretlenebilir ne kurtarılabilir.
+- Saat dilimi değişikliğinden hemen sonra tabanın altında kalan gün birkaç saat Bugün'de görünmez,
+  seri motoru onu yeni dilimde kapanana kadar açık sayar; kapanınca normal kurtarma akışı başlar.
+- Storage dosya adlarını uygulama üretir (`{uuid}.jpg` gibi; harf, rakam, `.`, `_`, `-`); galeri
+  dosya adıyla yükleme reddedilir.

@@ -73,6 +73,7 @@ profiles, friendships, blocks, reports, challenge_templates, challenges, challen
 - İstemci tablolara yalnızca politikası olan yerlerde doğrudan yazar (profil/ayar güncelleme, engel, arkadaşlık silme, dürtme geri alma, bildirim token'ı silme). Diğer her şey `public.*` RPC'leri: `checkin`, `send_poke`, `create_challenge`, `submit_report` …
 - Seri, gün numarası, hedef, sıra ve kurtarma hakkı sunucudan okunur (`my_today`, `my_streak`, `my_pending_rescues`, `challenge_board`, `friends_today`, `my_garden`); istemcide yeniden hesaplanmaz.
 - Yerel gün kullanıcının `user_settings.timezone`'una göre; istemci saat dilimini cihazdan alıp değişince günceller. `checkin`'e tarih verilmezse bugün; tolerans içinde dün için `p_local_date`.
-- Fotoğraf kanıtı: önce Storage `proofs/{uid}/{challenge_id}/{dosya}`, sonra `checkin(p_photo_path)`. Profil fotoğrafı `avatars/{uid}/{dosya}`.
+- `my_today` işaretlenebilen her gün için satır döner (gece 00:00–02:00 arası dün de, `local_date` ile); işaretlerken `p_local_date` gönder.
+- Fotoğraf kanıtı: önce Storage `proofs/{uid}/{challenge_id}/{uuid}.jpg`, sonra `checkin(p_photo_path)`. Profil fotoğrafı `avatars/{uid}/{uuid}.jpg`. Dosya adını uygulama üretir (harf, rakam, `.`, `_`, `-`); bir dosya yalnızca bir günün kanıtıdır.
 - Yeni fonksiyon eklerken: `app.*` varsayılan olarak yalnızca service_role'e açıktır; RLS politikası çağıracaksa `authenticated`'a, istemci RPC'siyse `public` altında açıkça `grant execute` yaz ve `01_rls_privileges` allow-list'ini güncelle.
 - Test: `supabase test db` (pgTAP + basejump supabase_test_helpers).

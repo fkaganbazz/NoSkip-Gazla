@@ -138,7 +138,6 @@ create table public.challenge_members (
   role public.member_role not null default 'member',
   status public.member_status not null default 'invited',
   invited_by uuid references public.profiles (id) on delete set null,
-  invite_code text references public.challenge_invites (code) on delete set null,
   joined_at timestamptz,
   -- Katıldığı ve ayrıldığı yerel gün: seri ve "tüm görevler" hesabı bu aralıktaki günlere bakar
   joined_on date,
@@ -206,11 +205,17 @@ language sql stable security definer set search_path = '' as $$
 $$;
 
 -- Profil görünürlüğü: kendisi; arkadaşlık satırı (bekleyen dahil) ya da ortak challenge (engel
--- yoksa); engelleyen, engellediği kişileri listesinde görebilir.
+-- yoksa). Engelleyen, engellerken görebildiği kişileri listesinde görmeye devam eder; karşı taraf da
+-- onu engellediyse görmez (geri engelleyerek bir engel aşılamasın).
 create function app.can_see_profile(p_viewer uuid, p_target uuid) returns boolean
 language sql stable security definer set search_path = '' as $$
   select p_viewer = p_target
-      or exists (select 1 from public.blocks b where b.blocker_id = p_viewer and b.blocked_id = p_target)
+      or (
+        exists (select 1 from public.blocks b
+                where b.blocker_id = p_viewer and b.blocked_id = p_target and b.profile_visible)
+        and not exists (select 1 from public.blocks b
+                        where b.blocker_id = p_target and b.blocked_id = p_viewer)
+      )
       or (
         not app.is_blocked(p_viewer, p_target)
         and (app.has_friendship_row(p_viewer, p_target) or app.are_co_members(p_viewer, p_target))
@@ -243,7 +248,7 @@ language sql stable security definer set search_path = '' as $$
     join public.challenge_members b on b.challenge_id = a.challenge_id
     where a.user_id = auth.uid() and a.status in ('invited', 'active') and b.status = 'active'
     union all
-    select bl.blocked_id from public.blocks bl where bl.blocker_id = auth.uid()
+    select bl.blocked_id from public.blocks bl where bl.blocker_id = auth.uid() and bl.profile_visible
   ) as x
   where x.id is not null
 $$;
@@ -258,14 +263,23 @@ declare
   v_challenge uuid := old.challenge_id;
   v_next uuid;
 begin
-  if old.role <> 'owner' then
-    return null;
-  end if;
   if tg_op = 'UPDATE' and new.role = 'owner' and new.status = 'active' then
     return null;
   end if;
-  if not exists (select 1 from public.challenges c where c.id = v_challenge) then
+  -- Challenge kilidi: eşzamanlı kabul/katılma önce biter, yeni aktif üye görülür
+  perform 1 from public.challenges c where c.id = v_challenge for no key update;
+  if not found then
     return null; -- challenge zaten siliniyor
+  end if;
+  if old.role <> 'owner' then
+    -- Sahip olmayan son aktif/ayrılmış üye satırı silindiyse (hesap silme) challenge de silinir
+    if tg_op = 'DELETE' and not exists (
+      select 1 from public.challenge_members m
+      where m.challenge_id = v_challenge and m.status in ('active', 'left')
+    ) then
+      delete from public.challenges c where c.id = v_challenge;
+    end if;
+    return null;
   end if;
 
   select m.user_id into v_next
@@ -366,13 +380,15 @@ create policy "challenge_invites: inviter read" on public.challenge_invites
   for select to authenticated
   using (inviter_id = (select auth.uid()));
 
--- Grup listesi: davetli/aktif üyeler; aralarında engel olanlar birbirini görmez.
+-- Grup listesi: aktif üyeler; bekleyen davetliyi yalnızca kendisi ve onu davet eden görür (linkle
+-- katılan yabancıya davetlinin kimliği ve arkadaşlığı açılmasın). Aralarında engel olanlar
+-- birbirini görmez.
 create policy "challenge_members: group read" on public.challenge_members
   for select to authenticated
   using (
     user_id = (select auth.uid())
     or (
-      status in ('invited', 'active')
+      (status = 'active' or (status = 'invited' and invited_by = (select auth.uid())))
       and challenge_id = any ((select app.my_challenge_ids('{invited,active}'))::uuid[])
       and not app.is_blocked((select auth.uid()), user_id)
     )
@@ -393,8 +409,3 @@ revoke update on public.challenges from authenticated;
 grant update (title, short_title, reminder_time, invite_message) on public.challenges to authenticated;
 revoke insert, update, delete on public.challenge_invites from authenticated;
 revoke insert, update, delete on public.challenge_members from authenticated;
--- Davet kodu yalnızca linkin sahibine görünür (challenge_invites); grup üyeleri göremez
-revoke select on public.challenge_members from authenticated;
-grant select (challenge_id, user_id, role, status, invited_by, joined_at, joined_on, left_on,
-              finished_at, final_days_done, final_required_days, final_rescues, final_rank, created_at)
-  on public.challenge_members to authenticated;

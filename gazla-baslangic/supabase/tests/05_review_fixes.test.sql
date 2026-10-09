@@ -10,7 +10,7 @@
 --
 -- Run:  supabase test db   (or the local testbed: ./test.sh supabase/tests/05_review_fixes.test.sql)
 begin;
-select plan(69);
+select plan(95);
 -- This file tests behaviour, not privileges (01_rls_privileges does).
 grant execute on all functions in schema app to authenticated;
 
@@ -155,7 +155,7 @@ select is((select final_rank::int from public.challenge_members where challenge_
 
 select tests.authenticate_as('fin_owner');
 select throws_ok(format($$select public.leave_challenge(%L)$$, :'ch_fin'),
-  'P0002', 'Bu challenge''da değilsin', 'a finished membership cannot be left (the result stays)');
+  'P0001', 'Bu challenge bitti', 'a challenge past its last day cannot be left (the result stays)');
 reset role;
 
 -- Another member still has a pending rescue for the last day -> nobody is ranked yet
@@ -226,7 +226,7 @@ select id as ch_rep from app.do_create_challenge(:'ri', null, 'Tehlikeli', 'chec
 insert into public.challenge_invites (code, challenge_id, inviter_id) values ('RepCode123', :'ch_rep', :'ri');
 select tests.authenticate_as('rep_stranger');
 select throws_ok(format($$select public.submit_report(%L, 'dangerous_challenge', null, false, 'challenge', null, %L)$$, :'ri', :'ch_rep'),
-  'P0002', 'Kullanıcı bulunamadı', 'without the invite code a stranger cannot report the challenge');
+  'P0002', 'Challenge bulunamadı', 'without the invite code a stranger cannot report the challenge');
 select lives_ok(format($$select public.submit_report(%L, 'dangerous_challenge', null, false, 'challenge', null, %L, 'RepCode123')$$, :'ri', :'ch_rep'),
   'with the invite code (InviteLanding) the challenge can be reported');
 reset role;
@@ -393,6 +393,152 @@ select results_eq(
 select lives_ok(format($$delete from auth.users where id = %L$$, :'dme'), 'deleting the last member succeeds');
 select is_empty(format($$select 1 from public.challenges where id = %L$$, :'ch_del'),
   'a challenge with no members left at all is deleted');
+
+-- ================================================================================================
+-- 11. Second review: blocks, reports, invites, display names, rescue chains
+-- ================================================================================================
+
+-- Blocking a random uuid does not open the profile; blocking back does not undo someone's block
+select pg_temp.mk_user('blk_eve') as be \gset
+select pg_temp.mk_user('blk_bob') as bb \gset
+update public.user_settings set discoverability = 'nobody' where user_id = :'bb';
+select tests.authenticate_as('blk_eve');
+select lives_ok(format($$insert into public.blocks (blocker_id, blocked_id) values (auth.uid(), %L)$$, :'bb'),
+  'any user can be blocked');
+select is_empty(format($$select 1 from public.profiles where id = %L$$, :'bb'),
+  'blocking a stranger who is not discoverable does not reveal the profile');
+reset role;
+select pg_temp.mk_user('blk_alice') as bal \gset
+select pg_temp.befriend(:'bal', :'bb') as _x \gset
+insert into public.blocks (blocker_id, blocked_id) values (:'bb', :'bal');
+select tests.authenticate_as('blk_alice');
+select lives_ok(format($$insert into public.blocks (blocker_id, blocked_id) values (auth.uid(), %L)$$, :'bb'),
+  'the blocked friend blocks back');
+select is_empty(format($$select 1 from public.profiles where id = %L$$, :'bb'),
+  'blocking back does not bring the blocker''s profile back');
+select tests.authenticate_as('blk_bob');
+select is_empty(format($$select 1 from public.profiles where id = %L$$, :'bal'),
+  'after a mutual block neither side sees the other''s profile');
+select isnt_empty(format($$select 1 from public.blocks where blocked_id = %L$$, :'bal'),
+  'the block stays in the blocked users list (it can still be lifted)');
+reset role;
+
+-- A pending friend request shows the profile row, not the activity
+select pg_temp.mk_user('pend_x') as px \gset
+select pg_temp.mk_user('pend_y') as py \gset
+insert into public.friendships (requester_id, addressee_id) values (:'px', :'py');
+select tests.authenticate_as('pend_x');
+select is(public.friend_profile(:'py'), null, 'friend_profile: nothing for a pending requester');
+reset role;
+
+-- Reports: one open report per target (repeat returns it), at most 10 new ones in 24 hours
+select id as rs_report from public.reports where reporter_id = :'rs' \gset
+select tests.authenticate_as('rep_stranger');
+select is(public.submit_report(null, 'dangerous_challenge', null, false, 'challenge', null, null, 'RepCode123'),
+          :'rs_report'::uuid,
+  'the invite code alone identifies challenge and inviter; a repeat returns the open report');
+reset role;
+select pg_temp.mk_user('rep_spam') as rsp \gset
+select array_agg(pg_temp.mk_user('rep_t' || g) order by g) as rts from generate_series(1, 11) g \gset
+select tests.authenticate_as('rep_spam');
+select is((select count(*)::int from unnest(:'rts'::uuid[]) with ordinality as t(u, n)
+           where n <= 10 and public.submit_report(t.u, 'spam_or_fake', null, false) is not null), 10,
+  '10 reports in a day are accepted');
+select throws_ok(format($$select public.submit_report(%L, 'spam_or_fake', null, false)$$, (:'rts'::uuid[])[11]),
+  'P0001', 'Bugün çok fazla şikayet gönderdin', 'the 11th new report in 24 hours is refused');
+reset role;
+
+-- A declined invite can be repeated at most 3 times a day per challenge
+select pg_temp.mk_user('rinv_o') as ro \gset
+select pg_temp.mk_user('rinv_f') as rf \gset
+select pg_temp.befriend(:'ro', :'rf') as _x \gset
+select id as ch_ri from app.do_create_challenge(:'ro', null, 'Davet', 'check', 7, null, null, null, null, null, 0,
+                                                null, null, '{}', now()) \gset
+select is(app.do_invite(:'ro', :'ch_ri', array[:'rf']::uuid[], now())
+          + (select 0 from app.do_respond_to_invite(:'rf', :'ch_ri', false, now()))
+          + app.do_invite(:'ro', :'ch_ri', array[:'rf']::uuid[], now())
+          + (select 0 from app.do_respond_to_invite(:'rf', :'ch_ri', false, now()))
+          + app.do_invite(:'ro', :'ch_ri', array[:'rf']::uuid[], now())
+          + (select 0 from app.do_respond_to_invite(:'rf', :'ch_ri', false, now())), 3,
+  'invite, decline, re-invite twice: 3 invites');
+select is(app.do_invite(:'ro', :'ch_ri', array[:'rf']::uuid[], now()), 0, 'a 4th invite the same day is skipped');
+
+-- Deleting the reported account removes personal data from the evidence
+delete from auth.users where id = :'m2';
+select results_eq(
+  format($$select reported_user_id, evidence ? 'photo_path', evidence ? 'note', evidence ? 'local_date'
+           from public.reports where reporter_id = %L and target_type = 'photo'$$, :'m1'),
+  $$values (null::uuid, false, false, true)$$,
+  'after the reported user deleted the account: no identity, no photo path or note, the day stays');
+
+-- Display names cannot pass for the mascot, the brand or support
+select tests.create_supabase_user('fake_support') as fs \gset
+select tests.authenticate_as('fake_support');
+select throws_ok($$select public.complete_profile('gazla.fan', 'Gazla Destek', 1995)$$,
+  '23514', 'Bu görünen ad kullanılamaz', '"Gazla Destek" is refused as a display name');
+select lives_ok($$select public.complete_profile('diken.ali', 'Diken Ali', 1995)$$, '"Diken Ali" is a normal name');
+select throws_ok($$update public.profiles set display_name = 'D İ K E N' where id = auth.uid()$$,
+  '23514', 'Bu görünen ad kullanılamaz', 'spacing and Turkish letters do not get around it');
+reset role;
+
+-- A rescued day cannot be followed by another rescue (no completing a challenge with ads alone)
+select pg_temp.mk_user('chain_u') as chu \gset
+select pg_temp.mk_ch('Zincir', '2026-09-01', 30) as ch_chain \gset
+select pg_temp.add_member(:'ch_chain', :'chu', '2026-09-01') as _x \gset
+select pg_temp.ci(:'chu', :'ch_chain', '2026-09-01', '2026-09-04') as _x \gset
+select lives_ok(format($$select app.apply_rescue(%L, %L, '2026-09-05', 'ad', 'reward-chain-1', '2026-09-06 03:00+03')$$,
+                       :'chu', :'ch_chain'), 'the first missed day is rescued with an ad');
+select is_empty(format($$select 1 from app.pending_rescues(%L, '2026-09-07 03:00+03')$$, :'chu'),
+  'the next missed day is not offered: a rescued day cannot be chained');
+
+-- ================================================================================================
+-- 12. Second review: orphans, client numbers, file names, the 2-hour grace in Today
+-- ================================================================================================
+
+-- The last remaining (left) member deletes the account -> the ownerless challenge goes too
+select pg_temp.mk_user('orph_a') as ora \gset
+select id as ch_orph from app.do_create_challenge(:'ora', null, 'Yetim', 'check', 7, null, null, null, null, null, 0,
+                                                  null, null, '{}', now()) \gset
+select app.do_leave_challenge(:'ora', :'ch_orph', now()) as _l \gset
+select isnt_empty(format($$select 1 from public.challenges where id = %L$$, :'ch_orph'),
+  'after the only member left, the challenge stays for history');
+delete from auth.users where id = :'ora';
+select is_empty(format($$select 1 from public.challenges where id = %L$$, :'ch_orph'),
+  'when that member deletes the account, the challenge with no members is deleted');
+
+-- JavaScript float noise is rounded, not rejected
+select pg_temp.mk_user('num_u') as nu \gset
+select tests.authenticate_as('num_u');
+select id as ch_numf from public.create_challenge(p_title => 'Koşu', p_task_type => 'number', p_duration_days => 7,
+  p_number_unit => 'km', p_number_base_target => 0.30000000000000004, p_number_step => 0.1) \gset
+select is((select value from public.checkin(:'ch_numf', p_value => 0.30000000000000004)), 0.3::numeric,
+  'a value like 0.1 + 0.2 from the app is stored as 0.3');
+reset role;
+select is((select number_base_target from public.challenges where id = :'ch_numf'), 0.3::numeric,
+  'challenge number settings are rounded the same way');
+
+-- Upload names the check-in would reject are refused at upload time
+select tests.authenticate_as('num_u');
+select throws_ok(format($$insert into storage.objects (bucket_id, name, owner_id) values ('proofs', %L, auth.uid()::text)$$,
+                        :'nu' || '/' || :'ch_numf' || '/fotoğraf (1).jpg'),
+  '42501', null, 'a proof named like a gallery file is refused (the app generates the name)');
+select throws_ok(format($$insert into storage.objects (bucket_id, name, owner_id) values ('avatars', %L, auth.uid()::text)$$,
+                        :'nu' || '/klasör/ben.jpg'),
+  '42501', null, 'an avatar in a sub-folder is refused');
+reset role;
+
+-- Inside the 2-hour grace, Today lists yesterday's still-open tasks too
+select pg_temp.mk_user('grace_u') as gu \gset
+select pg_temp.mk_ch('Gece', '2026-09-01', 30) as ch_grace \gset
+select pg_temp.add_member(:'ch_grace', :'gu', '2026-09-01') as _x \gset
+select results_eq(
+  format($$select local_date, done from app.today_tasks(%L, '2026-09-11 01:00+03')$$, :'gu'),
+  $$values ('2026-09-11'::date, false), ('2026-09-10'::date, false)$$,
+  'at 01:00 both today and yesterday are listed (yesterday can still be checked in)');
+select results_eq(
+  format($$select local_date from app.today_tasks(%L, '2026-09-11 02:00+03')$$, :'gu'),
+  $$values ('2026-09-11'::date)$$,
+  'from 02:00 only today');
 
 select * from finish();
 rollback;

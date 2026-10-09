@@ -54,10 +54,13 @@ $$;
 grant execute on function app.try_uuid(text), app.can_see_proof(uuid, text), app.proof_locked(text)
   to authenticated;
 
+-- Dosya adı işaretlemenin kabul ettiği biçimde olmalı ({uid}/{challenge}/{ad}: harf, rakam, . _ -;
+-- uygulama adı üretir, örn. uuid.jpg): yükleme sonradan reddedilecek bir adla başarılı olmasın.
 create policy "proofs: upload own folder" on storage.objects
   for insert to authenticated
   with check (
     bucket_id = 'proofs'
+    and name ~ '^[0-9a-f-]{36}/[0-9a-f-]{36}/[A-Za-z0-9_-][A-Za-z0-9._-]{0,99}$'
     and (storage.foldername(name))[1] = (select auth.uid())::text
     and app.is_active_member((select auth.uid()), app.try_uuid((storage.foldername(name))[2]))
     and not app.proof_locked(name)
@@ -73,6 +76,7 @@ create policy "proofs: update own" on storage.objects
   )
   with check (
     bucket_id = 'proofs'
+    and name ~ '^[0-9a-f-]{36}/[0-9a-f-]{36}/[A-Za-z0-9_-][A-Za-z0-9._-]{0,99}$'
     and (storage.foldername(name))[1] = (select auth.uid())::text
     and app.is_active_member((select auth.uid()), app.try_uuid((storage.foldername(name))[2]))
     and not app.proof_locked(name)
@@ -107,12 +111,20 @@ create policy "avatars: owner read" on storage.objects
 
 create policy "avatars: upload own folder" on storage.objects
   for insert to authenticated
-  with check (bucket_id = 'avatars' and (storage.foldername(name))[1] = (select auth.uid())::text);
+  with check (
+    bucket_id = 'avatars'
+    and name ~ '^[0-9a-f-]{36}/[A-Za-z0-9_-][A-Za-z0-9._-]{0,99}$'
+    and (storage.foldername(name))[1] = (select auth.uid())::text
+  );
 
 create policy "avatars: update own" on storage.objects
   for update to authenticated
   using (bucket_id = 'avatars' and (storage.foldername(name))[1] = (select auth.uid())::text)
-  with check (bucket_id = 'avatars' and (storage.foldername(name))[1] = (select auth.uid())::text);
+  with check (
+    bucket_id = 'avatars'
+    and name ~ '^[0-9a-f-]{36}/[A-Za-z0-9_-][A-Za-z0-9._-]{0,99}$'
+    and (storage.foldername(name))[1] = (select auth.uid())::text
+  );
 
 create policy "avatars: delete own" on storage.objects
   for delete to authenticated

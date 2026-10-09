@@ -47,18 +47,36 @@ language sql immutable parallel safe as $$
   )
 $$;
 
+-- Görünen ad maskot, marka ya da destek ekibi gibi görünmesin ("Diken", "Gazla Destek",
+-- "NoSkip Support"): Türkçe harfler sadeleştirilip harf/rakam dışı her şey atıldıktan sonra ad
+-- yalnızca ayrılmış kelimelerden (ve "ekibi", "resmi", "bot" gibi eklerden) oluşamaz. "Diken Ali",
+-- "Gazlayan Mehmet" gibi adlar geçer. En iyi çaba: istemci Diken bildirimlerini ayrı gösterir ve
+-- görünen adın yanında hep @kullanıcıadı yazar.
+create function app.is_reserved_display_name(p_name text) returns boolean
+language sql immutable parallel safe as $$
+  select regexp_replace(
+           lower(translate(p_name, 'İIıĞğÜüŞşÖöÇçÂâÎîÛû', 'iiigguussoocc' || 'aaiiuu')),
+           '[^a-z0-9]', '', 'g'
+         ) ~ ('^(diken|spiky|gazla|noskip|admin|administrator|support|destek|help|yardim|moderator'
+              '|system|root|null|undefined|ekibi|ekip|team|resmi|official|bot)+$')
+$$;
+
 create function app.profiles_guard() returns trigger
 language plpgsql security definer set search_path = '' as $$
 begin
   if app.is_reserved_username(new.username::text) then
     raise exception 'Bu kullanıcı adı kullanılamaz' using errcode = '23514';
   end if;
+  if (tg_op = 'INSERT' or new.display_name is distinct from old.display_name)
+     and app.is_reserved_display_name(new.display_name) then
+    raise exception 'Bu görünen ad kullanılamaz' using errcode = '23514';
+  end if;
   return new;
 end
 $$;
 
 create trigger profiles_guard
-  before insert or update of username on public.profiles
+  before insert or update of username, display_name on public.profiles
   for each row execute function app.profiles_guard();
 
 -- Kullanıcı ayarları (yalnızca sahibi) -----------------------------------------------------

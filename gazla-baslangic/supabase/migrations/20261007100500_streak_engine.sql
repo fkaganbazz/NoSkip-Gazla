@@ -177,8 +177,8 @@ $$;
 
 -- Kurtarılabilecek gün: kapanmış, kapanışından bu yana 24 saat geçmemiş, kapsanmamış ve öncesinde
 -- seri > 0. Üyenin challenge'daki ilk günü kaçtıysa challenge serisi yoktur; o gün genel seriyi
--- bozduğu için genel seri > 0 ise kurtarılabilir. Her challenge için pratikte en fazla bir gün
--- (iki gün üst üste kaçtıysa sonrakinin öncesinde seri 0'dır).
+-- bozduğu için genel seri > 0 ise kurtarılabilir. Kurtarılmış günün ertesi kurtarılamaz (kurtarma
+-- zinciriyle işaretlemeden seri sürmez); böylece her challenge için en fazla bir gün açıktır.
 create function app.pending_rescues(p_user uuid, p_at timestamptz)
 returns table (challenge_id uuid, missed_date date, streak_before integer, expires_at timestamptz)
 language sql stable security definer set search_path = '' as $$
@@ -197,6 +197,9 @@ language sql stable security definer set search_path = '' as $$
     where m.user_id = p_user and m.status = 'active'
       and t.d between greatest(c.start_date, m.joined_on) and c.end_date
       and not app.is_covered(p_user, m.challenge_id, t.d)
+      and not exists (select 1 from public.streak_rescues r
+                      where r.user_id = p_user and r.challenge_id = m.challenge_id
+                        and r.rescued_date = t.d - 1)
   )
   select x.challenge_id, x.d, x.run, x.expires_at
   from (
@@ -355,7 +358,9 @@ begin
   if v_days >= v_required then
     insert into public.notifications (recipient_id, kind, actor_id, challenge_id, payload, local_date)
     select f.friend_id, 'friend_finished_challenge', p_user, p_challenge,
-           jsonb_build_object('title', v_c.title, 'duration_days', v_c.duration_days),
+           -- Bitirdiği gün sayısı kendi günleri (sonradan katılan için süreden az olabilir)
+           jsonb_build_object('title', v_c.title, 'duration_days', v_required,
+                              'challenge_duration_days', v_c.duration_days),
            app.local_date(f.friend_id, p_at)
     from (
       select case when fr.requester_id = p_user then fr.addressee_id else fr.requester_id end as friend_id

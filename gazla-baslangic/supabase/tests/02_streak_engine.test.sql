@@ -684,7 +684,7 @@ select results_eq(
   $$values (5, 5, 'filiz'::public.diken_stage, false, 0, 2, true)$$,
   'my_streak: 5-day streak, today 0/2 done, not wilted, free right available');
 select results_eq(
-  $$select title, day_index, done, target from public.my_today() order by title$$,
+  format($$select title, day_index, done, target from public.my_today() where local_date = %L order by title$$, :'t'),
   $$values ('sk now check'::text, 6, false, null::numeric), ('sk now plank'::text, 3, false, 70::numeric)$$,
   'my_today: day index per challenge and the day-3 number target');
 select lives_ok(format($$select public.checkin(%L)$$, :'n1'), 'check-in of the check task');
@@ -780,7 +780,8 @@ from unnest(array[:'g7', :'g10', :'g30', :'gx']::uuid[]) c \gset
 select sum(pg_temp.ci(:'gd', c.id, c.start_date, c.end_date, array[:'t'::date - 10])) as _n
 from public.challenges c where c.id in (:'g7', :'g10', :'g30', :'gx') \gset
 select tests.authenticate_as('sk_gd');
-select is((select count(*)::int from public.my_today()), 0, 'my_today: no task today for a user whose challenges ended');
+select is((select count(*)::int from public.my_today() where local_date = app.local_date(auth.uid(), now())), 0,
+          'my_today: no task today for a user whose challenges ended');
 select results_eq($$select duration_days, stage, final_rank from public.my_garden() order by duration_days$$,
                   $$values (7, 'genc'::public.diken_stage, 1), (10, 'tam'::public.diken_stage, 1), (30, 'cicek'::public.diken_stage, 1)$$,
                   'my_garden after lazy finalization: 7 -> genc, 10 -> tam, 30 -> cicek; the missed one is absent');

@@ -584,8 +584,9 @@ select id as p_third from public.pokes
  where sender_id = auth.uid() and recipient_id = :'bea' and message_key = 'finish_together' \gset
 select isnt_empty(format($$delete from public.pokes where id = %L returning 1$$, :'p_third'),
   'send_poke undo: the sender can take back a fresh poke');
-select lives_ok(format($$select public.send_poke(%L, 'hype', 'diken_waiting')$$, :'bea'),
-  'send_poke limit: an undone poke does not count towards the daily limit');
+select throws_ok(format($$select public.send_poke(%L, 'hype', 'diken_waiting')$$, :'bea'),
+  'P0001', 'Bugün bu kişiyi yeterince dürttün',
+  'send_poke limit: an undone poke still counts (its notification and push already went out)');
 select tests.authenticate_as('bea');
 select lives_ok(format($$select public.send_poke(%L, 'hype', 'almost_there')$$, :'ali'),
   'send_poke limit: it is per direction (the recipient can still poke back)');
@@ -742,8 +743,8 @@ select tests.authenticate_as('ali');
 
 select throws_ok(format($$select public.submit_report(%L, 'harassment')$$, :'ali'),
   'P0001', 'Kendini şikayet edemezsin', 'submit_report: cannot report yourself');
-select throws_ok(format($$select public.submit_report(%L, 'harassment')$$, :'hale'),
-  'P0002', 'Kullanıcı bulunamadı', 'submit_report: a stranger whose profile I cannot see');
+select lives_ok(format($$select public.submit_report(%L, 'harassment', null, false)$$, :'hale'),
+  'submit_report: a stranger whose profile I cannot see can be reported (same answer as a blocker)');
 select throws_ok($$select public.submit_report(gen_random_uuid(), 'other')$$,
   'P0002', 'Kullanıcı bulunamadı', 'submit_report: unknown user');
 select throws_like($$select public.submit_report(null, 'other', null, false)$$, '%',
