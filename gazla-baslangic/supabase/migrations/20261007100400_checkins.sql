@@ -17,14 +17,22 @@ create table public.checkins (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint checkins_one_per_day unique (user_id, challenge_id, local_date),
-  constraint checkins_value check (value is null or value >= 0),
+  -- Üst sınır ve en çok 4 ondalık (NaN ve sonsuz da elenir)
+  constraint checkins_value
+    check (value is null or (value >= 0 and value <= 1000000000 and scale(value) <= 4)),
   constraint checkins_note check (note is null or char_length(note) <= 200),
+  -- {user_id}/{challenge_id}/{dosya}: tek dosya adı, "." ile başlamaz
   constraint checkins_photo_path check (
-    photo_path is null or photo_path like user_id::text || '/' || challenge_id::text || '/%'
+    photo_path is null or (
+      photo_path like user_id::text || '/' || challenge_id::text || '/%'
+      and photo_path ~ '^[0-9a-f-]{36}/[0-9a-f-]{36}/[A-Za-z0-9_-][A-Za-z0-9._-]{0,99}$'
+    )
   )
 );
 
 create index checkins_challenge_date_idx on public.checkins (challenge_id, local_date);
+-- Kanıt fotoğrafı → işaretleme (storage politikaları)
+create index checkins_photo_path_idx on public.checkins (photo_path) where photo_path is not null;
 
 create trigger checkins_touch_updated_at
   before update on public.checkins
@@ -85,7 +93,11 @@ alter table public.streak_rescues enable row level security;
 
 create policy "checkins: own and group read" on public.checkins
   for select to authenticated
-  using (app.can_see_member_activity((select auth.uid()), user_id, challenge_id));
+  using (
+    (user_id = (select auth.uid())
+     or challenge_id = any ((select app.my_challenge_ids('{active}'))::uuid[]))
+    and app.can_see_member_activity((select auth.uid()), user_id, challenge_id)
+  );
 
 -- Kurtarma yöntemi kişiseldir; grup yalnızca sonucu (seri) görür.
 create policy "streak_rescues: own read" on public.streak_rescues

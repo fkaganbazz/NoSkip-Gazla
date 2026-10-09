@@ -55,7 +55,7 @@ returns table (
   done_today integer, total_today integer, free_rescue_available boolean
 )
 language sql stable security definer set search_path = '' as $$
-  with s as (select app.user_streak(p_user, p_at) as cur),
+  with s as materialized (select app.user_streak(p_user, p_at) as cur),
   today as (
     select count(*)::int as total, (count(*) filter (where tt.done))::int as done
     from app.today_tasks(p_user, p_at) tt
@@ -182,22 +182,79 @@ language sql stable security definer set search_path = '' as $$
   select * from app.friends_today(app.require_user(), now())
 $$;
 
--- Bahçe: tüm günleri kapsanarak bitirilen challenge'lar; kaktüs aşaması süreye göre --------------
+-- Bahçe: sorumlu olduğu tüm günleri kapsanarak bitirilen challenge'lar. Kaktüs aşaması üyenin gün
+-- sayısına göre (sonradan katılan için süreden az olabilir) ------------------------------------
 
-create function public.my_garden()
+create function app.completed_challenges(p_user uuid)
 returns table (
-  challenge_id uuid, title text, short_title text, duration_days integer,
+  challenge_id uuid, title text, short_title text, duration_days integer, required_days integer,
   stage public.diken_stage, finished_at timestamptz, final_rescues integer, final_rank integer
 )
 language sql stable security definer set search_path = '' as $$
-  select c.id, c.title, c.short_title, c.duration_days::int,
-         public.diken_stage_for(c.duration_days), m.finished_at, m.final_rescues::int, m.final_rank::int
+  select c.id, c.title, c.short_title, c.duration_days::int, m.final_required_days::int,
+         public.diken_stage_for(m.final_required_days), m.finished_at, m.final_rescues::int,
+         m.final_rank::int
   from public.challenge_members m
   join public.challenges c on c.id = m.challenge_id
-  where m.user_id = app.require_user()
+  where m.user_id = p_user
     and m.finished_at is not null
-    and m.final_days_done >= c.duration_days
+    and m.final_days_done >= m.final_required_days
   order by m.finished_at desc
+$$;
+
+create function public.my_garden()
+returns table (
+  challenge_id uuid, title text, short_title text, duration_days integer, required_days integer,
+  stage public.diken_stage, finished_at timestamptz, final_rescues integer, final_rank integer
+)
+language sql stable security definer set search_path = '' as $$
+  select * from app.completed_challenges(app.require_user())
+$$;
+
+-- Tamamlama ekranının 7 günlük şeridi ve haftalık özet: genel günlük durum (en çok 31 gün)
+create function public.my_recent_days(p_days integer default 7)
+returns table (day date, required integer, covered integer, rescued integer, is_open boolean)
+language sql stable security definer set search_path = '' as $$
+  with u as (select app.require_user() as uid)
+  select s.day, s.required, s.covered,
+         (select count(*)::int from public.streak_rescues r
+          where r.user_id = u.uid and r.rescued_date = s.day),
+         s.is_open
+  from u
+  cross join app.user_day_status(u.uid, now()) s
+  where s.day > app.local_date(u.uid, now()) - least(greatest(coalesce(p_days, 7), 1), 31)
+  order by s.day
+$$;
+
+-- Arkadaş profili (FriendProfile): seri, tamamlanan sayısı, ortak challenge'lar. Profili
+-- görebilen (arkadaş, ortak üye) ve aralarında engel olmayan biri için; aksi halde null.
+create function public.friend_profile(p_user uuid) returns jsonb
+language sql stable security definer set search_path = '' as $$
+  with v as (select app.require_user() as uid)
+  select case when app.can_see_profile(v.uid, p.id) and not app.is_blocked(v.uid, p.id) then
+    jsonb_build_object(
+      'user_id', p.id, 'username', p.username::text, 'display_name', p.display_name,
+      'avatar_path', p.avatar_path, 'avatar_tint', p.avatar_tint, 'harsh_mode', p.harsh_mode,
+      'is_friend', app.are_friends(v.uid, p.id),
+      'streak', app.user_streak(p.id, now()),
+      'completed_count', (select count(*) from app.completed_challenges(p.id)),
+      'shared_challenges', coalesce((
+        select jsonb_agg(jsonb_build_object(
+                 'challenge_id', c.id, 'title', c.title, 'icon', c.icon, 'tint', c.tint,
+                 'duration_days', c.duration_days,
+                 'day_index', least(app.local_date(p.id, now()) - c.start_date + 1, c.duration_days),
+                 'days_done', app.days_done(p.id, c.id)
+               ) order by b.joined_at)
+        from public.challenge_members a
+        join public.challenge_members b on b.challenge_id = a.challenge_id
+        join public.challenges c on c.id = a.challenge_id
+        where a.user_id = v.uid and b.user_id = p.id and a.status = 'active' and b.status = 'active'
+          and c.end_date >= app.local_date(p.id, now())
+      ), '[]'::jsonb)
+    ) end
+  from v
+  join public.profiles p on p.id = p_user
+  where p.id <> v.uid
 $$;
 
 -- Keşfet / ChallengePreview: kaç kişi şu an yapıyor, hangi arkadaşlar ------------------------------
@@ -265,15 +322,19 @@ $$;
 
 -- Zamanlanmış işler (service role) ----------------------------------------------------------------
 
--- Diken bildirimi şimdi gönderilebilir mi: günde en fazla 2, sessiz saatler dışında (yerel)
+-- Diken bildirimi şimdi gönderilebilir mi: sessiz saatler (23:30–08:00) dışında ve bugün (yerel)
+-- gönderilen Diken bildirimi 2'den az. Sayım gönderim anının (pushed_at) yerel gününe göre.
+-- Salt okunur ön kontrol; gönderimden hemen önce claim_diken_push ile hak alınır.
 create function app.can_send_diken_push(p_user uuid, p_at timestamptz) returns boolean
 language sql stable security definer set search_path = '' as $$
-  with t as (select (p_at at time zone app.user_timezone(p_user)) as local_ts)
+  with z as (select app.user_timezone(p_user) as tz),
+  t as (select z.tz, (p_at at time zone z.tz) as local_ts from z)
   select not (t.local_ts::time >= app.quiet_hours_start() or t.local_ts::time < app.quiet_hours_end())
      and (
        select count(*) from public.notifications n
-       where n.recipient_id = p_user and n.actor_id is null and n.pushed_at is not null
-         and n.local_date = t.local_ts::date
+       where n.recipient_id = p_user and n.actor_id is null
+         and n.pushed_at >= (t.local_ts::date::timestamp at time zone t.tz)
+         and n.pushed_at < ((t.local_ts::date + 1)::timestamp at time zone t.tz)
      ) < app.diken_daily_limit()
   from t
 $$;
@@ -281,6 +342,34 @@ $$;
 create function public.can_send_diken_push(p_user uuid) returns boolean
 language sql stable security definer set search_path = '' as $$
   select app.can_send_diken_push(p_user, now())
+$$;
+
+-- Diken bildirimini göndermek için hak al: kural sağlanıyorsa pushed_at'i işaretler ve true döner.
+-- Kullanıcı başına kilitle atomik: eşzamanlı iki gönderici sınırı aşamaz. Edge Function yalnızca
+-- true dönerse push gönderir.
+create function app.claim_diken_push(p_notification uuid, p_at timestamptz) returns boolean
+language plpgsql security definer set search_path = '' as $$
+declare
+  v_user uuid;
+begin
+  select n.recipient_id into v_user from public.notifications n
+  where n.id = p_notification and n.actor_id is null and n.pushed_at is null;
+  if not found then
+    return false;
+  end if;
+  perform pg_advisory_xact_lock(hashtextextended('diken:' || v_user::text, 0));
+  if not app.can_send_diken_push(v_user, p_at) then
+    return false;
+  end if;
+  update public.notifications n set pushed_at = p_at
+  where n.id = p_notification and n.pushed_at is null;
+  return found;
+end
+$$;
+
+create function public.claim_diken_push(p_notification uuid) returns boolean
+language sql security definer set search_path = '' as $$
+  select app.claim_diken_push(p_notification, now())
 $$;
 
 -- Süresi dolan tüm üyelikleri kapatır (pg_cron ile saatlik çağrılabilir)
@@ -294,7 +383,8 @@ begin
     select m.user_id, m.challenge_id
     from public.challenge_members m
     join public.challenges c on c.id = m.challenge_id
-    where m.status = 'active' and m.finished_at is null and c.end_date < current_date
+    where m.status = 'active' and m.finished_at is null
+      and c.end_date < app.local_date(m.user_id, now())
   loop
     if app.finalize_member(r.user_id, r.challenge_id, now()) then
       v_count := v_count + 1;
@@ -305,41 +395,24 @@ end
 $$;
 
 -- Yetkiler ------------------------------------------------------------------------------------
--- Supabase yeni fonksiyonlara varsayılan olarak PUBLIC/anon/authenticated çalıştırma yetkisi
--- verir. Burada açıkça daraltılır.
+-- Varsayılan kapalı (20261007100000): app fonksiyonlarını yalnızca service_role çalıştırır.
+-- authenticated'a yalnızca RLS politikalarının çağırdığı yardımcılar açılır; diğerleri SECURITY
+-- DEFINER RPC'lerin içinden (sahip yetkisiyle) çağrılır. anon hiçbir app fonksiyonunu çalıştıramaz.
 
--- Yazan ya da zamanı parametre alan app yardımcıları API rollerine kapalı (yalnızca definer
--- fonksiyonlar içinden çağrılır). RLS'te kullanılan okuma yardımcıları açık kalır.
-revoke execute on function
-  app.apply_rescue(uuid, uuid, date, public.rescue_method, text, timestamptz),
-  app.finalize_member(uuid, uuid, timestamptz),
-  app.finalize_user(uuid, timestamptz),
-  app.do_send_poke(uuid, uuid, public.poke_tone, text, uuid, timestamptz),
-  app.do_invite(uuid, uuid, uuid[], timestamptz),
-  app.do_create_challenge(uuid, uuid, text, public.task_type, integer, date, time, text, text,
-                          numeric, numeric, numeric, numeric, uuid[], timestamptz),
-  app.do_respond_to_invite(uuid, uuid, boolean, timestamptz),
-  app.do_leave_challenge(uuid, uuid, timestamptz),
-  app.do_join_by_invite(uuid, text, timestamptz),
-  app.do_checkin(uuid, uuid, numeric, text, text, date, timestamptz),
-  app.do_undo_checkin(uuid, uuid, date, timestamptz),
-  app.today_tasks(uuid, timestamptz),
-  app.streak_summary(uuid, timestamptz),
-  app.challenge_board(uuid, uuid, timestamptz),
-  app.friends_today(uuid, timestamptz),
-  app.pending_rescues(uuid, timestamptz),
-  app.user_day_status(uuid, timestamptz),
-  app.user_streak(uuid, timestamptz),
-  app.user_longest_streak(uuid, timestamptz),
-  app.challenge_streak(uuid, uuid, timestamptz),
-  app.covered_run_ending(uuid, uuid, date),
-  app.covered_dates(uuid, uuid),
-  app.days_done(uuid, uuid),
-  app.can_send_diken_push(uuid, timestamptz),
-  app.random_code(integer)
-from public, anon, authenticated;
+revoke execute on all functions in schema app from public, anon, authenticated;
+grant execute on all functions in schema app to service_role;
 
--- Public RPC'ler: varsayılan yetkiyi kaldır, sonra rol rol aç
+grant execute on function
+  app.is_blocked(uuid, uuid),
+  app.is_active_member(uuid, uuid),
+  app.can_see_profile(uuid, uuid),
+  app.can_see_member_activity(uuid, uuid, uuid),
+  app.my_challenge_ids(public.member_status[]),
+  app.my_related_user_ids(),
+  app.poke_undo_window()
+to authenticated;
+
+-- Public RPC'ler: Supabase'in varsayılan yetkisini kaldır, sonra rol rol aç
 revoke execute on all functions in schema public from public, anon, authenticated;
 
 grant execute on function public.diken_stage_for(integer) to anon, authenticated;
@@ -353,7 +426,7 @@ grant execute on function
   public.send_friend_request(uuid),
   public.accept_friend_request(uuid),
   public.send_poke(uuid, public.poke_tone, text, uuid),
-  public.submit_report(uuid, public.report_reason, text, boolean, public.report_target, uuid, uuid),
+  public.submit_report(uuid, public.report_reason, text, boolean, public.report_target, uuid, uuid, text),
   public.mark_notifications_read(uuid[]),
   public.register_push_token(text, text),
   public.create_challenge(uuid, text, public.task_type, integer, date, time, text, text, numeric,
@@ -362,7 +435,7 @@ grant execute on function
   public.respond_to_invite(uuid, boolean),
   public.leave_challenge(uuid),
   public.create_invite(uuid),
-  public.revoke_invite(uuid),
+  public.revoke_invite(uuid, text),
   public.join_challenge_by_invite(text),
   public.checkin(uuid, numeric, text, text, date),
   public.undo_checkin(uuid, date),
@@ -372,18 +445,25 @@ grant execute on function
   public.my_pending_rescues(),
   public.challenge_board(uuid),
   public.friends_today(),
-  public.my_garden()
+  public.my_garden(),
+  public.my_recent_days(integer),
+  public.friend_profile(uuid)
 to authenticated;
 
 -- Yalnızca sunucu (Edge Function / pg_cron)
 grant execute on function
   public.grant_ad_rescue(uuid, uuid, date, text),
   public.can_send_diken_push(uuid),
+  public.claim_diken_push(uuid),
   public.finish_due_challenges()
 to service_role;
 
--- Bundan sonra eklenecek fonksiyonlar da varsayılan olarak kapalı başlasın. PUBLIC'e verilen
--- yetki şemaya özel değil, globaldir; anon/authenticated'a verilen ise Supabase'in public şeması
--- varsayılanıdır. (app şemasındaki açık varsayılan yetkiler RLS yardımcıları için korunur.)
-alter default privileges revoke execute on functions from public;
+-- Bundan sonra public'e eklenecek fonksiyonlar da kapalı başlasın (Supabase'in public şeması
+-- varsayılanı anon/authenticated'a açar).
 alter default privileges in schema public revoke execute on functions from anon, authenticated;
+
+-- Tablolar: Supabase varsayılanı API rollerine "all" verir. TRUNCATE RLS'i (ve silme
+-- tetikleyicilerini) atlar; TRIGGER/REFERENCES istemciye hiç gerekmez.
+revoke truncate, trigger, references on all tables in schema public from anon, authenticated;
+alter default privileges in schema public revoke truncate, trigger, references on tables
+  from anon, authenticated;

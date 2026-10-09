@@ -66,3 +66,13 @@ profiles, friendships, blocks, reports, challenge_templates, challenges, challen
 - Tok buton gölgesi (`box-shadow: 0 Ypx 0`): `src/components/FlatShadow` (`flatShadowStyle` + `FlatShadowUnderlay`; Android 9 altında View ile çizer).
 - İkonlar: `src/components/icons` (çizgi SVG; boyut ve çizgi kalınlığı tema token'larından).
 - `Link asChild` + `Pressable` stil fonksiyonu birlikte kullanma (Slot stil fonksiyonunu düşürüyor); `router.push`/`navigate` kullan.
+
+## Supabase
+- Şema `supabase/migrations/` (10 dosya), testler `supabase/tests/` (pgTAP). Ayrıntı, kararlar ve açık sorular: `supabase/README.md`.
+- Migration'lar yayımlanmadan önce yerinde düzenlenebilir; yayımlandıktan sonra her değişiklik yeni migration.
+- İstemci tablolara yalnızca politikası olan yerlerde doğrudan yazar (profil/ayar güncelleme, engel, arkadaşlık silme, dürtme geri alma, bildirim token'ı silme). Diğer her şey `public.*` RPC'leri: `checkin`, `send_poke`, `create_challenge`, `submit_report` …
+- Seri, gün numarası, hedef, sıra ve kurtarma hakkı sunucudan okunur (`my_today`, `my_streak`, `my_pending_rescues`, `challenge_board`, `friends_today`, `my_garden`); istemcide yeniden hesaplanmaz.
+- Yerel gün kullanıcının `user_settings.timezone`'una göre; istemci saat dilimini cihazdan alıp değişince günceller. `checkin`'e tarih verilmezse bugün; tolerans içinde dün için `p_local_date`.
+- Fotoğraf kanıtı: önce Storage `proofs/{uid}/{challenge_id}/{dosya}`, sonra `checkin(p_photo_path)`. Profil fotoğrafı `avatars/{uid}/{dosya}`.
+- Yeni fonksiyon eklerken: `app.*` varsayılan olarak yalnızca service_role'e açıktır; RLS politikası çağıracaksa `authenticated`'a, istemci RPC'siyse `public` altında açıkça `grant execute` yaz ve `01_rls_privileges` allow-list'ini güncelle.
+- Test: `supabase test db` (pgTAP + basejump supabase_test_helpers).

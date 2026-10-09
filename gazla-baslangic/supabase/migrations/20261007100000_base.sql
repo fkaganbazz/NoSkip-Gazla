@@ -3,11 +3,18 @@
 -- `app` şeması API'ye açık değildir (PostgREST yalnızca public'i sunar). RLS politikalarının
 -- kullandığı SECURITY DEFINER yardımcılar burada durur; böylece istemci onları doğrudan çağırıp
 -- örneğin "kim kimi engelledi" bilgisini sızdıramaz.
+--
+-- Fonksiyon yetkileri varsayılan olarak kapalıdır: PostgreSQL her yeni fonksiyonu PUBLIC'e açar,
+-- burada bu varsayılan kaldırılır. app fonksiyonlarını yalnızca service_role çalıştırır;
+-- authenticated'a RLS politikalarının çağırdıkları açıkça verilir (20261007100700, Yetkiler).
 
 create extension if not exists citext with schema extensions;
 
 create schema if not exists app;
-grant usage on schema app to anon, authenticated, service_role;
+grant usage on schema app to authenticated, service_role;
+
+alter default privileges revoke execute on functions from public;
+alter default privileges in schema app grant execute on functions to service_role;
 
 -- Enum'lar ---------------------------------------------------------------------------------
 
@@ -55,8 +62,16 @@ language sql immutable parallel safe as $$ select 13 $$;
 create function app.max_members() returns integer
 language sql immutable parallel safe as $$ select 20 $$;
 
--- Aynı kişiye günde en fazla dürtme
+-- Bir kullanıcının aynı anda sürdürebileceği en fazla challenge (bitmemiş, aktif üyelik)
+create function app.max_active_challenges() returns integer
+language sql immutable parallel safe as $$ select 20 $$;
+
+-- Aynı kişiye, alıcının yerel gününde en fazla dürtme
 create function app.poke_daily_limit() returns integer
+language sql immutable parallel safe as $$ select 3 $$;
+
+-- Aynı kişiye 24 saatte en fazla arkadaşlık isteği (geri çekip yeniden gönderme dahil)
+create function app.friend_request_daily_limit() returns integer
 language sql immutable parallel safe as $$ select 3 $$;
 
 -- Gönderilen dürtmeyi geri alma süresi ("Geri al" tostu)
@@ -90,7 +105,3 @@ begin
   end if;
 end
 $$;
-
-grant execute on all functions in schema app to anon, authenticated, service_role;
--- Sonraki migration'larda eklenen yardımcılar da RLS içinde çağrılabilsin
-alter default privileges in schema app grant execute on functions to anon, authenticated, service_role;

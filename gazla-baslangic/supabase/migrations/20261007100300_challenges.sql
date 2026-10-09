@@ -37,8 +37,14 @@ create table public.challenge_templates (
     check (featured_week is null or extract(isodow from featured_week) = 1),
   constraint challenge_templates_number check (
     case when task_type = 'number' then
-      number_unit is not null and number_base_target >= 0 and number_step > 0
+      number_unit is not null and char_length(number_unit) between 1 and 20
+      and number_base_target >= 0 and number_step > 0
       and number_daily_increment >= 0 and (number_max is null or number_max >= number_base_target)
+      -- Üst sınır ve en çok 4 ondalık: NaN ve sonsuz da bu karşılaştırmalarda elenir
+      and number_base_target <= 1000000000 and scale(number_base_target) <= 4
+      and number_step <= 1000000000 and scale(number_step) <= 4
+      and number_daily_increment <= 1000000000 and scale(number_daily_increment) <= 4
+      and (number_max is null or (number_max <= 1000000000 and scale(number_max) <= 4))
     else
       number_unit is null and number_base_target is null and number_step is null
       and number_max is null and number_daily_increment = 0
@@ -73,8 +79,10 @@ create table public.challenges (
   number_max numeric,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  constraint challenges_title check (char_length(btrim(title)) between 1 and 60),
-  constraint challenges_short_title check (short_title is null or char_length(btrim(short_title)) between 1 and 30),
+  -- Uzunluk ham metinden ölçülür (boşlukla şişirilemez); boş/yalnız boşluk olamaz
+  constraint challenges_title check (char_length(title) <= 60 and char_length(btrim(title)) >= 1),
+  constraint challenges_short_title
+    check (short_title is null or (char_length(short_title) <= 30 and char_length(btrim(short_title)) >= 1)),
   -- Hazır süreler 7/10/30; "Özel" süre yalnızca şablonsuz challenge'da (3–60 gün)
   constraint challenges_duration check (duration_days between 3 and 60),
   constraint challenges_template_duration check (template_id is null or duration_days in (7, 10, 30)),
@@ -83,8 +91,13 @@ create table public.challenges (
   constraint challenges_tint check (tint ~ '^[a-z]{1,16}$'),
   constraint challenges_number check (
     case when task_type = 'number' then
-      number_unit is not null and number_base_target >= 0 and number_step > 0
+      number_unit is not null and char_length(number_unit) between 1 and 20
+      and number_base_target >= 0 and number_step > 0
       and number_daily_increment >= 0 and (number_max is null or number_max >= number_base_target)
+      and number_base_target <= 1000000000 and scale(number_base_target) <= 4
+      and number_step <= 1000000000 and scale(number_step) <= 4
+      and number_daily_increment <= 1000000000 and scale(number_daily_increment) <= 4
+      and (number_max is null or (number_max <= 1000000000 and scale(number_max) <= 4))
     else
       number_unit is null and number_base_target is null and number_step is null
       and number_max is null and number_daily_increment = 0
@@ -115,7 +128,9 @@ create unique index challenge_invites_active_key
 
 -- Üyelik ------------------------------------------------------------------------------------
 -- Davet bekleyen, aktif, reddetmiş ve ayrılmış üyeler. Seri ve sıra hesaplanır; yalnızca
--- challenge bitince özet (final_*) saklanır.
+-- challenge bitince özet (final_*) saklanır. Durum geçişleri: invited → active | declined,
+-- declined → invited (yeniden davet), active → left. Ayrılmak kalıcıdır: geri dönüş katılma gününü
+-- değiştirip kaçırılan günleri seriden silerdi.
 
 create table public.challenge_members (
   challenge_id uuid not null references public.challenges (id) on delete cascade,
@@ -130,6 +145,8 @@ create table public.challenge_members (
   left_on date,
   finished_at timestamptz,
   final_days_done smallint,
+  -- Üyenin sorumlu olduğu gün sayısı (sonradan katılan için süreden az); bahçe ölçütü
+  final_required_days smallint,
   final_rescues smallint,
   final_rank smallint,
   created_at timestamptz not null default now(),
@@ -174,6 +191,9 @@ language sql stable security definer set search_path = '' as $$
   )
 $$;
 
+-- p_a, p_b'yi bir challenge grubunda görüyor mu: p_a davetli ya da aktif (karar verirken grubu
+-- görür), p_b aktif. Yalnızca davet edilmiş biri, linkle katılan yabancılara görünmez
+-- (keşfedilebilirliği "hiç kimse" olsa bile açığa çıkardı).
 create function app.are_co_members(p_a uuid, p_b uuid) returns boolean
 language sql stable security definer set search_path = '' as $$
   select exists (
@@ -181,7 +201,7 @@ language sql stable security definer set search_path = '' as $$
     from public.challenge_members a
     join public.challenge_members b on b.challenge_id = a.challenge_id
     where a.user_id = p_a and b.user_id = p_b
-      and a.status in ('invited', 'active') and b.status in ('invited', 'active')
+      and a.status in ('invited', 'active') and b.status = 'active'
   )
 $$;
 
@@ -197,7 +217,40 @@ language sql stable security definer set search_path = '' as $$
       )
 $$;
 
--- Sahip ayrılır ya da hesabını silerse sahiplik en eski aktif üyeye geçer; kimse kalmazsa
+-- RLS ön süzgeçleri: çağıranın ilgili olduğu challenge ve kişilerin listesi. Politikalarda
+-- `(select ...)` içinde bir kez hesaplanır ve dizinle eşleşir; satır başına pahalı kontrol yalnızca
+-- bu listedeki satırlara kalır (aksi halde her istek tüm tabloyu fonksiyonla tarardı).
+create function app.my_challenge_ids(p_statuses public.member_status[]) returns uuid[]
+language sql stable security definer set search_path = '' as $$
+  select coalesce(array_agg(m.challenge_id), '{}')
+  from public.challenge_members m
+  where m.user_id = auth.uid() and m.status = any (p_statuses)
+$$;
+
+-- app.can_see_profile'ın doğru olabileceği kişilerin üst kümesi
+create function app.my_related_user_ids() returns uuid[]
+language sql stable security definer set search_path = '' as $$
+  select coalesce(array_agg(distinct x.id), '{}')
+  from (
+    select auth.uid() as id
+    union all
+    select case when f.requester_id = auth.uid() then f.addressee_id else f.requester_id end
+    from public.friendships f
+    where auth.uid() in (f.requester_id, f.addressee_id)
+    union all
+    select b.user_id
+    from public.challenge_members a
+    join public.challenge_members b on b.challenge_id = a.challenge_id
+    where a.user_id = auth.uid() and a.status in ('invited', 'active') and b.status = 'active'
+    union all
+    select bl.blocked_id from public.blocks bl where bl.blocker_id = auth.uid()
+  ) as x
+  where x.id is not null
+$$;
+
+-- Sahip ayrılır ya da hesabını silerse sahiplik en eski aktif üyeye geçer. Aktif üye kalmazsa
+-- bekleyen davetler düşer; challenge geçmiş için (ayrılanların serisi, işaretlemeler, bahçe)
+-- sahipsiz kalır. Yalnızca hiç aktif/ayrılmış üye satırı kalmadıysa (son kişi hesabını sildi)
 -- challenge silinir.
 create function app.transfer_ownership() returns trigger
 language plpgsql security definer set search_path = '' as $$
@@ -222,7 +275,16 @@ begin
   limit 1;
 
   if v_next is null then
-    delete from public.challenges c where c.id = v_challenge;
+    delete from public.challenge_members m
+    where m.challenge_id = v_challenge and m.status = 'invited';
+    update public.challenge_invites i set revoked_at = now()
+    where i.challenge_id = v_challenge and i.revoked_at is null;
+    if not exists (
+      select 1 from public.challenge_members m
+      where m.challenge_id = v_challenge and m.status in ('active', 'left')
+    ) then
+      delete from public.challenges c where c.id = v_challenge;
+    end if;
   else
     update public.challenge_members m set role = 'owner'
     where m.challenge_id = v_challenge and m.user_id = v_next;
@@ -283,20 +345,21 @@ create policy "challenge_templates: read active" on public.challenge_templates
   for select to anon, authenticated
   using (is_active);
 
+-- Davetli ve aktif üyeler; ayrılan üye de geçmişi için challenge satırını görür (grubu görmez)
 create policy "challenges: members read" on public.challenges
   for select to authenticated
-  using (app.is_member((select auth.uid()), id));
+  using (id = any ((select app.my_challenge_ids('{invited,active,left}'))::uuid[]));
 
 -- Sahip yalnızca ad, kısa ad, hatırlatma ve davet mesajını değiştirebilir (sütun yetkisiyle)
 create policy "challenges: owner update" on public.challenges
   for update to authenticated
   using (exists (
     select 1 from public.challenge_members m
-    where m.challenge_id = id and m.user_id = (select auth.uid()) and m.role = 'owner'
+    where m.challenge_id = challenges.id and m.user_id = (select auth.uid()) and m.role = 'owner'
   ))
   with check (exists (
     select 1 from public.challenge_members m
-    where m.challenge_id = id and m.user_id = (select auth.uid()) and m.role = 'owner'
+    where m.challenge_id = challenges.id and m.user_id = (select auth.uid()) and m.role = 'owner'
   ));
 
 create policy "challenge_invites: inviter read" on public.challenge_invites
@@ -310,7 +373,7 @@ create policy "challenge_members: group read" on public.challenge_members
     user_id = (select auth.uid())
     or (
       status in ('invited', 'active')
-      and app.is_member((select auth.uid()), challenge_id)
+      and challenge_id = any ((select app.my_challenge_ids('{invited,active}'))::uuid[])
       and not app.is_blocked((select auth.uid()), user_id)
     )
   );
@@ -318,7 +381,10 @@ create policy "challenge_members: group read" on public.challenge_members
 -- Profiller: arkadaşlık / ortak challenge / engel kuralı (app.can_see_profile)
 create policy "profiles: visible to related users" on public.profiles
   for select to authenticated
-  using (app.can_see_profile((select auth.uid()), id));
+  using (
+    id = any ((select app.my_related_user_ids())::uuid[])
+    and app.can_see_profile((select auth.uid()), id)
+  );
 
 revoke all on public.challenges, public.challenge_invites, public.challenge_members from anon;
 revoke insert, update, delete on public.challenge_templates from anon, authenticated;
@@ -327,3 +393,8 @@ revoke update on public.challenges from authenticated;
 grant update (title, short_title, reminder_time, invite_message) on public.challenges to authenticated;
 revoke insert, update, delete on public.challenge_invites from authenticated;
 revoke insert, update, delete on public.challenge_members from authenticated;
+-- Davet kodu yalnızca linkin sahibine görünür (challenge_invites); grup üyeleri göremez
+revoke select on public.challenge_members from authenticated;
+grant select (challenge_id, user_id, role, status, invited_by, joined_at, joined_on, left_on,
+              finished_at, final_days_done, final_required_days, final_rescues, final_rank, created_at)
+  on public.challenge_members to authenticated;

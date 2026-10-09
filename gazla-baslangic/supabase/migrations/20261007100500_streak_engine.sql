@@ -3,12 +3,14 @@
 -- Tanımlar
 -- * Kapsanan gün: o challenge için işaretleme ya da kurtarma olan gün.
 -- * Açık gün: hâlâ işaretlenebilen gün (bugün; gece yarısından sonraki 2 saatte dün de).
---   Açık ve kapsanmamış gün seriyi bozmaz, sayılmaz da.
+--   Açık ve kapsanmamış gün seriyi bozmaz, sayılmaz da; ama sonraki bir gün kapsanmışsa bozar
+--   (boş bir dünün üstünden atlanmaz).
 -- * Challenge serisi: üyenin o challenge'da, en son kırılmadan (kapanmış ve kapsanmamış gün)
 --   sonraki kapsanan günleri. Katıldığı günden önce ve ayrıldıktan sonra sayılmaz.
 -- * Genel seri: o gün üyesi olduğu tüm challenge'lar kapsanmışsa gün tamam. Hiç challenge'ı
 --   olmayan gün seriyi dondurur (bozmaz, saymaz).
--- * Kurtarma: kapanan günün ardından 24 saat içinde, o güne kadar seri > 0 ise.
+-- * Kurtarma: günün kapanışından itibaren 24 saat içinde, o güne kadar challenge serisi > 0 ise
+--   (üyenin challenge'daki ilk günüyse genel seri > 0 ise).
 -- * Diken aşaması: 0–6 filiz, 7–9 genç, 10–29 tam, 30+ çiçek (Evolution.dc.html).
 
 -- Üyenin bir challenge'da sorumlu olduğu gün aralığı
@@ -69,19 +71,21 @@ language sql stable security definer set search_path = '' as $$
            app.open_dates(p_user, p_at) as open
     from r
   ),
-  days as (
+  days as materialized (
     select g::date as d, c.d is not null as covered, g::date = any (t.open) as is_open
     from r
     cross join t
     cross join generate_series(r.range_start, t.anchor, interval '1 day') as g
     left join app.covered_dates(p_user, p_challenge) as c(d) on c.d = g::date
-  )
+  ),
+  lc as (select max(d) as last_covered from days where covered)
   select coalesce((
     select count(*)::int
-    from days
-    where covered
-      and d > coalesce((select max(d) from days where not covered and not is_open),
-                       (select range_start - 1 from r))
+    from days, lc
+    where days.covered
+      and days.d > coalesce((select max(u.d) from days u
+                             where not u.covered and (not u.is_open or u.d < lc.last_covered)),
+                            (select range_start - 1 from r))
   ), 0)
 $$;
 
@@ -97,20 +101,21 @@ language sql stable security definer set search_path = '' as $$
     join public.challenges c on c.id = m.challenge_id
     where m.user_id = p_user and m.status in ('active', 'left') and m.joined_on is not null
   ),
-  t as (select app.local_date(p_user, p_at) as today, app.open_dates(p_user, p_at) as open),
+  t as materialized (select app.local_date(p_user, p_at) as today, app.open_dates(p_user, p_at) as open),
   days as (
     select g::date as day, g::date = any (t.open) as is_open
     from t, generate_series((select min(s) from ranges), t.today, interval '1 day') as g
   ),
-  req as (
-    select d.day, r.challenge_id
-    from days d
-    join ranges r on d.day between r.s and r.e
+  covered_days as (
+    select k.challenge_id, k.local_date as day from public.checkins k where k.user_id = p_user
+    union
+    select r.challenge_id, r.rescued_date from public.streak_rescues r where r.user_id = p_user
   ),
   cov as (
-    select q.day, q.challenge_id,
-           app.is_covered(p_user, q.challenge_id, q.day) as covered
-    from req q
+    select d.day, r.challenge_id, cd.day is not null as covered
+    from days d
+    join ranges r on d.day between r.s and r.e
+    left join covered_days cd on cd.challenge_id = r.challenge_id and cd.day = d.day
   )
   select d.day,
          count(c.challenge_id)::int as required,
@@ -125,8 +130,14 @@ $$;
 -- Genel seri (Bugün "12 GÜNLÜK SERİ", Bahçe "Aktif seri")
 create function app.user_streak(p_user uuid, p_at timestamptz) returns integer
 language sql stable security definer set search_path = '' as $$
-  with s as (select * from app.user_day_status(p_user, p_at)),
-  b as (select max(day) as last_break from s where required > 0 and covered < required and not is_open)
+  with s as materialized (select * from app.user_day_status(p_user, p_at)),
+  lc as (select max(day) as last_complete from s where required > 0 and covered = required),
+  b as (
+    select max(s.day) as last_break
+    from s, lc
+    where s.required > 0 and s.covered < s.required
+      and (not s.is_open or s.day < lc.last_complete)
+  )
   select count(*)::int
   from s, b
   where s.required > 0 and s.covered = s.required
@@ -136,12 +147,14 @@ $$;
 -- En uzun genel seri (Bahçe "En uzun seri")
 create function app.user_longest_streak(p_user uuid, p_at timestamptz) returns integer
 language sql stable security definer set search_path = '' as $$
-  with s as (select * from app.user_day_status(p_user, p_at)),
+  with s as materialized (select * from app.user_day_status(p_user, p_at)),
+  lc as (select max(day) as last_complete from s where required > 0 and covered = required),
   g as (
     select s.*,
-           sum(case when required > 0 and covered < required and not is_open then 1 else 0 end)
-             over (order by day) as grp
-    from s
+           sum(case when s.required > 0 and s.covered < s.required
+                         and (not s.is_open or s.day < lc.last_complete) then 1 else 0 end)
+             over (order by s.day) as grp
+    from s, lc
   )
   select coalesce(max(n), 0)::int
   from (
@@ -162,16 +175,22 @@ $$;
 
 -- Kurtarma ----------------------------------------------------------------------------------
 
--- Kurtarılabilecek gün: en son kapanan gün (kapanıştan itibaren 24 saat içinde), kapsanmamış ve
--- öncesinde seri > 0. Her challenge için en fazla bir gün.
+-- Kurtarılabilecek gün: kapanmış, kapanışından bu yana 24 saat geçmemiş, kapsanmamış ve öncesinde
+-- seri > 0. Üyenin challenge'daki ilk günü kaçtıysa challenge serisi yoktur; o gün genel seriyi
+-- bozduğu için genel seri > 0 ise kurtarılabilir. Her challenge için pratikte en fazla bir gün
+-- (iki gün üst üste kaçtıysa sonrakinin öncesinde seri 0'dır).
 create function app.pending_rescues(p_user uuid, p_at timestamptz)
 returns table (challenge_id uuid, missed_date date, streak_before integer, expires_at timestamptz)
 language sql stable security definer set search_path = '' as $$
   with t as (
-    select ((p_at at time zone app.user_timezone(p_user)) - app.grace_period())::date - 1 as d
+    select x.d, app.day_closes_at(p_user, x.d) + app.rescue_window() as expires_at
+    from (select app.local_date(p_user, p_at) as today) as l
+    cross join lateral unnest(array[l.today - 1, l.today - 2]) as x(d)
+    where app.day_closes_at(p_user, x.d) <= p_at
+      and p_at < app.day_closes_at(p_user, x.d) + app.rescue_window()
   ),
   candidates as (
-    select m.challenge_id, t.d
+    select m.challenge_id, t.d, t.expires_at, greatest(c.start_date, m.joined_on) as first_day
     from t
     cross join public.challenge_members m
     join public.challenges c on c.id = m.challenge_id
@@ -179,9 +198,12 @@ language sql stable security definer set search_path = '' as $$
       and t.d between greatest(c.start_date, m.joined_on) and c.end_date
       and not app.is_covered(p_user, m.challenge_id, t.d)
   )
-  select x.challenge_id, x.d, x.run, app.day_closes_at(p_user, x.d) + app.rescue_window()
+  select x.challenge_id, x.d, x.run, x.expires_at
   from (
-    select c.challenge_id, c.d, app.covered_run_ending(p_user, c.challenge_id, c.d - 1) as run
+    select c.challenge_id, c.d, c.expires_at,
+           case when c.d = c.first_day
+                then app.user_streak(p_user, app.day_closes_at(p_user, c.d - 1))
+                else app.covered_run_ending(p_user, c.challenge_id, c.d - 1) end as run
     from candidates c
   ) as x
   where x.run > 0
@@ -236,11 +258,12 @@ $$;
 
 -- Challenge bitişi --------------------------------------------------------------------------
 
--- Sayı görevinde günün hedefi: taban + (gün - 1) × artış
+-- Sayı görevinde günün hedefi: taban + (gün - 1) × artış, en çok number_max (least null'ı atlar)
 create function app.number_target(p_challenge uuid, p_day_index integer) returns numeric
 language sql stable security definer set search_path = '' as $$
   select case when c.task_type = 'number'
-              then c.number_base_target + greatest(p_day_index - 1, 0) * c.number_daily_increment end
+              then least(c.number_base_target + greatest(p_day_index - 1, 0) * c.number_daily_increment,
+                         c.number_max) end
   from public.challenges c where c.id = p_challenge
 $$;
 
@@ -253,14 +276,18 @@ language sql stable security definer set search_path = '' as $$
   where c.d between r.range_start and r.range_end
 $$;
 
--- Son gün kapandıysa üyenin sonucunu kaydeder (Finished: "30/30 gün · 1 kurtarma · 1. sıra").
--- Tüm günleri kapsayan üye "bitirmiş" sayılır: bahçeye kaktüs eklenir, arkadaşlara bildirim gider.
+-- Üyenin sonucunu kaydeder (Finished: "30/30 gün · 1 kurtarma · 1. sıra"). Sonuç ve sıra, hiçbir
+-- aktif üyenin sonucu artık değişemeyecekken alınır: son gün herkesin saat diliminde kapanmış ve
+-- bu challenge için bekleyen kurtarma yok. Böylece son günü kurtaran da sonuca girer ve sıralar
+-- tutarlı olur. Sorumlu olduğu tüm günleri kapsayan üye "bitirmiş" sayılır: bahçeye kaktüs
+-- eklenir, arkadaşlara bildirim gider.
 create function app.finalize_member(p_user uuid, p_challenge uuid, p_at timestamptz) returns boolean
 language plpgsql security definer set search_path = '' as $$
 declare
   v_c public.challenges;
   v_m public.challenge_members;
   v_days integer;
+  v_required integer;
   v_rescues integer;
   v_rank integer;
 begin
@@ -272,13 +299,25 @@ begin
   end if;
 
   select * into v_c from public.challenges c where c.id = p_challenge;
-  if app.day_closes_at(p_user, v_c.end_date) > p_at then
+  if exists (
+    select 1 from public.challenge_members o
+    where o.challenge_id = p_challenge and o.status = 'active'
+      and (app.day_closes_at(o.user_id, v_c.end_date) > p_at
+           or exists (select 1 from app.pending_rescues(o.user_id, p_at) pr
+                      where pr.challenge_id = p_challenge))
+  ) then
     return false;
   end if;
 
   v_days := app.days_done(p_user, p_challenge);
-  select count(*)::int into v_rescues from public.streak_rescues r
-  where r.user_id = p_user and r.challenge_id = p_challenge;
+  select (mr.range_end - mr.range_start + 1)::int into v_required
+  from app.member_range(p_user, p_challenge) mr;
+  -- Yalnızca üyenin aralığındaki kurtarmalar
+  select count(*)::int into v_rescues
+  from public.streak_rescues r
+  cross join app.member_range(p_user, p_challenge) mr
+  where r.user_id = p_user and r.challenge_id = p_challenge
+    and r.rescued_date between mr.range_start and mr.range_end;
 
   -- Sıra: kapsanan gün sayısı, sonra katılma zamanı (erken katılan önde)
   select 1 + count(*)::int into v_rank
@@ -288,10 +327,11 @@ begin
          or (app.days_done(o.user_id, p_challenge) = v_days and o.joined_at < v_m.joined_at));
 
   update public.challenge_members m
-  set finished_at = p_at, final_days_done = v_days, final_rescues = v_rescues, final_rank = v_rank
+  set finished_at = p_at, final_days_done = v_days, final_required_days = v_required,
+      final_rescues = v_rescues, final_rank = v_rank
   where m.challenge_id = p_challenge and m.user_id = p_user;
 
-  if v_days >= v_c.duration_days then
+  if v_days >= v_required then
     insert into public.notifications (recipient_id, kind, actor_id, challenge_id, payload, local_date)
     select f.friend_id, 'friend_finished_challenge', p_user, p_challenge,
            jsonb_build_object('title', v_c.title, 'duration_days', v_c.duration_days),

@@ -56,7 +56,7 @@ create function public.complete_profile(
   p_display_name text,
   p_birth_year integer,
   p_timezone text default null,
-  p_locale text default 'tr'
+  p_locale text default null
 ) returns public.profiles
 language plpgsql security definer set search_path = '' as $$
 declare
@@ -78,10 +78,11 @@ begin
     set username = excluded.username, display_name = excluded.display_name
   returning * into v_row;
 
-  insert into public.user_settings (user_id, birth_year, timezone, locale)
+  -- Tekrar çağrıda (profili düzenle) verilmeyen saat dilimi ve dil korunur; doğum yılı değişmez
+  insert into public.user_settings as s (user_id, birth_year, timezone, locale)
   values (v_uid, p_birth_year, coalesce(p_timezone, app.default_timezone()), coalesce(p_locale, 'tr'))
   on conflict (user_id) do update
-    set timezone = excluded.timezone, locale = excluded.locale;
+    set timezone = coalesce(p_timezone, s.timezone), locale = coalesce(p_locale, s.locale);
 
   return v_row;
 end
@@ -146,9 +147,20 @@ begin
     raise exception 'Kullanıcı bulunamadı' using errcode = 'P0002';
   end if;
 
+  -- Geri çekip yeniden göndererek (her seferinde yeni bildirim) istek yağdırılamasın
+  delete from app.friend_request_log l
+  where l.requester_id = v_uid and l.created_at <= now() - interval '24 hours';
+  if (
+    select count(*) from app.friend_request_log l
+    where l.requester_id = v_uid and l.addressee_id = p_user
+  ) >= app.friend_request_daily_limit() then
+    raise exception 'Bu kişiye bugün yeterince istek gönderdin' using errcode = 'P0001';
+  end if;
+
   insert into public.friendships (requester_id, addressee_id)
   values (v_uid, p_user)
   returning * into v_row;
+  insert into app.friend_request_log (requester_id, addressee_id) values (v_uid, p_user);
   return v_row;
 end
 $$;
@@ -188,8 +200,14 @@ begin
     raise exception 'Bu kişiyi dürtemezsin' using errcode = 'P0001';
   end if;
 
+  -- Challenge bağlamı yalnızca süren bir challenge: üyelik bitişten sonra da 'active' kalır, ama
+  -- alıcının son günü kapandıktan sonra (gece yarısı + tolerans) dürtme gerekçesi olmaz.
   if p_challenge is not null then
-    if not (app.is_active_member(p_sender, p_challenge) and app.is_active_member(p_recipient, p_challenge)) then
+    if not (app.is_active_member(p_sender, p_challenge) and app.is_active_member(p_recipient, p_challenge))
+       or not exists (
+         select 1 from public.challenges c
+         where c.id = p_challenge and app.day_closes_at(p_recipient, c.end_date) > p_at
+       ) then
       raise exception 'Bu kişiyi dürtemezsin' using errcode = 'P0001';
     end if;
   elsif not app.are_friends(p_sender, p_recipient) then
@@ -209,8 +227,11 @@ begin
     raise exception 'Geçersiz mesaj' using errcode = '22023';
   end if;
 
-  -- Aynı kişiye gönderenin yerel gününde en fazla N dürtme
-  v_day_start := (app.local_date(p_sender, p_at)::timestamp) at time zone app.user_timezone(p_sender);
+  -- Aynı kişiye, alıcının yerel gününde en fazla N dürtme. Sınır alıcıyı korur; gönderen kendi
+  -- saat dilimini değiştirerek pencereyi sıfırlayamaz. Çift için kilit: eşzamanlı gönderimler
+  -- sınırı aşamaz.
+  perform pg_advisory_xact_lock(hashtextextended('poke:' || p_sender::text || '>' || p_recipient::text, 0));
+  v_day_start := (app.local_date(p_recipient, p_at)::timestamp) at time zone app.user_timezone(p_recipient);
   if (
     select count(*) from public.pokes k
     where k.sender_id = p_sender and k.recipient_id = p_recipient
@@ -242,40 +263,84 @@ create function public.submit_report(
   p_also_block boolean default true,
   p_target public.report_target default 'user',
   p_checkin uuid default null,
-  p_challenge uuid default null
+  p_challenge uuid default null,
+  -- Davet linkinden görülen challenge (InviteLanding): üye olmadan şikayet edilebilsin
+  p_invite_code text default null
 ) returns uuid
 language plpgsql security definer set search_path = '' as $$
 declare
   v_uid uuid := app.require_user();
+  v_via_invite boolean := false;
+  v_evidence jsonb;
   v_id uuid;
 begin
+  if p_user is null or not exists (select 1 from public.profiles p where p.id = p_user) then
+    raise exception 'Kullanıcı bulunamadı' using errcode = 'P0002';
+  end if;
   if p_user = v_uid then
     raise exception 'Kendini şikayet edemezsin' using errcode = 'P0001';
   end if;
-  if not app.can_see_profile(v_uid, p_user) then
+
+  if p_target = 'challenge' and p_invite_code is not null then
+    v_via_invite := exists (
+      select 1 from public.challenge_invites i
+      where i.code = p_invite_code and i.challenge_id = p_challenge and i.inviter_id = p_user
+    );
+  end if;
+
+  -- Engel iki yönde de şikayeti engellemez: taciz eden, önce engelleyerek şikayetten kaçamaz
+  if not (v_via_invite or app.can_see_profile(v_uid, p_user) or app.is_blocked(v_uid, p_user)) then
     raise exception 'Kullanıcı bulunamadı' using errcode = 'P0002';
   end if;
 
   if p_target = 'photo' then
-    if p_checkin is null or not exists (
-      select 1 from public.checkins k
-      where k.id = p_checkin and k.user_id = p_user and k.photo_path is not null
-        and app.can_see_member_activity(v_uid, k.user_id, k.challenge_id)
-    ) then
+    -- Şikayet eden o challenge'da aktif ya da ayrılmış üye (engel sonrası da şikayet edebilsin)
+    select jsonb_build_object('photo_path', k.photo_path, 'note', k.note, 'value', k.value,
+                              'local_date', k.local_date, 'challenge_id', k.challenge_id)
+      into v_evidence
+    from public.checkins k
+    where k.id = p_checkin and k.user_id = p_user and k.photo_path is not null
+      and exists (
+        select 1 from public.challenge_members m
+        where m.challenge_id = k.challenge_id and m.user_id = v_uid and m.status in ('active', 'left')
+      );
+    if v_evidence is null then
       raise exception 'Fotoğraf bulunamadı' using errcode = 'P0002';
     end if;
   elsif p_target = 'challenge' then
-    if p_challenge is null or not app.is_member(v_uid, p_challenge) then
+    -- Şikayet edilen kişi challenge'la ilgili olmalı: kurucusu, davetlisi ya da (eski) üyesi
+    if p_challenge is null
+       or not (v_via_invite
+               or exists (
+                 select 1 from public.challenge_members m
+                 where m.challenge_id = p_challenge and m.user_id = v_uid
+                   and m.status in ('invited', 'active', 'left')
+               ))
+       or not (
+         exists (
+           select 1 from public.challenge_members m
+           where m.challenge_id = p_challenge and m.user_id = p_user
+             and (m.status = 'invited' or m.joined_at is not null)
+         )
+         or exists (select 1 from public.challenges c where c.id = p_challenge and c.created_by = p_user)
+       ) then
       raise exception 'Challenge bulunamadı' using errcode = 'P0002';
     end if;
+    select jsonb_build_object('title', c.title, 'invite_message', c.invite_message) into v_evidence
+    from public.challenges c where c.id = p_challenge;
+  else
+    select jsonb_build_object('username', p.username::text, 'display_name', p.display_name,
+                              'avatar_path', p.avatar_path)
+      into v_evidence
+    from public.profiles p where p.id = p_user;
   end if;
 
   insert into public.reports (reporter_id, reported_user_id, target_type, checkin_id, challenge_id,
-                              reason, details, also_blocked)
+                              reason, details, also_blocked, evidence)
   values (v_uid, p_user, p_target,
           case when p_target = 'photo' then p_checkin end,
           case when p_target = 'challenge' then p_challenge end,
-          p_reason, nullif(btrim(p_details), ''), coalesce(p_also_block, false))
+          p_reason, nullif(btrim(p_details), ''), coalesce(p_also_block, false), v_evidence)
   returning id into v_id;
 
   if coalesce(p_also_block, false) then
@@ -332,6 +397,21 @@ begin
 end
 $$;
 
+-- Aynı anda sürdürülen (bitmemiş, aktif) challenge sınırı
+create function app.assert_can_take_challenge(p_user uuid, p_at timestamptz) returns void
+language plpgsql stable security definer set search_path = '' as $$
+begin
+  if (
+    select count(*) from public.challenge_members m
+    join public.challenges c on c.id = m.challenge_id
+    where m.user_id = p_user and m.status = 'active' and c.end_date >= app.local_date(p_user, p_at)
+  ) >= app.max_active_challenges() then
+    raise exception 'Aynı anda en fazla % challenge sürdürebilirsin', app.max_active_challenges()
+      using errcode = 'P0001';
+  end if;
+end
+$$;
+
 -- Arkadaşları davet eder (davetli olarak; "Katıl" ile aktif olurlar)
 create function app.do_invite(p_inviter uuid, p_challenge uuid, p_users uuid[], p_at timestamptz)
 returns integer
@@ -341,6 +421,8 @@ declare
   v_count integer := 0;
   v_status public.member_status;
 begin
+  -- Challenge başına kilit: eşzamanlı davet/katılma üye sınırını aşamaz
+  perform 1 from public.challenges c where c.id = p_challenge for no key update;
   if not app.is_active_member(p_inviter, p_challenge) then
     raise exception 'Bu challenge''a davet edemezsin' using errcode = '42501';
   end if;
@@ -354,7 +436,8 @@ begin
     select m.status into v_status from public.challenge_members m
     where m.challenge_id = p_challenge and m.user_id = v_user;
 
-    if v_status in ('active', 'invited') then
+    -- Ayrılan üye geri alınmaz (ayrılmak kalıcı)
+    if v_status in ('active', 'invited', 'left') then
       continue;
     end if;
 
@@ -367,9 +450,9 @@ begin
       insert into public.challenge_members (challenge_id, user_id, status, invited_by)
       values (p_challenge, v_user, 'invited', p_inviter);
     else
-      -- Daha önce reddetmiş ya da ayrılmış: yeniden davet
+      -- Daha önce reddetmiş: yeniden davet
       update public.challenge_members m
-      set status = 'invited', invited_by = p_inviter, left_on = null
+      set status = 'invited', invited_by = p_inviter
       where m.challenge_id = p_challenge and m.user_id = v_user;
       insert into public.notifications (recipient_id, kind, actor_id, challenge_id, local_date)
       values (v_user, 'challenge_invite', p_inviter, p_challenge, app.local_date(v_user, p_at));
@@ -409,6 +492,7 @@ begin
   if v_start < v_today or v_start > v_today + 7 then
     raise exception 'Başlangıç günü bugün ile 7 gün sonrası arasında olmalı' using errcode = '22023';
   end if;
+  perform app.assert_can_take_challenge(p_user, p_at);
 
   if p_template is not null then
     select * into v_t from public.challenge_templates t where t.id = p_template and t.is_active;
@@ -485,6 +569,8 @@ language plpgsql security definer set search_path = '' as $$
 declare
   v_row public.challenge_members;
 begin
+  -- Kilit sırası her yerde aynı: önce challenge, sonra üye satırı
+  perform 1 from public.challenges c where c.id = p_challenge for no key update;
   select * into v_row from public.challenge_members m
   where m.challenge_id = p_challenge and m.user_id = p_user and m.status = 'invited'
   for update;
@@ -493,12 +579,17 @@ begin
   end if;
 
   if p_accept then
+    -- Davetten sonra aralarına engel girdiyse davet geçersiz (link yolu da reddeder)
+    if app.is_blocked(p_user, v_row.invited_by) then
+      raise exception 'Davet bulunamadı' using errcode = 'P0002';
+    end if;
     perform app.assert_challenge_open(p_user, p_challenge, p_at);
     if app.active_member_count(p_challenge) >= app.max_members() then
       raise exception 'Grup dolu' using errcode = 'P0001';
     end if;
+    perform app.assert_can_take_challenge(p_user, p_at);
     update public.challenge_members m
-    set status = 'active', joined_at = p_at, joined_on = app.local_date(p_user, p_at), left_on = null
+    set status = 'active', joined_at = p_at, joined_on = app.local_date(p_user, p_at)
     where m.challenge_id = p_challenge and m.user_id = p_user
     returning * into v_row;
   else
@@ -521,9 +612,11 @@ language plpgsql security definer set search_path = '' as $$
 declare
   v_row public.challenge_members;
 begin
+  -- Bitmiş (sonucu kaydedilmiş) üyelikten ayrılınmaz: sonuç ve bahçe geçmişi korunur
   update public.challenge_members m
   set status = 'left', left_on = app.local_date(p_user, p_at)
   where m.challenge_id = p_challenge and m.user_id = p_user and m.status = 'active'
+    and m.finished_at is null
   returning * into v_row;
   if not found then
     raise exception 'Bu challenge''da değilsin' using errcode = 'P0002';
@@ -543,35 +636,65 @@ language plpgsql security definer set search_path = '' as $$
 declare
   v_uid uuid := app.require_user();
   v_code text;
+  v_constraint text;
 begin
   if not app.is_active_member(v_uid, p_challenge) then
     raise exception 'Bu challenge''a davet edemezsin' using errcode = '42501';
   end if;
   perform app.assert_challenge_open(v_uid, p_challenge, now());
 
-  select i.code into v_code from public.challenge_invites i
-  where i.challenge_id = p_challenge and i.inviter_id = v_uid and i.revoked_at is null;
-  if found then
-    return v_code;
-  end if;
+  for v_attempt in 1 .. 10 loop
+    -- Her turda yeniden oku: eşzamanlı çağrı (çift dokunma, iki cihaz) az önce eklemiş olabilir
+    select i.code into v_code from public.challenge_invites i
+    where i.challenge_id = p_challenge and i.inviter_id = v_uid and i.revoked_at is null;
+    if found then
+      return v_code;
+    end if;
 
-  loop
-    v_code := app.random_code(10);
     begin
       insert into public.challenge_invites (code, challenge_id, inviter_id)
-      values (v_code, p_challenge, v_uid);
-      return v_code;
+      values (app.random_code(10), p_challenge, v_uid)
+      on conflict (challenge_id, inviter_id) where revoked_at is null do nothing
+      returning code into v_code;
+      if found then
+        return v_code;
+      end if;
     exception when unique_violation then
-      -- Çok düşük olasılıklı kod çakışması: yeniden dene
+      -- Yalnızca (çok düşük olasılıklı) kod çakışmasında yeniden dene
+      get stacked diagnostics v_constraint = constraint_name;
+      if v_constraint is distinct from 'challenge_invites_pkey' then
+        raise;
+      end if;
     end;
   end loop;
+  raise exception 'Davet linki oluşturulamadı, tekrar dene' using errcode = 'P0001';
 end
 $$;
 
-create function public.revoke_invite(p_challenge uuid) returns void
-language sql security definer set search_path = '' as $$
-  update public.challenge_invites i set revoked_at = now()
-  where i.challenge_id = p_challenge and i.inviter_id = app.require_user() and i.revoked_at is null
+-- p_code yoksa çağıranın kendi linki kapanır. p_code verilirse o link kapanır: linkin sahibi ya da
+-- challenge sahibi (örneğin bir üyenin herkese açık paylaştığı linki) kapatabilir.
+create function public.revoke_invite(p_challenge uuid, p_code text default null) returns void
+language plpgsql security definer set search_path = '' as $$
+declare
+  v_uid uuid := app.require_user();
+begin
+  if p_code is null then
+    update public.challenge_invites i set revoked_at = now()
+    where i.challenge_id = p_challenge and i.inviter_id = v_uid and i.revoked_at is null;
+    return;
+  end if;
+
+  update public.challenge_invites i set revoked_at = coalesce(i.revoked_at, now())
+  where i.code = p_code and i.challenge_id = p_challenge
+    and (i.inviter_id = v_uid
+         or exists (
+           select 1 from public.challenge_members m
+           where m.challenge_id = p_challenge and m.user_id = v_uid and m.role = 'owner'
+         ));
+  if not found then
+    raise exception 'Davet linki bulunamadı' using errcode = 'P0002';
+  end if;
+end
 $$;
 
 create function app.do_join_by_invite(p_user uuid, p_code text, p_at timestamptz)
@@ -586,6 +709,7 @@ begin
      or not app.is_active_member(v_inv.inviter_id, v_inv.challenge_id) then
     raise exception 'Davet linki geçersiz' using errcode = 'P0002';
   end if;
+  perform 1 from public.challenges c where c.id = v_inv.challenge_id for no key update;
   perform app.assert_challenge_open(p_user, v_inv.challenge_id, p_at);
 
   select * into v_row from public.challenge_members m
@@ -594,16 +718,22 @@ begin
   if found and v_row.status = 'active' then
     return v_row;
   end if;
+  -- Ayrılan geri dönemez: dönüş katılma gününü bugüne çekip kaçırdığı günleri seriden silerdi
+  if found and v_row.status = 'left' then
+    raise exception 'Ayrıldığın challenge''a tekrar katılamazsın' using errcode = 'P0001';
+  end if;
 
   if app.active_member_count(v_inv.challenge_id) >= app.max_members() then
     raise exception 'Grup dolu' using errcode = 'P0001';
   end if;
+  perform app.assert_can_take_challenge(p_user, p_at);
 
+  -- Yeni üye ya da bekleyen/reddedilmiş davetli
   insert into public.challenge_members (challenge_id, user_id, status, invited_by, invite_code, joined_at, joined_on)
   values (v_inv.challenge_id, p_user, 'active', v_inv.inviter_id, v_inv.code, p_at, app.local_date(p_user, p_at))
   on conflict (challenge_id, user_id) do update
     set status = 'active', invited_by = excluded.invited_by, invite_code = excluded.invite_code,
-        joined_at = excluded.joined_at, joined_on = excluded.joined_on, left_on = null
+        joined_at = excluded.joined_at, joined_on = excluded.joined_on
   returning * into v_row;
   return v_row;
 end
@@ -623,15 +753,14 @@ create function app.do_checkin(
 language plpgsql security definer set search_path = '' as $$
 declare
   v_c public.challenges;
-  v_open date[] := app.open_dates(p_user, p_at);
-  v_day date := coalesce(p_local_date, v_open[1]);
+  v_day date := coalesce(p_local_date, app.local_date(p_user, p_at));
   v_range record;
   v_row public.checkins;
 begin
   if not app.is_active_member(p_user, p_challenge) then
     raise exception 'Bu challenge''da değilsin' using errcode = '42501';
   end if;
-  if not (v_day = any (v_open)) then
+  if not (v_day = any (app.checkin_dates(p_user, p_at))) then
     raise exception 'Bu gün artık işaretlenemez' using errcode = 'P0001';
   end if;
 
@@ -647,14 +776,20 @@ begin
         raise exception 'Bu görev tek dokunuşla işaretlenir' using errcode = '22023';
       end if;
     when 'number' then
-      if p_value is null or p_value < 0 or (v_c.number_max is not null and p_value > v_c.number_max) then
+      -- NaN ve sonsuz da bu karşılaştırmalarda elenir
+      if p_value is null or not (p_value >= 0 and p_value <= 1000000000) or scale(p_value) > 4
+         or (v_c.number_max is not null and p_value > v_c.number_max) then
         raise exception 'Geçersiz değer' using errcode = '22023';
       end if;
       if p_photo_path is not null then
         raise exception 'Bu görev sayı ile işaretlenir' using errcode = '22023';
       end if;
     when 'photo' then
-      if p_photo_path is null or p_photo_path not like p_user::text || '/' || p_challenge::text || '/%' then
+      -- Dosya proofs kovasına gerçekten yüklenmiş olmalı (önce yükle, sonra işaretle)
+      if p_photo_path is null or p_photo_path not like p_user::text || '/' || p_challenge::text || '/%'
+         or not exists (
+           select 1 from storage.objects o where o.bucket_id = 'proofs' and o.name = p_photo_path
+         ) then
         raise exception 'Fotoğraf kanıtı gerekli' using errcode = '22023';
       end if;
       if p_value is not null then
@@ -687,10 +822,9 @@ create function app.do_undo_checkin(p_user uuid, p_challenge uuid, p_local_date 
 returns boolean
 language plpgsql security definer set search_path = '' as $$
 declare
-  v_open date[] := app.open_dates(p_user, p_at);
-  v_day date := coalesce(p_local_date, v_open[1]);
+  v_day date := coalesce(p_local_date, app.local_date(p_user, p_at));
 begin
-  if not (v_day = any (v_open)) then
+  if not (v_day = any (app.checkin_dates(p_user, p_at))) then
     raise exception 'Geçmiş günler değiştirilemez' using errcode = 'P0001';
   end if;
   delete from public.checkins k
@@ -713,14 +847,38 @@ language sql security definer set search_path = '' as $$
 $$;
 
 -- AdMob sunucu doğrulamasından (SSV) sonra Edge Function çağırır; yalnızca service role.
+-- Yeniden denenen (ya da eşzamanlı yinelenen) aynı geri çağrı hata değil, mevcut satırı döndürür;
+-- aynı ödül başka bir kurtarma için kullanılamaz (23505).
 create function public.grant_ad_rescue(
   p_user uuid, p_challenge uuid, p_missed_date date, p_ad_reward_id text
 ) returns public.streak_rescues
 language plpgsql security definer set search_path = '' as $$
+declare
+  v_row public.streak_rescues;
 begin
-  if p_ad_reward_id is null or char_length(p_ad_reward_id) < 8 then
+  if p_ad_reward_id is null or char_length(p_ad_reward_id) not between 8 and 200 then
     raise exception 'Geçersiz ödül kimliği' using errcode = '22023';
   end if;
-  return app.apply_rescue(p_user, p_challenge, p_missed_date, 'ad', p_ad_reward_id, now());
+
+  select * into v_row from public.streak_rescues r where r.ad_reward_id = p_ad_reward_id;
+  if found then
+    if (v_row.user_id, v_row.challenge_id, v_row.rescued_date) = (p_user, p_challenge, p_missed_date) then
+      return v_row;
+    end if;
+    raise exception 'Bu ödül zaten kullanıldı' using errcode = '23505';
+  end if;
+
+  begin
+    return app.apply_rescue(p_user, p_challenge, p_missed_date, 'ad', p_ad_reward_id, now());
+  exception when unique_violation then
+    -- Aynı ödülün eşzamanlı ikinci çağrısı: diğeri kaydetti
+    select * into v_row from public.streak_rescues r
+    where r.ad_reward_id = p_ad_reward_id
+      and r.user_id = p_user and r.challenge_id = p_challenge and r.rescued_date = p_missed_date;
+    if found then
+      return v_row;
+    end if;
+    raise;
+  end;
 end
 $$;

@@ -19,6 +19,19 @@ create unique index friendships_pair_key
   on public.friendships (least(requester_id, addressee_id), greatest(requester_id, addressee_id));
 create index friendships_addressee_idx on public.friendships (addressee_id, status);
 
+-- Gönderilen istek kaydı: istek silinse (geri çekme, reddetme) de kalır; send_friend_request aynı
+-- kişiye 24 saatteki istek sayısını buradan sınırlar (geri çekip yeniden göndererek bildirim
+-- yağdırılamasın). app şemasında: API'ye kapalı.
+create table app.friend_request_log (
+  requester_id uuid not null references public.profiles (id) on delete cascade,
+  addressee_id uuid not null references public.profiles (id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+create index friend_request_log_pair_idx
+  on app.friend_request_log (requester_id, addressee_id, created_at desc);
+alter table app.friend_request_log enable row level security;
+revoke all on app.friend_request_log from public, anon, authenticated;
+
 -- Engelleme --------------------------------------------------------------------------------
 
 create table public.blocks (
@@ -62,13 +75,18 @@ language sql stable security definer set search_path = '' as $$
   )
 $$;
 
--- Engellenince arkadaşlık (ve bekleyen istek) silinir
+-- Engellenince arkadaşlık (ve bekleyen istek) ile aralarındaki bekleyen challenge davetleri silinir
+-- (challenge_members sonraki migration'da oluşur; plpgsql gövdeyi çalışırken çözer).
 create function app.blocks_after_insert() returns trigger
 language plpgsql security definer set search_path = '' as $$
 begin
   delete from public.friendships f
   where least(f.requester_id, f.addressee_id) = least(new.blocker_id, new.blocked_id)
     and greatest(f.requester_id, f.addressee_id) = greatest(new.blocker_id, new.blocked_id);
+  delete from public.challenge_members m
+  where m.status = 'invited'
+    and ((m.user_id = new.blocked_id and m.invited_by = new.blocker_id)
+      or (m.user_id = new.blocker_id and m.invited_by = new.blocked_id));
   return new;
 end
 $$;
@@ -90,6 +108,9 @@ create table public.reports (
   reason public.report_reason not null,
   details text,
   also_blocked boolean not null default false,
+  -- Şikayet anındaki kanıt (fotoğraf yolu, not, gün): kişi işaretlemeyi geri alsa da inceleme
+  -- görebilsin; proofs kovasındaki dosya inceleme bitene kadar silinemez (storage politikaları)
+  evidence jsonb,
   status public.report_status not null default 'pending',
   created_at timestamptz not null default now(),
   review_due_at timestamptz not null default (now() + interval '24 hours'),
@@ -153,7 +174,8 @@ create table public.notifications (
 
 create index notifications_recipient_idx on public.notifications (recipient_id, created_at desc);
 create index notifications_unread_idx on public.notifications (recipient_id) where read_at is null;
-create index notifications_diken_idx on public.notifications (recipient_id, local_date)
+-- Diken günlük sınırı gönderim anına göre sayılır (claim_diken_push)
+create index notifications_diken_idx on public.notifications (recipient_id, pushed_at)
   where actor_id is null and pushed_at is not null;
 
 -- Push token'ları --------------------------------------------------------------------------
@@ -239,10 +261,11 @@ create policy "blocks: blocker delete" on public.blocks
 
 -- reports: istemci okuyamaz ve doğrudan yazamaz; submit_report RPC'si kullanılır.
 
--- poke_messages: oturum açmış herkes okur (etkin olanlar).
-create policy "poke_messages: read active" on public.poke_messages
+-- poke_messages: oturum açmış herkes okur. Kaldırılan (is_active = false) mesajlar eski dürtmelerin
+-- metni için okunur kalır; Poke sayfası etkinleri listeler, send_poke yalnızca etkinleri kabul eder.
+create policy "poke_messages: read" on public.poke_messages
   for select to authenticated
-  using (is_active);
+  using (true);
 
 -- pokes: gönderen ve alıcı okur (aralarında engel yoksa); gönderen kısa süre içinde geri alabilir.
 create policy "pokes: parties read" on public.pokes

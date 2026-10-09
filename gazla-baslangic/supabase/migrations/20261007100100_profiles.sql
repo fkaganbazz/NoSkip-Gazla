@@ -18,10 +18,17 @@ create table public.profiles (
   -- 3–20 karakter: küçük harf, rakam, nokta, alt çizgi; harf/rakamla başlayıp biter ("deniz.k")
   constraint profiles_username_format
     check (username::text ~ '^[a-z0-9][a-z0-9._]{1,18}[a-z0-9]$'),
+  -- Uzunluk ham metinden ölçülür (boşlukla şişirilemez); boş/yalnız boşluk olamaz
   constraint profiles_display_name_length
-    check (char_length(btrim(display_name)) between 1 and 40),
+    check (char_length(display_name) <= 40 and char_length(btrim(display_name)) >= 1),
   constraint profiles_avatar_tint check (avatar_tint in ('peach', 'lavender', 'mint', 'butter')),
-  constraint profiles_avatar_path check (avatar_path is null or avatar_path like id::text || '/%')
+  -- avatars kovasında {id}/{dosya}: tek dosya adı, "." ile başlamaz
+  constraint profiles_avatar_path check (
+    avatar_path is null or (
+      avatar_path like id::text || '/%'
+      and avatar_path ~ '^[0-9a-f-]{36}/[A-Za-z0-9_-][A-Za-z0-9._-]{0,99}$'
+    )
+  )
 );
 
 comment on table public.profiles is 'Herkese açık profil alanları; görünürlük RLS ile (arkadaş / ortak üye / engel).';
@@ -41,7 +48,7 @@ language sql immutable parallel safe as $$
 $$;
 
 create function app.profiles_guard() returns trigger
-language plpgsql set search_path = '' as $$
+language plpgsql security definer set search_path = '' as $$
 begin
   if app.is_reserved_username(new.username::text) then
     raise exception 'Bu kullanıcı adı kullanılamaz' using errcode = '23514';
@@ -66,6 +73,9 @@ create table public.user_settings (
   daily_reminder_time time default '21:00',
   discoverability public.discoverability not null default 'everyone',
   terms_accepted_at timestamptz not null default now(),
+  -- Saat dilimi değişince bu günden önceki günler işaretlenemez (eski dilimde kapanmış günler
+  -- yeni dilimde yeniden açılmasın: kurtarma yerine bedava geriye dönük işaretleme olurdu)
+  checkin_floor date,
   updated_at timestamptz not null default now(),
   constraint user_settings_locale check (locale in ('tr', 'en')),
   constraint user_settings_birth_year check (birth_year between 1900 and 2100)
@@ -74,11 +84,17 @@ create table public.user_settings (
 comment on table public.user_settings is 'Yalnızca sahibinin okuyabildiği ayarlar; zamanlanmış işler service role ile okur.';
 
 create function app.user_settings_guard() returns trigger
-language plpgsql set search_path = '' as $$
+language plpgsql security definer set search_path = '' as $$
 begin
   perform app.assert_valid_timezone(new.timezone);
   if new.birth_year > extract(year from now())::int - app.min_age() then
     raise exception 'En az % yaşında olmalısın', app.min_age() using errcode = '23514';
+  end if;
+  if tg_op = 'UPDATE' and new.timezone is distinct from old.timezone then
+    -- Eski dilimde hâlâ açık olan en erken gün (bkz. app.open_dates)
+    new.checkin_floor := greatest(
+      old.checkin_floor, ((now() - app.grace_period()) at time zone old.timezone)::date
+    );
   end if;
   return new;
 end
@@ -109,21 +125,35 @@ language sql stable set search_path = '' as $$
   select (p_at at time zone app.user_timezone(p_user))::date
 $$;
 
--- Hâlâ işaretlenebilen günler: bugün ve gece yarısından sonraki 2 saat içinde dün.
+-- Bir günün kapandığı an: ertesi günün yerel gece yarısından 2 saat (geçen süre) sonra.
+-- Geçen süreyle tanımlı olduğu için yaz saati gecelerinde de tam 2 saattir.
+create function app.day_closes_at(p_user uuid, p_day date) returns timestamptz
+language sql stable set search_path = '' as $$
+  select ((p_day + 1)::timestamp at time zone app.user_timezone(p_user)) + app.grace_period()
+$$;
+
+-- Hâlâ işaretlenebilen günler (yeniden eskiye): bugün ve kapanmamışsa dün.
+-- day_closes_at ile aynı kural: gün d açık ⇔ p_at < day_closes_at(d) ⇔ (p_at − tolerans)'ın yerel günü ≤ d.
 create function app.open_dates(p_user uuid, p_at timestamptz) returns date[]
 language sql stable set search_path = '' as $$
-  with t as (select p_at at time zone app.user_timezone(p_user) as local_ts)
+  with z as (select app.user_timezone(p_user) as tz)
   select array(
-    select d::date
-    from t, generate_series((t.local_ts - app.grace_period())::date, t.local_ts::date, interval '1 day') as g(d)
-    order by d desc
+    select g::date
+    from z, generate_series(((p_at - app.grace_period()) at time zone z.tz)::date,
+                            (p_at at time zone z.tz)::date, interval '1 day') as g
+    order by g desc
   )
 $$;
 
--- Bir günün kapandığı an: ertesi gün yerel 00:00 + tolerans
-create function app.day_closes_at(p_user uuid, p_day date) returns timestamptz
-language sql stable set search_path = '' as $$
-  select ((p_day + 1)::timestamp + app.grace_period()) at time zone app.user_timezone(p_user)
+-- İşaretleme ve geri almaya açık günler: açık günler, saat dilimi değişikliği tabanından itibaren
+create function app.checkin_dates(p_user uuid, p_at timestamptz) returns date[]
+language sql stable security definer set search_path = '' as $$
+  select array(
+    select d from unnest(app.open_dates(p_user, p_at)) as d
+    where d >= coalesce((select s.checkin_floor from public.user_settings s where s.user_id = p_user),
+                        '-infinity'::date)
+    order by d desc
+  )
 $$;
 
 -- RLS ---------------------------------------------------------------------------------------
@@ -132,10 +162,8 @@ alter table public.profiles enable row level security;
 alter table public.user_settings enable row level security;
 
 -- profiles: okuma politikası arkadaşlık/üyelik tabloları oluştuktan sonra (challenges migration'ı).
-create policy "profiles: insert own" on public.profiles
-  for insert to authenticated
-  with check (id = (select auth.uid()));
-
+-- Profil ve ayarlar yalnızca public.complete_profile ile oluşturulur (yaş ve saat dilimi kontrolü,
+-- şartların kabul zamanı aynı işlemde); istemci doğrudan ekleyemez.
 create policy "profiles: update own" on public.profiles
   for update to authenticated
   using (id = (select auth.uid()))
@@ -143,8 +171,6 @@ create policy "profiles: update own" on public.profiles
 
 -- Kimlik ve zaman damgaları istemciden değiştirilemez
 revoke insert, update on public.profiles from anon, authenticated;
-grant insert (id, username, display_name, avatar_path, avatar_tint, harsh_mode)
-  on public.profiles to authenticated;
 grant update (username, display_name, avatar_path, avatar_tint, harsh_mode)
   on public.profiles to authenticated;
 
@@ -152,19 +178,12 @@ create policy "user_settings: read own" on public.user_settings
   for select to authenticated
   using (user_id = (select auth.uid()));
 
-create policy "user_settings: insert own" on public.user_settings
-  for insert to authenticated
-  with check (user_id = (select auth.uid()));
-
 create policy "user_settings: update own" on public.user_settings
   for update to authenticated
   using (user_id = (select auth.uid()))
   with check (user_id = (select auth.uid()));
 
 revoke insert, update on public.user_settings from anon, authenticated;
-grant insert (user_id, birth_year, timezone, locale, poke_push_enabled, daily_reminder_time,
-              discoverability, terms_accepted_at)
-  on public.user_settings to authenticated;
 grant update (timezone, locale, poke_push_enabled, daily_reminder_time, discoverability)
   on public.user_settings to authenticated;
 
