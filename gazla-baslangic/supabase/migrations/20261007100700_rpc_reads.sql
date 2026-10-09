@@ -385,6 +385,8 @@ begin
     join public.challenges c on c.id = m.challenge_id
     where m.status = 'active' and m.finished_at is null
       and c.end_date < app.local_date(m.user_id, now())
+    -- finalize_user ile aynı kilit sırası (challenge'a göre)
+    order by m.challenge_id, m.user_id
   loop
     if app.finalize_member(r.user_id, r.challenge_id, now()) then
       v_count := v_count + 1;

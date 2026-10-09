@@ -191,7 +191,8 @@ create function app.do_send_poke(
 language plpgsql security definer set search_path = '' as $$
 declare
   v_row public.pokes;
-  v_day_start timestamptz;
+  v_tz text := app.user_timezone(p_recipient);
+  v_day date := app.local_date(p_recipient, p_at);
 begin
   if p_recipient = p_sender then
     raise exception 'Kendini dürtemezsin' using errcode = 'P0001';
@@ -230,12 +231,14 @@ begin
   -- Aynı kişiye, alıcının yerel gününde en fazla N dürtme. Sınır alıcıyı korur; gönderen kendi
   -- saat dilimini değiştirerek pencereyi sıfırlayamaz. Çift için kilit: eşzamanlı gönderimler
   -- sınırı aşamaz.
+  -- Sayım alıcının bütün günü üzerinden (p_at işlemin başlangıcıdır; kilidi önce alan daha geç
+  -- başlamış bir işlemin dürtmesini kaçırmamak için üst sınır p_at değil, günün sonu).
   perform pg_advisory_xact_lock(hashtextextended('poke:' || p_sender::text || '>' || p_recipient::text, 0));
-  v_day_start := (app.local_date(p_recipient, p_at)::timestamp) at time zone app.user_timezone(p_recipient);
   if (
     select count(*) from public.pokes k
     where k.sender_id = p_sender and k.recipient_id = p_recipient
-      and k.created_at >= v_day_start and k.created_at <= p_at
+      and k.created_at >= (v_day::timestamp at time zone v_tz)
+      and k.created_at < ((v_day + 1)::timestamp at time zone v_tz)
   ) >= app.poke_daily_limit() then
     raise exception 'Bugün bu kişiyi yeterince dürttün' using errcode = 'P0001';
   end if;
@@ -791,6 +794,13 @@ begin
            select 1 from storage.objects o where o.bucket_id = 'proofs' and o.name = p_photo_path
          ) then
         raise exception 'Fotoğraf kanıtı gerekli' using errcode = '22023';
+      end if;
+      -- Her gün yeni kanıt: başka bir günün işaretlemesine bağlı dosya kullanılamaz
+      if exists (
+        select 1 from public.checkins k
+        where k.photo_path = p_photo_path and k.local_date <> v_day
+      ) then
+        raise exception 'Bu fotoğraf başka bir gün için gönderildi' using errcode = '22023';
       end if;
       if p_value is not null then
         raise exception 'Bu görev fotoğrafla işaretlenir' using errcode = '22023';

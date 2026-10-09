@@ -291,6 +291,8 @@ declare
   v_rescues integer;
   v_rank integer;
 begin
+  -- Kilit sırası her yerde aynı: önce challenge, sonra üye satırı (katılma ile sıralı çalışır)
+  perform 1 from public.challenges c where c.id = p_challenge for no key update;
   select * into v_m from public.challenge_members m
   where m.challenge_id = p_challenge and m.user_id = p_user
   for update;
@@ -331,6 +333,25 @@ begin
       final_rescues = v_rescues, final_rank = v_rank
   where m.challenge_id = p_challenge and m.user_id = p_user;
 
+  -- Biri sonuçlandıktan sonra aktif üye kümesi değişebilir (en batıdaki biri kendi son gününde
+  -- katılır ya da sonuçlanmamış bir üye ayrılır). Son aktif üye sonuçlanınca tüm sıralar kayıtlı
+  -- sonuçlardan aynı kuralla yeniden yazılır; iki kişi aynı sırayı almaz.
+  if not exists (
+    select 1 from public.challenge_members o
+    where o.challenge_id = p_challenge and o.status = 'active' and o.finished_at is null
+  ) then
+    update public.challenge_members m
+    set final_rank = r.rnk
+    from (
+      select o.user_id,
+             row_number() over (order by o.final_days_done desc, o.joined_at, o.user_id)::smallint as rnk
+      from public.challenge_members o
+      where o.challenge_id = p_challenge and o.status = 'active'
+    ) as r
+    where m.challenge_id = p_challenge and m.user_id = r.user_id
+      and m.final_rank is distinct from r.rnk;
+  end if;
+
   if v_days >= v_required then
     insert into public.notifications (recipient_id, kind, actor_id, challenge_id, payload, local_date)
     select f.friend_id, 'friend_finished_challenge', p_user, p_challenge,
@@ -360,6 +381,7 @@ begin
     join public.challenges c on c.id = m.challenge_id
     where m.user_id = p_user and m.status = 'active' and m.finished_at is null
       and c.end_date < app.local_date(p_user, p_at)
+    order by m.challenge_id
   loop
     if app.finalize_member(p_user, r.challenge_id, p_at) then
       v_count := v_count + 1;

@@ -31,8 +31,8 @@ create table public.checkins (
 );
 
 create index checkins_challenge_date_idx on public.checkins (challenge_id, local_date);
--- Kanıt fotoğrafı → işaretleme (storage politikaları)
-create index checkins_photo_path_idx on public.checkins (photo_path) where photo_path is not null;
+-- Kanıt fotoğrafı → işaretleme (storage politikaları); bir dosya tek bir işaretlemenin kanıtı
+create unique index checkins_photo_path_key on public.checkins (photo_path) where photo_path is not null;
 
 create trigger checkins_touch_updated_at
   before update on public.checkins

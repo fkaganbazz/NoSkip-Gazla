@@ -10,7 +10,7 @@
 --
 -- Run:  supabase test db   (or the local testbed: ./test.sh supabase/tests/05_review_fixes.test.sql)
 begin;
-select plan(63);
+select plan(69);
 -- This file tests behaviour, not privileges (01_rls_privileges does).
 grant execute on all functions in schema app to authenticated;
 
@@ -169,6 +169,22 @@ select ok(not app.finalize_member(:'wa', :'ch_wait', '2026-09-08 03:00+03'),
 select ok(app.finalize_member(:'wa', :'ch_wait', '2026-09-09 02:00+03'),
           'once the rescue window has passed the result is taken');
 
+-- A far-west member joins on her own last day after someone was already finalized: when the last
+-- active member is finalized all ranks are rewritten, so nobody shares 1st place
+select pg_temp.mk_user('rank_a') as rka \gset
+select pg_temp.mk_user('rank_d', 'Pacific/Pago_Pago') as rkd \gset
+select pg_temp.mk_ch('Sıra', '2026-09-01', 3) as ch_rank \gset
+select pg_temp.add_member(:'ch_rank', :'rka', '2026-09-01') as _x \gset
+select ok(app.finalize_member(:'rka', :'ch_rank', '2026-09-04 03:00+03'), 'the only member (0 days) is finalized');
+insert into public.challenge_members (challenge_id, user_id, status, joined_at, joined_on)
+values (:'ch_rank', :'rkd', 'active', '2026-09-04 00:30+00', '2026-09-03');
+select pg_temp.ci(:'rkd', :'ch_rank', '2026-09-03', '2026-09-03') as _x \gset
+select ok(app.finalize_member(:'rkd', :'ch_rank', '2026-09-04 14:00+00'), 'the late joiner is finalized after her own close');
+select results_eq(
+  format($$select user_id, final_rank::int from public.challenge_members where challenge_id = %L order by final_rank$$, :'ch_rank'),
+  format($$values (%L::uuid, 1), (%L::uuid, 2)$$, :'rkd', :'rka'),
+  'ranks are rewritten from the saved results: no shared 1st place');
+
 -- ================================================================================================
 -- 4. Friend requests: at most 3 per pair in 24 hours (cancel + resend included)
 -- ================================================================================================
@@ -240,6 +256,19 @@ select is_empty(format($$delete from storage.objects where name = %L returning 1
 reset role;
 select is((select evidence ->> 'photo_path' from public.reports where reporter_id = :'m1'), :'m2_path',
           'the report still points to the photo');
+
+-- A photo is the proof of one day only
+select pg_temp.mk_user('photo_u') as phu \gset
+select pg_temp.mk_ch('Foto', '2026-09-01', 7, 'photo') as ch_pu \gset
+select pg_temp.add_member(:'ch_pu', :'phu', '2026-09-01') as _x \gset
+select :'phu' || '/' || :'ch_pu' || '/gun1.jpg' as pu_path \gset
+insert into storage.objects (bucket_id, name, owner_id) values ('proofs', :'pu_path', :'phu');
+select lives_ok(format($$select app.do_checkin(%L, %L, null, %L, null, null, '2026-09-01 20:00+03')$$, :'phu', :'ch_pu', :'pu_path'),
+  'day 1 is checked in with the photo');
+select lives_ok(format($$select app.do_checkin(%L, %L, null, %L, 'düzeltme', null, '2026-09-01 21:00+03')$$, :'phu', :'ch_pu', :'pu_path'),
+  're-sending the same day with the same photo is fine');
+select throws_ok(format($$select app.do_checkin(%L, %L, null, %L, null, null, '2026-09-02 20:00+03')$$, :'phu', :'ch_pu', :'pu_path'),
+  '22023', 'Bu fotoğraf başka bir gün için gönderildi', 'the same photo cannot prove another day');
 
 -- ================================================================================================
 -- 6. Diken push: at most 2 per local day (counted when pushed), never in quiet hours, atomic claim

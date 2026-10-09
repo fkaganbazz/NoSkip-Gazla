@@ -20,7 +20,7 @@ tablolara yalnızca politikası olan yerlerde doğrudan dokunur, geri kalan her 
 | `20261007100800_storage.sql` | `proofs` (özel) ve `avatars` (açık) kovaları, Storage politikaları |
 | `20261007100900_reference_data.sql` | 12 hazır dürtme mesajı, 8 challenge şablonu (prod'da da gerekli) |
 
-Testler (`tests/`, pgTAP, 938 doğrulama):
+Testler (`tests/`, pgTAP, 944 doğrulama):
 
 | Dosya | Kapsam |
 |---|---|
@@ -46,7 +46,7 @@ fonksiyonlarını kullanır (`tests.create_supabase_user`, `tests.authenticate_a
 verisini oluşturur ve `rollback` ile geri alır.
 
 Bu şema ve testler PostgreSQL 16 üzerinde, Supabase rolleri, `auth` ve `storage` şemalarıyla aynı
-davranan bir test ortamında doğrulandı (938/938). Gerçek Supabase'de ilk `supabase test db`
+davranan bir test ortamında doğrulandı (944/944). Gerçek Supabase'de ilk `supabase test db`
 çalıştırmasında farklılık çıkarsa önce Storage tablolarına doğrudan yazan testlere bakın (Storage
 sürümleri `storage.objects` üzerinde ek tetikleyiciler getirebiliyor).
 
@@ -87,7 +87,8 @@ zamanlanmış işler içindir, API rollerine kapalıdır.
   **her aktif üyenin** saat diliminde kapandıktan ve o challenge için kimsenin bekleyen kurtarması
   kalmadıktan sonra kaydedilir. Böylece son günü kurtaran da sonuca girer ve sıralar tutarlıdır.
 - Kendi tüm günlerini kapsayan üye bitirmiş sayılır: bahçeye kaktüs eklenir, arkadaşlarına bildirim
-  gider. Sonradan katılanın günleri katıldığı günden sayılır.
+  gider. Sonradan katılanın günleri katıldığı günden sayılır. Son aktif üye sonuçlanınca sıralar
+  kayıtlı sonuçlardan yeniden yazılır (aynı sırayı iki kişi almaz).
 - Kayıt ya kullanıcı Bugün'ü açınca (`my_today`), ya da saatlik işle (`finish_due_challenges`) olur.
 
 ### Challenge ve üyelik
@@ -200,8 +201,8 @@ Tasarımda ya da CLAUDE.md'de açık olmayan noktalarda verilen kararlar:
 10. Ayrılmak kalıcı; son aktif üye ayrılınca challenge geçmiş için sahipsiz kalır.
 11. Sonradan katılan, kendi günlerini tamamlarsa bitirmiş sayılır; kaktüs aşaması kendi gün
     sayısına göre.
-12. Fotoğraflı işaretleme için dosya önce yüklenmeli. Grup yalnızca işaretlemeye bağlı fotoğrafı
-    görür; kapanmış günün fotoğrafı değişmez.
+12. Fotoğraflı işaretleme için dosya önce yüklenmeli ve yalnızca bir günün kanıtı olur. Grup yalnızca
+    işaretlemeye bağlı fotoğrafı görür; kapanmış günün fotoğrafı değişmez.
 13. Şikayet engelden bağımsız; davet linkiyle challenge şikayeti; kanıt anlık görüntüsü saklanır.
 14. Profil fotoğrafları herkese açık kovada (arama ve davet kartı için).
 15. Sert mod varsayılan kapalı.
@@ -224,8 +225,9 @@ Tasarımda ya da CLAUDE.md'de açık olmayan noktalarda verilen kararlar:
 
 ## Bilinen sınırlar
 
-- İşaretleme beyana dayalıdır: aynı fotoğraf her gün kullanılabilir. Saat dilimini ileri alarak
-  yarını erkenden işaretlemek mümkündür (geriye dönük işaretleme ise kapalı).
+- İşaretleme beyana dayalıdır. Bir dosya yalnızca bir günün kanıtı olabilir, ama aynı fotoğraf yeni
+  adla yeniden yüklenebilir. Saat dilimini ileri alarak yarını erkenden işaretlemek mümkündür
+  (geriye dönük işaretleme ise kapalı).
 - Aynı cihazda başka hesapla `register_push_token` çağrılırsa token yeni hesaba geçer (cihaz el
   değiştirince doğru davranış). Çıkışta istemci kendi token satırını silmeli.
 - `template_stats` "şu an yapıyor" sayısını sunucu gününe göre (±1 gün) hesaplar.
