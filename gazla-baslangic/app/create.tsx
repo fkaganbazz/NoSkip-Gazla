@@ -1,36 +1,316 @@
-import { useRouter } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { CloseIcon } from '@/components/icons';
-import { borderWidth, iconMetrics, layout, spacing, typography, useTheme } from '@/theme';
+import { ClockIcon, LockIcon } from '@/components/icons';
+import { Avatar, Button, Chip, ScreenHeader, TextField, Toggle } from '@/components/ui';
+import { useCreateChallengeMutation, useFriendsToday, useTemplates } from '@/data';
+import { CalendarIcon } from '@/features/create/icons';
+import {
+  DURATION_OPTIONS,
+  TASK_OPTIONS,
+  formFromTemplate,
+  inviteSummary,
+  shiftTime,
+  startChipLabel,
+  toCreateInput,
+  type CreateForm,
+} from '@/features/create/logic';
+import { AddFriendButton, DurationCell, RoundStep, SettingRow, TaskOption } from '@/features/create/parts';
+import { formatDayLabel } from '@/features/today/logic';
+import { borderWidth, componentTypography, layout, typography, useTheme } from '@/theme';
+import { createColors, createMetrics as m, createTypography as t } from '@/theme/create';
 
-// Yeni challenge — tam ekran modal (alt menüdeki + butonu). Başlık satırı Create.dc.html'den;
-// formun kendisi sıradaki adımlarda uygulanacak.
+const INITIAL: CreateForm = {
+  templateId: null,
+  title: '',
+  taskType: 'check',
+  duration: 10,
+  customDays: m.customDefault,
+  unit: '',
+  target: '',
+  increment: '',
+  startOffset: 0,
+  reminder: m.reminderDefault,
+  invitees: [],
+};
 
+type Panel = 'reminder' | 'start' | 'friends' | null;
+
+// Yeni challenge — design/Create.dc.html (tam ekran modal). Tasarımda olmayan ama create_challenge'ın
+// istediği alanlar (şablon, özel süre, sayı ayarları, başlangıç günü) aynı bileşenlerle eklendi.
+// Explore/şablon ekranı `?templateId=` ile açarsa form o şablonla dolu gelir.
 export default function CreateScreen() {
-  const { colors } = useTheme();
+  const { templateId: templateParam } = useLocalSearchParams<{ templateId?: string }>();
   const router = useRouter();
+  const { colors, scheme } = useTheme();
+  const c = createColors[scheme];
+
+  const templates = useTemplates();
+  const friends = useFriendsToday();
+  const create = useCreateChallengeMutation();
+
+  const [form, setForm] = useState<CreateForm>(INITIAL);
+  const [panel, setPanel] = useState<Panel>(null);
+  const now = useMemo(() => new Date(), []);
+  const update = (patch: Partial<CreateForm>) => setForm((f) => ({ ...f, ...patch }));
+  // Şablondan gelen ad/tür/sayı değişirse artık özel challenge
+  const edit = (patch: Partial<CreateForm>) => update({ ...patch, templateId: null });
+  const togglePanel = (p: Panel) => setPanel((cur) => (cur === p ? null : p));
+
+  const template = templates.data?.find((x) => x.id === form.templateId);
+
+  // Parametreyle gelen şablonu bir kez uygula
+  const appliedParam = useRef(false);
+  useEffect(() => {
+    if (appliedParam.current || !templateParam || !templates.data) return;
+    const tp = templates.data.find((x) => x.id === templateParam);
+    appliedParam.current = true;
+    if (tp) setForm((f) => formFromTemplate(f, tp));
+  }, [templateParam, templates.data]);
+
+  const friendList = friends.data ?? [];
+  // Seçim sırasıyla ("Mert ve Ece davet edilecek")
+  const invited = form.invitees.flatMap((id) => friendList.filter((f) => f.id === id));
+  const input = toCreateInput(form, template);
+
+  const submit = () => {
+    if (!input) return;
+    create.mutate(input, {
+      onSuccess: (challenge) => router.replace({ pathname: '/challenge/[id]', params: { id: challenge.id } }),
+    });
+  };
+
+  const toggleInvitee = (id: string) =>
+    update({
+      invitees: form.invitees.includes(id) ? form.invitees.filter((x) => x !== id) : [...form.invitees, id],
+    });
+
+  const startValue = form.startOffset === 0 ? 'Bugün' : form.startOffset === 1 ? 'Yarın' : formatDayLabel(
+    new Date(now.getFullYear(), now.getMonth(), now.getDate() + form.startOffset),
+  );
 
   return (
     <SafeAreaView edges={['top']} style={styles.screen}>
-      <View style={styles.header}>
-        <Pressable
-          onPress={() => router.back()}
-          accessibilityRole="button"
-          accessibilityLabel="Kapat"
-          style={[styles.close, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <CloseIcon
-            color={colors.text}
-            size={iconMetrics.closeSize}
-            strokeWidth={iconMetrics.closeStrokeWidth}
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          <ScreenHeader title="Yeni challenge" leading="close" />
+
+          <TextField
+            label="Challenge adı"
+            value={form.title}
+            onChangeText={(title) => edit({ title })}
+            maxLength={m.titleMaxLength}
+            placeholder="Akşam 20 dakika yürüyüş"
+            returnKeyType="done"
+            style={styles.section}
           />
-        </Pressable>
-        <Text style={[typography.screenTitle, styles.title, { color: colors.text }]}>Yeni challenge</Text>
-      </View>
-      <Text style={[typography.body, styles.body, { color: colors.textBody }]}>
-        Form sıradaki adımlarda Create.dc.html dosyasına göre uygulanacak.
-      </Text>
+
+          {/* Şablonlar (tasarımda yok): dokununca form şablonla dolar */}
+          {!!templates.data?.length && (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.templates}
+              contentContainerStyle={styles.templatesContent}>
+              {templates.data.map((tp) => (
+                <Chip
+                  key={tp.id}
+                  label={tp.title}
+                  selected={form.templateId === tp.id}
+                  onPress={() => (form.templateId === tp.id ? update({ templateId: null }) : setForm((f) => formFromTemplate(f, tp)))}
+                />
+              ))}
+            </ScrollView>
+          )}
+
+          <Text nativeID="create-duration" style={[componentTypography.inputLabel, styles.section, { color: colors.text }]}>
+            Süre
+          </Text>
+          <View accessibilityRole="radiogroup" accessibilityLabelledBy="create-duration" style={styles.durations}>
+            {DURATION_OPTIONS.map((d) => (
+              <DurationCell
+                key={d.label}
+                label={d.label}
+                selected={form.duration === d.value}
+                onPress={() => update({ duration: d.value })}
+              />
+            ))}
+          </View>
+          {form.duration === 'custom' && (
+            <View style={styles.custom}>
+              <RoundStep
+                kind="minus"
+                accessibilityLabel="Bir gün azalt"
+                onPress={() => update({ customDays: Math.max(m.customMin, form.customDays - 1) })}
+              />
+              <Text accessibilityLiveRegion="polite" style={[t.panelValue, styles.panelValueText, { color: colors.text }]}>
+                {`${form.customDays} gün`}
+              </Text>
+              <RoundStep
+                kind="plus"
+                accessibilityLabel="Bir gün artır"
+                onPress={() => update({ customDays: Math.min(m.customMax, form.customDays + 1) })}
+              />
+            </View>
+          )}
+
+          <Text nativeID="create-type" style={[componentTypography.inputLabel, styles.section, { color: colors.text }]}>
+            Nasıl tamamlanır?
+          </Text>
+          <View accessibilityRole="radiogroup" accessibilityLabelledBy="create-type" style={styles.options}>
+            {TASK_OPTIONS.map((o) => (
+              <TaskOption
+                key={o.value}
+                title={o.title}
+                desc={o.desc}
+                selected={form.taskType === o.value}
+                onPress={() => form.taskType !== o.value && edit({ taskType: o.value })}>
+                {o.value === 'number' && form.taskType === 'number' && (
+                  <View style={styles.numberFields}>
+                    <TextField
+                      label="Birim"
+                      value={form.unit}
+                      onChangeText={(unit) => edit({ unit })}
+                      maxLength={m.unitMaxLength}
+                      placeholder="dk"
+                      autoCapitalize="none"
+                      style={styles.numberField}
+                    />
+                    <TextField
+                      label="Hedef"
+                      value={form.target}
+                      onChangeText={(target) => edit({ target })}
+                      keyboardType="decimal-pad"
+                      placeholder="20"
+                      style={styles.numberField}
+                    />
+                    <TextField
+                      label="Her gün +"
+                      value={form.increment}
+                      onChangeText={(increment) => edit({ increment })}
+                      keyboardType="decimal-pad"
+                      placeholder="0"
+                      style={styles.numberField}
+                    />
+                  </View>
+                )}
+              </TaskOption>
+            ))}
+          </View>
+
+          <View style={[styles.card, { backgroundColor: c.cardBg, borderColor: c.cardBorder }]}>
+            <SettingRow
+              icon={<ClockIcon color={c.rowIcon} size={m.rowIconSize} strokeWidth={m.rowIconStrokeWidth} />}
+              label="Hatırlatma"
+              value={form.reminder ? `Her gün ${form.reminder}` : 'Kapalı'}
+              onPress={() => togglePanel('reminder')}
+              expanded={panel === 'reminder'}
+            />
+            {panel === 'reminder' && (
+              <View style={styles.panel}>
+                {form.reminder ? (
+                  <View style={styles.panelSteps}>
+                    <RoundStep
+                      kind="minus"
+                      accessibilityLabel={`${m.reminderStepMinutes} dakika erken`}
+                      onPress={() => form.reminder && update({ reminder: shiftTime(form.reminder, -m.reminderStepMinutes) })}
+                    />
+                    <Text accessibilityLiveRegion="polite" style={[t.panelValue, styles.panelValueText, { color: colors.text }]}>
+                      {form.reminder}
+                    </Text>
+                    <RoundStep
+                      kind="plus"
+                      accessibilityLabel={`${m.reminderStepMinutes} dakika geç`}
+                      onPress={() => form.reminder && update({ reminder: shiftTime(form.reminder, m.reminderStepMinutes) })}
+                    />
+                  </View>
+                ) : (
+                  <Text style={[t.rowValue, { color: c.rowValue }]}>Hatırlatma kapalı</Text>
+                )}
+                <Toggle
+                  value={!!form.reminder}
+                  onChange={(on) => update({ reminder: on ? m.reminderDefault : null })}
+                  accessibilityLabel="Hatırlatma"
+                />
+              </View>
+            )}
+
+            <SettingRow
+              divider
+              icon={<CalendarIcon color={c.rowIcon} size={m.rowIconSize} strokeWidth={m.rowIconStrokeWidth} />}
+              label="Başlangıç"
+              value={startValue}
+              onPress={() => togglePanel('start')}
+              expanded={panel === 'start'}
+            />
+            {panel === 'start' && (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.startChips}>
+                {Array.from({ length: m.startMaxOffset + 1 }, (_, i) => (
+                  <Chip
+                    key={i}
+                    label={startChipLabel(i, now)}
+                    selected={form.startOffset === i}
+                    onPress={() => update({ startOffset: i })}
+                  />
+                ))}
+              </ScrollView>
+            )}
+
+            {/* Challenge'ı yalnızca davet edilenler görür; ayrı bir görünürlük ayarı yok (yalnızca bilgi). */}
+            <SettingRow
+              divider
+              icon={<LockIcon color={c.rowIcon} size={m.rowIconSize} strokeWidth={m.rowIconStrokeWidth} />}
+              label="Kimler görebilir"
+              value="Davetliler"
+            />
+          </View>
+
+          <View style={styles.invite}>
+            {invited.map((f) => (
+              <Avatar
+                key={f.id}
+                name={f.displayName}
+                tint={f.avatarTint}
+                url={f.avatarUrl}
+                size={m.avatarSize}
+                style={{ borderWidth: m.avatarRing, borderColor: c.inviteRing }}
+              />
+            ))}
+            {friendList.length > 0 && (
+              <AddFriendButton expanded={panel === 'friends'} onPress={() => togglePanel('friends')} />
+            )}
+            <Text style={[typography.caption, styles.inviteText, { color: colors.textBody }]}>
+              {friendList.length > 0 || invited.length > 0
+                ? inviteSummary(invited)
+                : 'Davet linkini challenge açılınca paylaşabilirsin'}
+            </Text>
+          </View>
+          {panel === 'friends' && (
+            <View style={styles.friends}>
+              {friendList.map((f) => (
+                <Chip
+                  key={f.id}
+                  label={f.displayName}
+                  selected={form.invitees.includes(f.id)}
+                  onPress={() => toggleInvitee(f.id)}
+                  icon={<Avatar name={f.displayName} tint={f.avatarTint} url={f.avatarUrl} size={m.friendChipAvatar} />}
+                />
+              ))}
+            </View>
+          )}
+        </ScrollView>
+
+        <View style={styles.footer}>
+          {create.isError && (
+            <Text accessibilityLiveRegion="polite" style={[componentTypography.inputError, styles.error, { color: colors.danger }]}>
+              {create.error.message}
+            </Text>
+          )}
+          <Button title="Challenge'ı başlat" onPress={submit} disabled={!input} loading={create.isPending} />
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -38,26 +318,102 @@ export default function CreateScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    paddingHorizontal: layout.screenPadding,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingTop: layout.screenTopGap,
-  },
-  close: {
-    width: layout.minTouchTarget,
-    height: layout.minTouchTarget,
-    borderRadius: layout.minTouchTarget / 2,
-    borderWidth: borderWidth.thin,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: {
+  flex: {
     flex: 1,
   },
-  body: {
-    marginTop: spacing.md,
+  content: {
+    paddingTop: layout.screenTopGap,
+    paddingHorizontal: layout.screenPadding,
+    paddingBottom: layout.screenPadding,
+  },
+  section: {
+    marginTop: m.sectionMarginTop,
+  },
+  templates: {
+    marginTop: m.templatesMarginTop,
+    marginHorizontal: -layout.screenPadding,
+  },
+  templatesContent: {
+    paddingHorizontal: layout.screenPadding,
+    gap: m.templatesGap,
+  },
+  durations: {
+    marginTop: m.labelGap,
+    flexDirection: 'row',
+    gap: m.durationGap,
+  },
+  custom: {
+    marginTop: m.durationGap,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: m.panelGap,
+  },
+  panelValueText: {
+    minWidth: m.stepSize * 2,
+    textAlign: 'center',
+  },
+  options: {
+    marginTop: m.labelGap,
+    gap: m.optionGap,
+  },
+  numberFields: {
+    flexDirection: 'row',
+    gap: m.numberGap,
+    paddingHorizontal: m.optionPaddingX,
+    paddingBottom: m.optionPaddingX,
+  },
+  numberField: {
+    flex: 1,
+  },
+  card: {
+    marginTop: m.cardMarginTop,
+    borderRadius: m.cardRadius,
+    borderWidth: borderWidth.thin,
+    overflow: 'hidden',
+  },
+  panel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: m.rowPaddingX,
+    paddingBottom: m.panelPaddingBottom,
+  },
+  panelSteps: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m.panelGap,
+  },
+  startChips: {
+    paddingHorizontal: m.rowPaddingX,
+    paddingBottom: m.panelPaddingBottom,
+    gap: m.templatesGap,
+  },
+  invite: {
+    marginTop: m.inviteMarginTop,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: m.inviteGap,
+  },
+  inviteText: {
+    flexShrink: 1,
+    marginLeft: m.inviteTextMarginLeft,
+  },
+  friends: {
+    marginTop: m.friendsMarginTop,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: m.templatesGap,
+  },
+  footer: {
+    paddingTop: m.footerPaddingTop,
+    paddingHorizontal: layout.screenPadding,
+    paddingBottom: m.footerPaddingBottom,
+    gap: m.labelGap,
+  },
+  error: {
+    textAlign: 'center',
   },
 });
