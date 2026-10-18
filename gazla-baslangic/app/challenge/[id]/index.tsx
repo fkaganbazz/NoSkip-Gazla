@@ -79,7 +79,7 @@ export default function ChallengeDetailScreen() {
     }
   }, [openTask, checkin, router]);
 
-  const goPoke = (userId: string) => router.push({ pathname: '/poke/[userId]', params: { userId } });
+  const goPoke = (userId: string) => router.push({ pathname: '/poke/[userId]', params: { userId, challengeId: id } });
 
   const refetchAll = () => {
     challenge.refetch();
@@ -240,7 +240,11 @@ export default function ChallengeDetailScreen() {
         }
         onReport={() => {
           setMenuOpen(false);
-          router.push({ pathname: '/report', params: { target: 'challenge', challengeId: ch.id } });
+          // Challenge şikayeti, oluşturan kişiye yazılır (submit_report)
+          router.push({
+            pathname: '/report',
+            params: { targetType: 'challenge', targetId: ch.id, ...(ch.createdBy ? { userId: ch.createdBy } : {}) },
+          });
         }}
         onLeave={
           active && phase.kind !== 'finished'

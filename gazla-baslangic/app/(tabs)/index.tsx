@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useIsFocused, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -50,30 +50,40 @@ export default function TodayScreen() {
   const rows = useMemo(() => tasks.map((t) => toTaskRow(t, now)), [tasks, now]);
   const friendRows = useMemo(() => (friends.data ?? []).filter((f) => f.doneToday !== null).map(toFriendRow), [friends.data]);
 
+  // Anlar yalnızca Bugün odaktayken açılır: işaretleme alt sayfası/fotoğraf ekranı kapanırken
+  // (router.back) üstlerine açılan ekranı da kapatmasın.
+  const focused = useIsFocused();
+
   // Günün son görevi işaretlenince tamamlama anı (her gün bir kez; ilk yüklemede değil)
   const allDone = tasks.length > 0 && tasks.every((t) => t.done);
   const prevAllDone = useRef<boolean | null>(null);
+  const celebrate = useRef<string | null>(null);
   const celebrated = useRef(new Set<string>());
   useEffect(() => {
     if (today.isPending) return;
     const day = tasks[0]?.localDate;
-    if (prevAllDone.current === false && allDone && day && !celebrated.current.has(day)) {
-      celebrated.current.add(day);
-      router.push('/completion');
-    }
+    if (prevAllDone.current === false && allDone && day && !celebrated.current.has(day)) celebrate.current = day;
+    if (!allDone) celebrate.current = null;
     prevAllDone.current = allDone;
-  }, [allDone, today.isPending, tasks, router]);
+  }, [allDone, today.isPending, tasks]);
+  useEffect(() => {
+    const day = celebrate.current;
+    if (!focused || !allDone || !day) return;
+    celebrate.current = null;
+    celebrated.current.add(day);
+    router.push('/completion');
+  }, [focused, allDone, router]);
 
   // Seri koptuysa kurtarma ekranı (her kaçırılan gün için oturumda bir kez)
   const rescueShown = useRef(new Set<string>());
   useEffect(() => {
     const first = rescues.data?.[0];
-    if (!first) return;
+    if (!focused || !first) return;
     const key = `${first.challengeId}|${first.missedDate}`;
     if (rescueShown.current.has(key)) return;
     rescueShown.current.add(key);
     router.push('/streak-lost');
-  }, [rescues.data, router]);
+  }, [focused, rescues.data, router]);
 
   const onTask = useCallback(
     (rowId: string) => {
