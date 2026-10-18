@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -23,6 +23,7 @@ import {
   useAuth,
   useCheckinMutation,
   useFriendsToday,
+  usePendingRescues,
   useStreak,
   useToday,
   useUndoCheckinMutation,
@@ -41,12 +42,38 @@ export default function TodayScreen() {
   const streak = useStreak();
   const friends = useFriendsToday();
   const activity = useActivity();
+  const rescues = usePendingRescues();
   const checkin = useCheckinMutation();
   const undo = useUndoCheckinMutation();
 
   const tasks = useMemo(() => today.data ?? [], [today.data]);
   const rows = useMemo(() => tasks.map((t) => toTaskRow(t, now)), [tasks, now]);
   const friendRows = useMemo(() => (friends.data ?? []).filter((f) => f.doneToday !== null).map(toFriendRow), [friends.data]);
+
+  // Günün son görevi işaretlenince tamamlama anı (her gün bir kez; ilk yüklemede değil)
+  const allDone = tasks.length > 0 && tasks.every((t) => t.done);
+  const prevAllDone = useRef<boolean | null>(null);
+  const celebrated = useRef(new Set<string>());
+  useEffect(() => {
+    if (today.isPending) return;
+    const day = tasks[0]?.localDate;
+    if (prevAllDone.current === false && allDone && day && !celebrated.current.has(day)) {
+      celebrated.current.add(day);
+      router.push('/completion');
+    }
+    prevAllDone.current = allDone;
+  }, [allDone, today.isPending, tasks, router]);
+
+  // Seri koptuysa kurtarma ekranı (her kaçırılan gün için oturumda bir kez)
+  const rescueShown = useRef(new Set<string>());
+  useEffect(() => {
+    const first = rescues.data?.[0];
+    if (!first) return;
+    const key = `${first.challengeId}|${first.missedDate}`;
+    if (rescueShown.current.has(key)) return;
+    rescueShown.current.add(key);
+    router.push('/streak-lost');
+  }, [rescues.data, router]);
 
   const onTask = useCallback(
     (rowId: string) => {

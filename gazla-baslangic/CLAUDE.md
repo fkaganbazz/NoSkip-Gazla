@@ -51,8 +51,9 @@ profiles, friendships, blocks, reports, challenge_templates, challenges, challen
 ## Kurulum ve komutlar
 - Expo SDK 57, route'lar kökteki `app/` altında (`src/app` açma; açılırsa Expo Router onu kök sayar). Diğer kod `src/`, import kısayolu `@/` → `src/`.
 - Uygulama sekmelerle açılır: `app/(tabs)/` (Bugün `index`, Keşfet `explore`, Arkadaşlar `friends`, Bahçem `garden`); ortadaki + `app/create.tsx`'i tam ekran modal açar. Alt menü `src/components/TabBar.tsx` (TabBar.dc.html), `Tabs` `expo-router/js-tabs`'tan.
-- Geliştirme ekranları `app/dev/` (token önizleme, Diken). Geliştirme sürümünde henüz yer tutucu olan sekmelerdeki (Keşfet, Arkadaşlar, Bahçem) "Geliştirme ekranları" bağlantısıyla açılır.
-- Klasörler: `src/components` (ortak bileşenler, `icons`), `src/features/<ekran>` (ekrana özel bileşenler, mantık, tipler; ör. `src/features/today`), `src/mocks` (Supabase gelene kadar örnek veri), `src/theme`.
+- Geliştirme ekranları `app/dev/` (token önizleme, Diken, tüm ekranlara bağlantı, mock kontrolleri: oturumu kapat, seri koptu senaryosu, sıfırla). Geliştirme sürümünde Keşfet/Arkadaşlar/Bahçem altındaki "Geliştirme ekranları" bağlantısıyla açılır.
+- Route korumaları `app/_layout.tsx`: `Stack.Protected` ile oturum + profil hazır ve onboarding bitmişse uygulama, değilse `(onboarding)`; `invite/[code]` herkese açık. Alt sayfa (NumberEntry, Poke) `formSheet`.
+- Klasörler: `src/components` (ortak bileşenler, `icons`, `ui`), `src/features/<ekran>` (ekrana özel bileşenler, mantık, tipler; ör. `src/features/today`), `src/data` (veri katmanı), `src/theme` (ekrana özel token dosyaları `src/theme/<ekran>.ts`, doğrudan import edilir).
 - `npm run android` / `npm run ios`: development build'i derleyip kurar (`expo run:*`). Sonraki açılışlarda `npm start` (dev client).
 - Bulut derleme: `npx eas-cli build --profile development` (iOS simülatör için `development-simulator`).
 - Paket eklerken `npx expo install <paket>` kullan. Bitirmeden önce `npm run typecheck`.
@@ -66,6 +67,16 @@ profiles, friendships, blocks, reports, challenge_templates, challenges, challen
 - Tok buton gölgesi (`box-shadow: 0 Ypx 0`): `src/components/FlatShadow` (`flatShadowStyle` + `FlatShadowUnderlay`; Android 9 altında View ile çizer).
 - İkonlar: `src/components/icons` (çizgi SVG; boyut ve çizgi kalınlığı tema token'larından).
 - `Link asChild` + `Pressable` stil fonksiyonu birlikte kullanma (Slot stil fonksiyonunu düşürüyor); `router.push`/`navigate` kullan.
+
+## Veri katmanı (`src/data`)
+- Ekranlar yalnızca `@/data` kancalarını kullanır (`useToday`, `useCheckinMutation` …; liste `src/data/hooks.ts`). Doğrudan Supabase çağırma.
+- `GazlaApi` arayüzü (`api.ts`) iki uygulama: `mock/mockApi.ts` (bellek içi, tasarımdaki örnek veri `mock/seed.ts`, iş kurallarının istemci taklidi) ve `supabase/supabaseApi.ts` (RPC + Storage). `client.ts`: `EXPO_PUBLIC_SUPABASE_URL` ve `EXPO_PUBLIC_SUPABASE_ANON_KEY` tanımlıysa Supabase, değilse mock. Değerler `.env`'e (örnek `.env.example`, git'e girmez).
+- Oturum: `DataProvider` + `useAuth()` → `status` (`loading | signedOut | needsProfile | ready`), `profile`. Onboarding son adımları `useOnboarding()` ile açık kalır (`finish()` ile biter).
+- Hata: `ApiError.message` kullanıcıya gösterilecek Türkçe metindir.
+- Yeni alan/RPC gerekirse: önce migration, sonra `types.ts` → `api.ts` → iki uygulama → kanca.
+
+## Ortak UI (`src/components/ui`)
+- Components.dc.html: `Button` (primary, secondary, poke, danger, text; loading/disabled), `IconButton`, `ScreenHeader`, `Chip`, `Segmented`, `Toggle`, `Radio`, `Checkbox`, `SectionLabel`, `Card`, `ProgressBar`, `TextField`, `Avatar`, `Toast`, `CountBadge`, `LoadingState`, `ErrorState`. Token'ları `componentColors[scheme]`, `componentMetrics`, `componentTypography`.
 
 ## Supabase
 - Şema `supabase/migrations/` (10 dosya), testler `supabase/tests/` (pgTAP). Ayrıntı, kararlar ve açık sorular: `supabase/README.md`.
