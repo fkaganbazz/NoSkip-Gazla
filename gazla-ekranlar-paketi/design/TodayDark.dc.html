@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Bugün · koyu mod</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&amp;family=Nunito:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#150E26;font-family:'Nunito',system-ui,sans-serif;color:#FFF8F2}
+a{color:#8BE0AE}a:hover{color:#B8F0CF}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; box-sizing: border-box; padding: 56px 20px 0; display: flex; flex-direction: column; background: #150E26; font-family: 'Nunito', system-ui, sans-serif; color: #FFF8F2">
+
+<div style="display: flex; align-items: flex-start; justify-content: space-between">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<div style="font-size: 14px; font-weight: 700; color: #B7AACF">Pazartesi, 28 Eylül</div>
+<h1 style="margin: 0; font-family: 'Baloo 2', 'Nunito', sans-serif; font-weight: 800; font-size: 27px; line-height: 1.1">İyi akşamlar, Deniz</h1>
+</div>
+<a href="Activity.dc.html" aria-label="Aktivite, 3 yeni" style="position: relative; width: 44px; height: 44px; flex-shrink: 0; box-sizing: border-box; border-radius: 22px; background: #211538; border: 1px solid #33264F; display: flex; align-items: center; justify-content: center; color: #FFF8F2">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16.5 V11 C6 7.7 8.7 5 12 5 C15.3 5 18 7.7 18 11 V16.5 L19.5 18 H4.5 Z"></path><path d="M10 20.5 C10.4 21.3 11.1 21.7 12 21.7 C12.9 21.7 13.6 21.3 14 20.5"></path></svg>
+<span style="position: absolute; top: -4px; right: -5px; min-width: 22px; height: 22px; box-sizing: border-box; padding: 0 5px; border-radius: 11px; border: 2px solid #150E26; background: #FF5A1F; color: #150E26; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center">3</span>
+</a>
+</div>
+
+<div style="position: relative; margin-top: 14px; height: 164px; box-sizing: border-box; padding: 16px 18px 14px; border-radius: 28px; background: #16392A; overflow: hidden">
+<div style="position: absolute; right: -30px; top: -26px; width: 190px; height: 190px; border-radius: 50%; background: #1C4633"></div>
+<div style="position: relative; width: 196px; height: 100%; display: flex; flex-direction: column; gap: 6px">
+<div style="align-self: flex-start; display: flex; align-items: center; gap: 6px; padding: 5px 10px 5px 8px; border-radius: 999px; background: #0E2A1C; color: #DDF3E4; font-size: 12px; font-weight: 800; letter-spacing: 0.4px">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8BE0AE" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21 V10"></path><path d="M12 10 C12 6 9.5 3.5 5 3.5 C5 7.5 7.5 10 12 10 Z"></path><path d="M12 13 C12 9.5 14.5 7 19 7 C19 10.5 16.5 13 12 13 Z"></path></svg>
+{{streakLabel}}
+</div>
+<div style="font-family: 'Baloo 2', 'Nunito', sans-serif; font-weight: 800; font-size: 25px; line-height: 1.05; color: #EEF8F1">{{heroTitle}}</div>
+<div style="font-size: 14px; font-weight: 700; line-height: 1.35; color: #B8E6CA">{{heroSub}}</div>
+<div style="margin-top: auto; display: flex; align-items: center; gap: 4px">
+<sc-for list="{{drops}}" as="d" hint-placeholder-count="3">
+<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8 C15.6 7.4 18 10.7 18 14.3 C18 17.8 15.3 20.6 12 20.6 C8.7 20.6 6 17.8 6 14.3 C6 10.7 8.4 7.4 12 2.8 Z" fill="{{d.fill}}" stroke="#3BAE6A" stroke-width="2.2" stroke-linejoin="round"></path></svg>
+</sc-for>
+<span style="margin-left: 4px; font-size: 13px; font-weight: 800; color: #B8E6CA">{{dropLabel}}</span>
+</div>
+</div>
+<div style="position: absolute; right: 4px; bottom: -6px">
+<dc-import name="Diken" mood="{{heroMood}}" stage="tam" gear="bant" size="138" hint-size="138px,173px"></dc-import>
+</div>
+</div>
+
+<div style="margin-top: 18px; display: flex; align-items: baseline; justify-content: space-between">
+<h2 style="margin: 0; font-family: 'Baloo 2', 'Nunito', sans-serif; font-weight: 800; font-size: 21px">Bugünkü görevler</h2>
+<span style="font-size: 14px; font-weight: 800; color: #B7AACF">{{doneCount}}/3 tamam</span>
+</div>
+
+<div style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px">
+<sc-for list="{{tasks}}" as="c" hint-placeholder-count="3">
+<div style="height: 72px; box-sizing: border-box; padding: 0 12px 0 14px; border-radius: 22px; background: #211538; border: 1px solid #33264F; display: flex; align-items: center; gap: 12px">
+<a href="{{c.href}}" style="flex-grow: 1; min-width: 0; display: flex; align-items: center; gap: 12px; text-decoration: none; color: #FFF8F2">
+<span style="width: 44px; height: 44px; flex-shrink: 0; border-radius: 14px; background: {{c.tint}}; display: flex; align-items: center; justify-content: center; color: {{c.ink}}">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{c.icon}}"></path></svg>
+</span>
+<span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px">
+<span style="font-size: 15px; font-weight: 800; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{c.title}}</span>
+<span style="font-size: 13px; font-weight: 700; color: #B7AACF">{{c.meta}}</span>
+<span style="display: block; height: 6px; border-radius: 3px; background: #33264F; overflow: hidden"><span style="display: block; height: 6px; border-radius: 3px; background: #3BAE6A; width: {{c.pct}}%"></span></span>
+</span>
+</a>
+<sc-if value="{{c.done}}" hint-placeholder-val="{{ false }}">
+<button type="button" onClick="{{c.toggle}}" aria-label="{{c.labelDone}}" style="width: 52px; height: 52px; flex-shrink: 0; border-radius: 26px; border: none; background: #3BAE6A; box-shadow: 0 3px 0 #1F7A45; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#150E26" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5 L10 17.5 L19 7"></path></svg></button>
+</sc-if>
+<sc-if value="{{c.todoCheck}}" hint-placeholder-val="{{ false }}">
+<button type="button" onClick="{{c.toggle}}" aria-label="{{c.labelTodo}}" style="width: 52px; height: 52px; flex-shrink: 0; box-sizing: border-box; border-radius: 26px; border: 3px solid #3BAE6A; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4E6B5C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5 L10 17.5 L19 7"></path></svg></button>
+</sc-if>
+<sc-if value="{{c.todoPhoto}}" hint-placeholder-val="{{ false }}">
+<button type="button" onClick="{{c.toggle}}" aria-label="{{c.labelTodo}}" style="width: 52px; height: 52px; flex-shrink: 0; box-sizing: border-box; border-radius: 26px; border: 3px solid #3BAE6A; background: transparent; display: flex; align-items: center; justify-content: center; color: #8BE0AE; cursor: pointer"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8 H7.5 L9 5.5 H15 L16.5 8 H20 V19 H4 Z"></path><path d="M15.5 13 A3.5 3.5 0 1 1 8.5 13 A3.5 3.5 0 1 1 15.5 13 Z"></path></svg></button>
+</sc-if>
+<sc-if value="{{c.todoNumber}}" hint-placeholder-val="{{ false }}">
+<button type="button" onClick="{{c.toggle}}" aria-label="{{c.labelTodo}}" style="width: 52px; height: 52px; flex-shrink: 0; box-sizing: border-box; border-radius: 26px; border: 3px solid #3BAE6A; background: transparent; display: flex; align-items: center; justify-content: center; color: #8BE0AE; cursor: pointer"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M12 5.5 V18.5 M5.5 12 H18.5"></path></svg></button>
+</sc-if>
+</div>
+</sc-for>
+</div>
+
+<div style="margin-top: 16px; display: flex; align-items: baseline; justify-content: space-between">
+<h2 style="margin: 0; font-family: 'Baloo 2', 'Nunito', sans-serif; font-weight: 800; font-size: 21px">Arkadaşların</h2>
+<span style="font-size: 14px; font-weight: 800; color: #FF9A6B">2 kişi bekliyor</span>
+</div>
+<div style="margin-top: 10px; display: flex; justify-content: space-between">
+<div style="width: 62px; display: flex; flex-direction: column; align-items: center; gap: 6px">
+<div style="position: relative; width: 54px; height: 54px; box-sizing: border-box; border-radius: 27px; border: 3px solid #3BAE6A; padding: 3px"><div style="width: 100%; height: 100%; border-radius: 50%; background: #5A2E1C; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #FFD8C2">M</div><span style="position: absolute; right: -4px; bottom: -3px; width: 20px; height: 20px; border-radius: 10px; border: 2px solid #150E26; background: #3BAE6A; display: flex; align-items: center; justify-content: center"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#150E26" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5 L10 17.5 L19 7"></path></svg></span></div>
+<div style="font-size: 13px; font-weight: 800">Mert</div>
+</div>
+<a href="Poke.dc.html" style="width: 62px; display: flex; flex-direction: column; align-items: center; gap: 6px; text-decoration: none; color: #FFF8F2">
+<span style="display: block; width: 54px; height: 54px; box-sizing: border-box; border-radius: 27px; border: 3px dashed #FF7A3D; padding: 3px"><span style="width: 100%; height: 100%; border-radius: 50%; background: #3A2C5C; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #E4DBF2">E</span></span>
+<span style="padding: 2px 10px; border-radius: 10px; background: #FF5A1F; font-size: 12px; font-weight: 800; color: #150E26">Dürt</span>
+</a>
+<div style="width: 62px; display: flex; flex-direction: column; align-items: center; gap: 6px">
+<div style="position: relative; width: 54px; height: 54px; box-sizing: border-box; border-radius: 27px; border: 3px solid #3BAE6A; padding: 3px"><div style="width: 100%; height: 100%; border-radius: 50%; background: #1F4D33; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #CDEBD8">C</div><span style="position: absolute; right: -4px; bottom: -3px; width: 20px; height: 20px; border-radius: 10px; border: 2px solid #150E26; background: #3BAE6A; display: flex; align-items: center; justify-content: center"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#150E26" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5 L10 17.5 L19 7"></path></svg></span></div>
+<div style="font-size: 13px; font-weight: 800">Can</div>
+</div>
+<a href="Poke.dc.html" style="width: 62px; display: flex; flex-direction: column; align-items: center; gap: 6px; text-decoration: none; color: #FFF8F2">
+<span style="display: block; width: 54px; height: 54px; box-sizing: border-box; border-radius: 27px; border: 3px dashed #FF7A3D; padding: 3px"><span style="width: 100%; height: 100%; border-radius: 50%; background: #4A3A12; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #FFF1C7">S</span></span>
+<span style="padding: 2px 10px; border-radius: 10px; background: #FF5A1F; font-size: 12px; font-weight: 800; color: #150E26">Dürt</span>
+</a>
+<a href="InviteFriends.dc.html" style="width: 62px; display: flex; flex-direction: column; align-items: center; gap: 6px; text-decoration: none; color: #B7AACF">
+<span style="display: flex; width: 54px; height: 54px; box-sizing: border-box; border-radius: 27px; border: 2px dashed #5E4F82; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5.5 V18.5 M5.5 12 H18.5"></path></svg></span>
+<span style="font-size: 13px; font-weight: 800">Davet et</span>
+</a>
+</div>
+
+<div style="position: absolute; left: 0; bottom: 0">
+<dc-import name="TabBar" active="bugun" dark="true" hint-size="390px,88px"></dc-import>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { done: { phone: true, read: false, plank: false } };
+}
+renderVals() {
+const done = this.state.done;
+const base = [
+{ id: 'phone', type: 'check', title: 'Uyanınca 1 saat telefonsuz', meta: 'Gün 12/30 · Grup 4 kişi', pct: 40, href: 'DetailDark.dc.html', tint: '#2E2352', ink: '#CDBEF5', icon: 'M8 3 H16 C17.1 3 18 3.9 18 5 V19 C18 20.1 17.1 21 16 21 H8 C6.9 21 6 20.1 6 19 V5 C6 3.9 6.9 3 8 3 Z M11 18 H13 M3.5 3.5 L20.5 20.5' },
+{ id: 'read', type: 'photo', title: 'Her gün 20 sayfa oku', meta: 'Gün 4/30 · Fotoğraf kanıtı', pct: 13, href: 'PhotoProof.dc.html', tint: '#42203A', ink: '#FFB3CF', icon: 'M4 5.5 C6.5 4.5 9.5 4.5 12 6 C14.5 4.5 17.5 4.5 20 5.5 V19 C17.5 18 14.5 18 12 19.5 C9.5 18 6.5 18 4 19 Z M12 6 V19.5' },
+{ id: 'plank', type: 'number', title: 'Plank: her gün +5 saniye', meta: 'Gün 3/10 · Bugün 70 sn', pct: 30, href: 'NumberEntry.dc.html', tint: '#16372A', ink: '#8BE0AE', icon: 'M20 13.5 A8 8 0 1 1 4 13.5 A8 8 0 1 1 20 13.5 Z M12 9.5 V13.5 L14.5 16 M9.5 2.5 H14.5' }
+];
+const tasks = base.map((c) => {
+const d = !!done[c.id];
+return {
+...c,
+done: d,
+todoCheck: !d && c.type === 'check',
+todoPhoto: !d && c.type === 'photo',
+todoNumber: !d && c.type === 'number',
+labelDone: c.title + ': tamamlandı, geri al',
+labelTodo: c.title + ': bugünü tamamla',
+toggle: () => this.setState({ done: { ...this.state.done, [c.id]: !this.state.done[c.id] } })
+};
+});
+const count = tasks.filter((t) => t.done).length;
+const titles = ['Diken susadı', 'Diken hâlâ susuz', 'Az kaldı, bırakma', 'Diken kana kana içti'];
+const subs = ['3 görev kaldı. Günün bitmesine 1 sa 16 dk var.', '2 görev kaldı. Günün bitmesine 1 sa 16 dk var.', 'Tek görev kaldı. Diken bardağı görüyor.', 'Bugün tamam. Serin 13 gün oldu.'];
+const moods = ['endise', 'endise', 'mutlu', 'cosku'];
+const drops = [0, 1, 2].map((i) => ({ fill: i < count ? '#3BAE6A' : 'transparent' }));
+return {
+tasks,
+doneCount: count,
+heroTitle: titles[count],
+heroSub: subs[count],
+heroMood: moods[count],
+streakLabel: count === 3 ? '13 GÜNLÜK SERİ' : '12 GÜNLÜK SERİ',
+drops,
+dropLabel: count + '/3 su'
+};
+}
+}
+</script>
+</body>
+</html>

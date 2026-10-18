@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Story paylaşım kartı</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&amp;family=Nunito:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#1F7A45;font-family:'Nunito',system-ui,sans-serif;color:#FFF8F2}
+a{color:#FFF8F2}a:hover{color:#FFFFFF}
+</style>
+</helmet>
+<div style="position: relative; width: 360px; height: 640px; overflow: hidden; box-sizing: border-box; padding: 34px 26px 40px; display: flex; flex-direction: column; align-items: center; background: #1F7A45; font-family: 'Nunito', system-ui, sans-serif; color: #FFF8F2">
+
+<div style="position: absolute; left: 30px; top: 74px; width: 300px; height: 300px; border-radius: 50%; background: #23874D"></div>
+<div style="position: absolute; left: 70px; top: 114px; width: 220px; height: 220px; border-radius: 50%; background: #2A9156"></div>
+<svg width="360" height="640" viewBox="0 0 360 640" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="position: absolute; left: 0; top: 0">
+<rect x="36" y="120" width="12" height="7" rx="2" fill="#FFC83D" transform="rotate(-24 42 123)"></rect>
+<rect x="306" y="104" width="12" height="7" rx="2" fill="#FF7A3D" transform="rotate(32 312 107)"></rect>
+<rect x="296" y="300" width="10" height="6" rx="2" fill="#FFF8F2" transform="rotate(-40 301 303)"></rect>
+<rect x="44" y="310" width="10" height="6" rx="2" fill="#8BE0AE" transform="rotate(18 49 313)"></rect>
+<circle cx="70" cy="210" r="4.5" fill="#FFF8F2"></circle>
+<circle cx="298" cy="196" r="5" fill="#FFC83D"></circle>
+<path d="M320 238 L323.5 248.5 L334 252 L323.5 255.5 L320 266 L316.5 255.5 L306 252 L316.5 248.5 Z" fill="#FFC83D"></path>
+<path d="M28 248 L30.8 256.2 L39 259 L30.8 261.8 L28 270 L25.2 261.8 L17 259 L25.2 256.2 Z" fill="#FFF8F2"></path>
+</svg>
+
+<div style="position: relative; display: flex; align-items: center; gap: 8px">
+<svg width="30" height="30" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="border-radius: 8px; background: #24163F"><path d="M16 110 V58 C16 36 31 20 50 20 C69 20 84 36 84 58 V110 Z" fill="#3BAE6A"></path><path d="M58 21.5 C73 25 84 40 84 58 V110 H72 V60 C72 44 67 30 58 21.5 Z" fill="#2C9459"></path><path d="M50 20.5 L44 10 M50 20 L50 7 M50 20.5 L56 10" fill="none" stroke="#3BAE6A" stroke-width="4.5" stroke-linecap="round"></path><ellipse cx="38" cy="61" rx="8.5" ry="10" fill="#FFFFFF" stroke="#24163F" stroke-width="3"></ellipse><circle cx="41" cy="64" r="4.5" fill="#24163F"></circle><path d="M27.5 61 A10.5 12 0 0 1 48.5 61 Z" fill="#3BAE6A"></path><path d="M29 61 H47" fill="none" stroke="#24163F" stroke-width="3.5" stroke-linecap="round"></path><ellipse cx="62" cy="60" rx="9" ry="10.5" fill="#FFFFFF" stroke="#24163F" stroke-width="3"></ellipse><circle cx="65" cy="62" r="4.8" fill="#24163F"></circle><circle cx="66.7" cy="60" r="1.6" fill="#FFFFFF"></circle><path d="M29 49.5 L46 52 M54 45 Q62 36 71 42 M41 79 Q52 82 61 73" fill="none" stroke="#24163F" stroke-width="4" stroke-linecap="round"></path></svg>
+<span style="font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 24px; line-height: 1">Gazla</span>
+</div>
+
+<div style="position: relative; margin-top: 14px">
+<dc-import name="Diken" mood="gurur" stage="cicek" gear="gozluk" size="196" hint-size="196px,245px"></dc-import>
+</div>
+
+<div style="position: relative; margin-top: 8px; font-family: 'Baloo 2', 'Nunito', sans-serif; font-weight: 800; font-size: 86px; line-height: 0.85; color: #FFC83D">30 GÜN</div>
+<div style="position: relative; margin-top: 10px; font-family: 'Baloo 2', 'Nunito', sans-serif; font-weight: 800; font-size: 26px; line-height: 1.05; text-align: center">uyanınca 1 saat telefonsuz</div>
+<div style="position: relative; margin-top: 8px; font-size: 15px; font-weight: 700; color: #DDF3E4">Deniz başardı. Sıra sende.</div>
+
+<div style="position: relative; margin-top: auto; padding: 10px 18px; border-radius: 999px; background: #FFF8F2; color: #24163F; font-size: 14px; font-weight: 800">Gazla'da beni bul · @deniz.k</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":360,"height":640}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>
