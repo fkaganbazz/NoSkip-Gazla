@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AddIcon, CheckIcon } from '@/components/icons';
 import {
@@ -17,6 +17,8 @@ const BADGE_OUTER = m.friendBadgeSize + m.friendBadgeBorder * 2;
 
 type Props = {
   friends: TodayFriend[];
+  onPoke?: (friendId: string) => void;
+  onInvite?: () => void;
 };
 
 /** Türkçe büyük harf (i → İ, ı → I); Intl'e bağlı kalmadan */
@@ -24,7 +26,7 @@ const upperTr = (ch: string) => (ch === 'i' ? 'İ' : ch === 'ı' ? 'I' : ch.toUp
 
 // Arkadaşların bugünkü durumu: bitirenler yeşil halka + tik, bekleyenler kesikli halka + Dürt,
 // sonda davet (Today.dc.html). Dürt ve davet ekranları gelince bağlanacak.
-export default function FriendsRow({ friends }: Props) {
+export default function FriendsRow({ friends, onPoke, onInvite }: Props) {
   const { colors, scheme } = useTheme();
   const c = todayColors[scheme];
 
@@ -34,9 +36,11 @@ export default function FriendsRow({ friends }: Props) {
         const tint = avatarTints[friend.tint][scheme];
         const initial = upperTr(friend.name.charAt(0));
         return (
-          <View
+          <Pressable
             key={friend.id}
-            accessible
+            onPress={friend.doneToday ? undefined : () => onPoke?.(friend.id)}
+            disabled={friend.doneToday || !onPoke}
+            accessibilityRole={friend.doneToday ? undefined : 'button'}
             accessibilityLabel={friend.doneToday ? `${friend.name}, bugün tamam` : `${friend.name}, bekliyor, dürt`}
             style={styles.item}>
             <View
@@ -70,11 +74,16 @@ export default function FriendsRow({ friends }: Props) {
                 <Text style={[typography.smallStrong, { color: colors.onAccent }]}>Dürt</Text>
               </View>
             )}
-          </View>
+          </Pressable>
         );
       })}
 
-      <View accessible accessibilityLabel="Davet et" style={styles.item}>
+      <Pressable
+        onPress={onInvite}
+        disabled={!onInvite}
+        accessibilityRole="button"
+        accessibilityLabel="Davet et"
+        style={styles.item}>
         <View style={[styles.invite, { borderColor: c.inviteRing }]}>
           <AddIcon
             color={colors.textSecondary}
@@ -83,7 +92,7 @@ export default function FriendsRow({ friends }: Props) {
           />
         </View>
         <Text style={[typography.metaStrong, { color: colors.textSecondary }]}>Davet et</Text>
-      </View>
+      </Pressable>
     </View>
   );
 }

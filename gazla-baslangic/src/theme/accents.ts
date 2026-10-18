@@ -45,6 +45,24 @@ export const challengeTints = {
     light: { bg: '#DDF3E4', ink: '#1F6B40' },
     dark: { bg: '#16372A', ink: '#8BE0AE' },
   },
+  // PickChallenge.dc.html / Explore.dc.html. Bu renklerin koyu tasarımı yok: koyu modda aynı tonun
+  // avatar karşılığı (butter, peach) ya da en yakın challenge rengi (teal → green, sky → lilac).
+  butter: {
+    light: { bg: '#FFF1C7', ink: '#8A5A00' },
+    dark: { bg: '#4A3A12', ink: '#FFF1C7' },
+  },
+  peach: {
+    light: { bg: '#FFE3D2', ink: '#9A3412' },
+    dark: { bg: '#5A2E1C', ink: '#FFD8C2' },
+  },
+  teal: {
+    light: { bg: '#D9F2EF', ink: '#0F6B63' },
+    dark: { bg: '#16372A', ink: '#8BE0AE' },
+  },
+  sky: {
+    light: { bg: '#E0EEFF', ink: '#1E4F9A' },
+    dark: { bg: '#2E2352', ink: '#CDBEF5' },
+  },
 } as const satisfies Record<string, Record<Scheme, Tint>>;
 
 export type AvatarTint = keyof typeof avatarTints;

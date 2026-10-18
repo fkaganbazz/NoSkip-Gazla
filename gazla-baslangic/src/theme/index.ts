@@ -10,6 +10,7 @@ export {
   type Tint,
 } from './accents';
 export { darkColors, lightColors, palette, type ColorRoles } from './colors';
+export { componentColors, componentMetrics, componentTypography, type ComponentColors } from './components';
 export { dikenColors } from './diken';
 export { borderWidth, iconMetrics, layout, radius, spacing } from './spacing';
 export { tabBarColors, tabBarMetrics, type TabBarColors } from './tabBar';

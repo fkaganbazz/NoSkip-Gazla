@@ -159,6 +159,56 @@ export function DropIcon({ color, size, strokeWidth, fill }: IconProps & { fill:
   );
 }
 
+// Ortak gezinme ve form ikonları
+
+/** Geri — sola ok (Settings.dc.html) */
+export function BackIcon(props: IconProps) {
+  return (
+    <LineIcon {...props}>
+      <Path d="M15 5 L8 12 L15 19" />
+    </LineIcon>
+  );
+}
+
+/** Satır sonu — sağa ok (Create.dc.html) */
+export function ChevronRightIcon(props: IconProps) {
+  return (
+    <LineIcon {...props}>
+      <Path d="M9 5 L16 12 L9 19" />
+    </LineIcon>
+  );
+}
+
+/** Ara — büyüteç (Explore.dc.html; tasarımda stroke-linejoin yok) */
+export function SearchIcon(props: IconProps) {
+  return (
+    <LineIcon {...props} rounded={false}>
+      <Circle cx={11} cy={11} r={6.5} />
+      <Path d="M16 16 L20.5 20.5" />
+    </LineIcon>
+  );
+}
+
+/** Saat — hatırlatma (Create.dc.html) */
+export function ClockIcon(props: IconProps) {
+  return (
+    <LineIcon {...props}>
+      <Circle cx={12} cy={12} r={8.5} />
+      <Path d="M12 7.5 V12 L15 14" />
+    </LineIcon>
+  );
+}
+
+/** Kilit — görünürlük (Create.dc.html) */
+export function LockIcon(props: IconProps) {
+  return (
+    <LineIcon {...props}>
+      <Path d="M6 11 H18 V20 H6 Z" />
+      <Path d="M8.5 11 V8 C8.5 6 10 4.5 12 4.5 C14 4.5 15.5 6 15.5 8 V11" />
+    </LineIcon>
+  );
+}
+
 // Challenge ikonları (görev kartındaki karo)
 
 /** Telefonsuz — üstü çizili telefon */
@@ -188,11 +238,66 @@ export function TimerIcon(props: IconProps) {
   );
 }
 
+/** Kahvesiz — fincan (PickChallenge.dc.html) */
+export function CoffeeIcon(props: IconProps) {
+  return (
+    <LineIcon {...props}>
+      <Path d="M5 8 H16 V14 C16 17 13.8 19 11 19 H10 C7.2 19 5 17 5 14 Z M16 10 H18 C19.4 10 20.5 11.1 20.5 12.5 C20.5 13.9 19.4 15 18 15 H16 M9 3.5 C8.3 4.4 8.3 5.3 9 6.2 M12.5 3.5 C11.8 4.4 11.8 5.3 12.5 6.2" />
+    </LineIcon>
+  );
+}
+
+/** İltifat — kalpli konuşma balonu (PickChallenge.dc.html) */
+export function ChatHeartIcon(props: IconProps) {
+  return (
+    <LineIcon {...props}>
+      <Path d="M4 5 H20 V15 H11 L7 19 V15 H4 Z M12 12.4 C10.3 11.2 9.4 10.2 9.4 9.2 C9.4 8.4 10 7.8 10.8 7.8 C11.3 7.8 11.7 8.1 12 8.6 C12.3 8.1 12.7 7.8 13.2 7.8 C14 7.8 14.6 8.4 14.6 9.2 C14.6 10.2 13.7 11.2 12 12.4 Z" />
+    </LineIcon>
+  );
+}
+
+/** Harcamasız — cüzdan (PickChallenge.dc.html) */
+export function WalletIcon(props: IconProps) {
+  return (
+    <LineIcon {...props}>
+      <Path d="M6 6.5 H18 C19.4 6.5 20.5 7.6 20.5 9 V17 C20.5 18.4 19.4 19.5 18 19.5 H6 C4.6 19.5 3.5 18.4 3.5 17 V9 C3.5 7.6 4.6 6.5 6 6.5 Z M15.5 13 H20.5 M6 6.5 L15 3.5 L16.2 6.5" />
+    </LineIcon>
+  );
+}
+
+/** Ters el — diş fırçası (Explore.dc.html) */
+export function ToothbrushIcon(props: IconProps) {
+  return (
+    <LineIcon {...props}>
+      <Path d="M5 19 L13 11" />
+      <Path d="M12 6 H19 V9 H12 Z" />
+      <Path d="M13.5 6 V4.5 M15.5 6 V4.5 M17.5 6 V4.5" />
+      <Path d="M4 20.5 L5.5 19" />
+    </LineIcon>
+  );
+}
+
+/** Şekersiz — şeker. Tasarımda çizimi yok; aynı çizgi diliyle sarılı şeker. */
+export function CandyIcon(props: IconProps) {
+  return (
+    <LineIcon {...props}>
+      <Path d="M16 12 A4 4 0 1 1 8 12 A4 4 0 1 1 16 12 Z" />
+      <Path d="M8.3 10.5 L4 8.5 V15.5 L8.3 13.5 M15.7 10.5 L20 8.5 V15.5 L15.7 13.5" />
+    </LineIcon>
+  );
+}
+
 export const challengeIcons = {
+  check: CheckIcon,
   phoneOff: PhoneOffIcon,
   book: BookIcon,
   timer: TimerIcon,
-} as const;
+  coffee: CoffeeIcon,
+  chatHeart: ChatHeartIcon,
+  wallet: WalletIcon,
+  toothbrush: ToothbrushIcon,
+  candy: CandyIcon,
+} as const satisfies Record<import('@/data/types').ChallengeIconKey, (props: IconProps) => ReactNode>;
 
 export type ChallengeIcon = keyof typeof challengeIcons;
 

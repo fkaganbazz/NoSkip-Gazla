@@ -13,16 +13,18 @@ import {
   useTheme,
 } from '@/theme';
 
-import type { TodayTask } from './types';
+import type { TaskRow } from './types';
 
 type Props = {
-  task: TodayTask;
+  task: TaskRow;
   done: boolean;
   onToggle: (id: string) => void;
+  /** Kart gövdesine dokununca challenge detayı */
+  onOpen?: () => void;
 };
 
 // Bugünkü görev satırı ve işaretleme butonu (Today.dc.html).
-function TaskCard({ task, done, onToggle }: Props) {
+function TaskCard({ task, done, onToggle, onOpen }: Props) {
   const { colors, scheme } = useTheme();
   const c = todayColors[scheme];
   const tint = challengeTints[task.tint][scheme];
@@ -40,8 +42,12 @@ function TaskCard({ task, done, onToggle }: Props) {
             : undefined,
         },
       ]}>
-      {/* Detay / kanıt ekranları gelince bağlanacak */}
-      <View style={styles.body}>
+      <Pressable
+        onPress={onOpen}
+        disabled={!onOpen}
+        accessibilityRole="button"
+        accessibilityLabel={`${task.title}, detay`}
+        style={styles.body}>
         <View style={[styles.iconTile, { backgroundColor: tint.bg }]}>
           <Icon color={tint.ink} size={m.taskIconSize} strokeWidth={m.taskIconStrokeWidth} />
         </View>
@@ -61,7 +67,7 @@ function TaskCard({ task, done, onToggle }: Props) {
             />
           </View>
         </View>
-      </View>
+      </Pressable>
 
       <CheckButton task={task} done={done} onToggle={onToggle} />
     </View>

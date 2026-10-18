@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { BellIcon } from '@/components/icons';
 import { borderWidth, todayMetrics as m, todayTypography, typography, useTheme } from '@/theme';
@@ -7,10 +7,11 @@ type Props = {
   dayLabel: string;
   title: string;
   unread: number;
+  onPressBell?: () => void;
 };
 
 // Tarih, selamlama ve aktivite zili (Today.dc.html üst satır).
-export default function TodayHeader({ dayLabel, title, unread }: Props) {
+export default function TodayHeader({ dayLabel, title, unread, onPressBell }: Props) {
   const { colors } = useTheme();
 
   return (
@@ -22,9 +23,9 @@ export default function TodayHeader({ dayLabel, title, unread }: Props) {
         </Text>
       </View>
 
-      {/* Aktivite ekranı gelince bağlanacak */}
-      <View
-        accessible
+      <Pressable
+        onPress={onPressBell}
+        accessibilityRole="button"
         accessibilityLabel={unread > 0 ? `Aktivite, ${unread} yeni` : 'Aktivite'}
         style={[styles.bell, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <BellIcon color={colors.text} size={m.bellIconSize} strokeWidth={m.bellIconStrokeWidth} />
@@ -37,7 +38,7 @@ export default function TodayHeader({ dayLabel, title, unread }: Props) {
             <Text style={[typography.micro, { color: colors.onAccent }]}>{unread}</Text>
           </View>
         )}
-      </View>
+      </Pressable>
     </View>
   );
 }

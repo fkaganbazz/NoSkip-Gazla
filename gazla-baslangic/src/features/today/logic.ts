@@ -3,6 +3,9 @@
  * görev sayısından bağımsız hale getirilmiş hali.
  */
 import type { DikenMood } from '@/components/Diken';
+import type { FriendToday, TodayTask } from '@/data';
+
+import type { TaskRow, TodayFriend } from './types';
 
 const DAYS = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
 const MONTHS = [
@@ -89,4 +92,39 @@ export function heroState(done: number, total: number, streakDays: number, minut
     };
   }
   return { title: 'Diken hâlâ susuz', sub: countdown, mood: 'endise', streak: streakDays };
+}
+
+const formatNumber = (n: number) => (Number.isInteger(n) ? String(n) : n.toLocaleString('tr-TR'));
+
+/** Görev satırı alt bilgisi: "Gün 12/30 · Grup 4 kişi", "Gün 4/30 · Fotoğraf kanıtı", "Gün 3/10 · Bugün 70 sn" */
+export function taskMeta(task: TodayTask, now: Date) {
+  const day = `Gün ${task.dayIndex}/${task.durationDays}`;
+  const todayIso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const prefix = task.localDate !== todayIso ? 'Dün · ' : '';
+  if (task.taskType === 'number' && task.target != null) {
+    const value = task.done && task.value != null ? task.value : task.target;
+    return `${prefix}${day} · ${task.done ? '' : 'Bugün '}${formatNumber(value)} ${task.numberUnit ?? ''}`.trim();
+  }
+  if (task.taskType === 'photo') {
+    return `${prefix}${day} · Fotoğraf kanıtı`;
+  }
+  return task.memberCount > 1 ? `${prefix}${day} · Grup ${task.memberCount} kişi` : `${prefix}${day}`;
+}
+
+export function toTaskRow(task: TodayTask, now: Date): TaskRow {
+  return {
+    id: `${task.challengeId}|${task.localDate}`,
+    challengeId: task.challengeId,
+    done: task.done,
+    type: task.taskType,
+    title: task.title,
+    meta: taskMeta(task, now),
+    progress: Math.round((Math.min(task.dayIndex, task.durationDays) / task.durationDays) * 100),
+    tint: task.tint,
+    icon: task.icon,
+  };
+}
+
+export function toFriendRow(friend: FriendToday): TodayFriend {
+  return { id: friend.id, name: friend.displayName, tint: friend.avatarTint, doneToday: !!friend.doneToday };
 }
