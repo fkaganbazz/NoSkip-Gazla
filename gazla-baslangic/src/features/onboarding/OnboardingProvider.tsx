@@ -5,8 +5,11 @@
  *   oluşturulur; o zamana kadar burada tutulur.
  * - Profil tamamlanınca oturum "hazır" olur ama kullanıcı davet ve bildirim adımlarını da görsün diye
  *   `inProgress` açık kalır; NotifPermission `finish()` çağırınca uygulama açılır.
+ * - Oturum kapanınca (ör. Profil'den geri) yarım kalan onboarding sıfırlanır; seçilen şablon korunur.
  */
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+
+import { useAuth } from '@/data';
 
 type OnboardingState = {
   /** Onboarding sürüyor (profil tamamlansa bile son adımlar bitmedi) */
@@ -27,6 +30,18 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   const [inProgress, setInProgress] = useState(false);
   const [pickedTemplateId, setPickedTemplateId] = useState<string | null>(null);
   const [createdChallengeId, setCreatedChallengeId] = useState<string | null>(null);
+
+  // Oturum kapandığında (yükleniyor ara durumu sayılmaz) onboarding'in oturumlu adımları sıfırlanır
+  const { status } = useAuth();
+  const lastStatus = useRef(status);
+  useEffect(() => {
+    if (status === 'loading') return;
+    if (status === 'signedOut' && lastStatus.current !== 'signedOut' && lastStatus.current !== 'loading') {
+      setInProgress(false);
+      setCreatedChallengeId(null);
+    }
+    lastStatus.current = status;
+  }, [status]);
 
   const value = useMemo<OnboardingState>(
     () => ({

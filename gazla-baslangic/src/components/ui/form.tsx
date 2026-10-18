@@ -191,6 +191,8 @@ const styles = StyleSheet.create({
     gap: spacing.xs - 2,
   },
   input: {
+    // Web: tarayıcının odak çerçevesi kenar rengini örtmesin
+    outlineWidth: 0,
     height: cm.inputHeight,
     paddingHorizontal: cm.inputPaddingX,
     borderRadius: cm.inputRadius,
