@@ -1,6 +1,240 @@
-import PlaceholderScreen from '@/components/PlaceholderScreen';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useMemo, useState } from 'react';
+import { Platform, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-// Poke.dc.html — uygulanacak.
-export default function Screen() {
-  return <PlaceholderScreen title="Dürt" design="Poke.dc.html" />;
+import { Button, ErrorState, IconButton, LoadingState, Segmented, Toast } from '@/components/ui';
+import {
+  ApiError,
+  useFriendProfile,
+  useFriendsToday,
+  usePokeMessages,
+  useSendPokeMutation,
+  useUndoPokeMutation,
+  type PokeTone,
+} from '@/data';
+import { SendIcon, ShieldIcon } from '@/features/friends/icons';
+import { toDative } from '@/features/friends/names';
+import PersonAvatar from '@/features/friends/PersonAvatar';
+import MessageGrid from '@/features/poke/MessageGrid';
+import { componentTypography, todayTypography, typography, useTheme } from '@/theme';
+import { socialColors, socialMetrics as m, socialTypography } from '@/theme/social';
+
+/** Geri alma süresi (sunucudaki pokes delete politikasıyla aynı) */
+const UNDO_MS = 30_000;
+
+/** Tasarımdaki ilk seçim: gazda ilk mesaj, lafta ikinci */
+const defaultIndex = (tone: PokeTone) => (tone === 'roast' ? 1 : 0);
+
+// Dürt — design/Poke.dc.html (alt sayfa). Hazır mesaj listesi (poke_messages); "Laf sok" yalnızca
+// alıcının sert modu açıksa. Gönderince 30 sn "Geri al" tostu, süre bitince sayfa kapanır.
+// Parametreler: userId; isteğe bağlı tone ('hype' — "Gaz ver" butonlarından) ve challengeId.
+export default function PokeSheet() {
+  const params = useLocalSearchParams<{ userId: string; tone?: PokeTone; challengeId?: string }>();
+  const userId = params.userId;
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { colors, scheme } = useTheme();
+  const c = socialColors[scheme];
+
+  const friends = useFriendsToday();
+  const profile = useFriendProfile(userId);
+  const messages = usePokeMessages();
+  const send = useSendPokeMutation();
+  const undo = useUndoPokeMutation();
+
+  const friend = friends.data?.find((f) => f.id === userId);
+  const person = friend ?? profile.data ?? null;
+  const harsh = friend?.harshMode ?? profile.data?.harshMode ?? false;
+
+  const [tone, setTone] = useState<PokeTone | null>(params.tone ?? null);
+  const [pickedKey, setPickedKey] = useState<string | null>(null);
+  const [sentId, setSentId] = useState<string | null>(null);
+
+  // Sert mod kapalıysa her zaman gaz; açıksa tasarımdaki gibi "Laf sok" seçili açılır
+  const activeTone: PokeTone = !harsh ? 'hype' : (tone ?? 'roast');
+  const list = useMemo(
+    () =>
+      (messages.data ?? [])
+        .filter((x) => x.isActive && x.tone === activeTone)
+        .sort((a, b) => a.sortOrder - b.sortOrder),
+    [messages.data, activeTone],
+  );
+  const selectedKey =
+    pickedKey && list.some((x) => x.key === pickedKey)
+      ? pickedKey
+      : ((list[defaultIndex(activeTone)] ?? list[0])?.key ?? null);
+
+  const close = () => (router.canGoBack() ? router.back() : router.replace('/friends'));
+
+  // Geri alma süresi bitince sayfa kendiliğinden kapanır
+  useEffect(() => {
+    if (!sentId) return;
+    const id = setTimeout(() => (router.canGoBack() ? router.back() : router.replace('/friends')), UNDO_MS);
+    return () => clearTimeout(id);
+  }, [sentId, router]);
+
+  const loading = messages.isPending || (friends.isPending && profile.isPending);
+
+  const body = () => {
+    if (loading) return <LoadingState />;
+    if (messages.isError) return <ErrorState onRetry={() => messages.refetch()} />;
+    if (!person) return <ErrorState message="Bu kişiyi şu an dürtemezsin." />;
+
+    const name = person.displayName;
+    const doneToday = friend?.doneToday ?? null;
+    const title =
+      doneToday === false ? `${name} bugün hâlâ yok` : doneToday === true ? `${name} bugünü tamamladı` : name;
+    const sub = friend
+      ? [friend.sharedChallengeTitle, `${friend.streak} gün seri`].filter(Boolean).join(' · ')
+      : profile.data
+        ? `${profile.data.streak} gün seri`
+        : '';
+    const note = !harsh
+      ? `${name} sert modu kapalı; sadece gaz verebilirsin.`
+      : activeTone === 'roast'
+        ? `${name} sert modu açtı, laf sokabilirsin.`
+        : 'Gaz mesajları herkese her zaman açık.';
+    const error = [send.error, undo.error].find((e) => e instanceof ApiError) as ApiError | undefined;
+
+    return (
+      <>
+        <View style={styles.header}>
+          <PersonAvatar
+            person={person}
+            size={m.pokeAvatarOuter}
+            state={doneToday === false ? 'pending' : 'plain'}
+            ringPadding={m.pokeAvatarRingPadding}
+            textStyle={todayTypography.avatarInitial}
+          />
+          <View style={styles.headerTexts}>
+            <Text accessibilityRole="header" style={[socialTypography.pokeTitle, { color: colors.text }]}>
+              {title}
+            </Text>
+            {!!sub && <Text style={[typography.meta, { color: colors.textSecondary }]}>{sub}</Text>}
+          </View>
+          <IconButton icon="close" onPress={close} />
+        </View>
+
+        {harsh && (
+          <View style={styles.segment}>
+            <Segmented<PokeTone>
+              options={[
+                { value: 'hype', label: 'Gaz ver' },
+                { value: 'roast', label: 'Laf sok' },
+              ]}
+              value={activeTone}
+              onChange={(t) => {
+                setTone(t);
+                setPickedKey(null);
+              }}
+              selectedColor={(t) => (t === 'roast' ? c.roastText : colors.actionText)}
+            />
+          </View>
+        )}
+
+        <View style={styles.note}>
+          <ShieldIcon color={colors.textSecondary} size={m.noteIconSize} strokeWidth={m.noteIconStrokeWidth} />
+          <Text style={[typography.meta, styles.noteText, { color: colors.textBody }]}>{note}</Text>
+        </View>
+
+        <MessageGrid messages={list} selectedKey={selectedKey} onSelect={setPickedKey} />
+
+        <View style={styles.footer}>
+          {!!error && (
+            <Text
+              accessibilityLiveRegion="polite"
+              style={[componentTypography.inputError, styles.error, { color: colors.danger }]}>
+              {error.message}
+            </Text>
+          )}
+          {sentId ? (
+            <Toast
+              message={`${toDative(name)} gönderildi`}
+              action={{
+                label: 'Geri al',
+                onPress: () => undo.mutate(sentId, { onSuccess: () => setSentId(null) }),
+              }}
+            />
+          ) : (
+            <Button
+              title={`${toDative(name)} gönder`}
+              icon={<SendIcon color={colors.onAction} size={m.sendIconSize} strokeWidth={m.sendIconStrokeWidth} />}
+              loading={send.isPending}
+              disabled={!selectedKey}
+              onPress={() => {
+                if (!selectedKey) return;
+                undo.reset();
+                send.mutate(
+                  {
+                    recipientId: userId,
+                    tone: activeTone,
+                    messageKey: selectedKey,
+                    challengeId: params.challengeId ?? friend?.sharedChallengeId ?? undefined,
+                  },
+                  { onSuccess: (poke) => setSentId(poke.id) },
+                );
+              }}
+            />
+          )}
+        </View>
+      </>
+    );
+  };
+
+  return (
+    <View
+      style={[
+        styles.sheet,
+        { backgroundColor: colors.background, paddingBottom: m.sheetPaddingBottom + insets.bottom },
+      ]}>
+      {/* Tutamak: iOS/Android'de sistem çiziyor (sheetGrabberVisible); webde burada */}
+      <View style={[styles.grabber, Platform.OS === 'web' && { backgroundColor: c.grabber }]} />
+      {body()}
+    </View>
+  );
 }
+
+const styles = StyleSheet.create({
+  sheet: {
+    minHeight: m.sheetMinHeight,
+    paddingTop: m.sheetPaddingTop,
+    paddingHorizontal: m.sheetPaddingX,
+  },
+  grabber: {
+    alignSelf: 'center',
+    width: m.grabberWidth,
+    height: m.grabberHeight,
+    borderRadius: m.grabberRadius,
+  },
+  header: {
+    marginTop: m.pokeHeaderMarginTop,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m.pokeHeaderGap,
+  },
+  headerTexts: {
+    flex: 1,
+    gap: m.pokeTitleGap,
+  },
+  segment: {
+    marginTop: m.segmentMarginTop,
+  },
+  note: {
+    marginTop: m.noteMarginTop,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: m.noteGap,
+  },
+  noteText: {
+    flex: 1,
+  },
+  footer: {
+    marginTop: 'auto',
+    paddingTop: m.sendMarginTop,
+  },
+  error: {
+    marginBottom: m.pokeErrorMarginBottom,
+    textAlign: 'center',
+  },
+});
