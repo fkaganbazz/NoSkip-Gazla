@@ -40,9 +40,12 @@ type Panel = 'reminder' | 'start' | 'friends' | null;
 
 // Yeni challenge — design/Create.dc.html (tam ekran modal). Tasarımda olmayan ama create_challenge'ın
 // istediği alanlar (şablon, özel süre, sayı ayarları, başlangıç günü) aynı bileşenlerle eklendi.
-// Explore/şablon ekranı `?templateId=` ile açarsa form o şablonla dolu gelir.
+// Explore/şablon ekranı `?templateId=&durationDays=` ile açarsa form o şablon ve süreyle dolu gelir.
 export default function CreateScreen() {
-  const { templateId: templateParam } = useLocalSearchParams<{ templateId?: string }>();
+  const { templateId: templateParam, durationDays: durationParam } = useLocalSearchParams<{
+    templateId?: string;
+    durationDays?: string;
+  }>();
   const router = useRouter();
   const { colors, scheme } = useTheme();
   const c = createColors[scheme];
@@ -67,8 +70,11 @@ export default function CreateScreen() {
     if (appliedParam.current || !templateParam || !templates.data) return;
     const tp = templates.data.find((x) => x.id === templateParam);
     appliedParam.current = true;
-    if (tp) setForm((f) => formFromTemplate(f, tp));
-  }, [templateParam, templates.data]);
+    if (!tp) return;
+    const days = Number(durationParam);
+    const duration = days === 7 || days === 10 || days === 30 ? days : undefined;
+    setForm((f) => ({ ...formFromTemplate(f, tp), ...(duration ? { duration } : {}) }));
+  }, [templateParam, durationParam, templates.data]);
 
   const friendList = friends.data ?? [];
   // Seçim sırasıyla ("Mert ve Ece davet edilecek")
