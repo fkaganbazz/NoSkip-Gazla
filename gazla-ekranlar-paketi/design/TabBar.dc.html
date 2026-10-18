@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Alt menü</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&amp;family=Nunito:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<nav aria-label="Ana menü" style="width: 390px; height: 88px; box-sizing: border-box; padding: 6px 6px 24px; background: {{t.bg}}; border-top: 1px solid {{t.border}}; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: center; font-family: 'Nunito', system-ui, sans-serif; color: {{t.ink}}">
+<a href="Today.dc.html" aria-current="{{i.bugun.cur}}" style="min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; text-decoration: none; color: {{i.bugun.c}}; font-size: 12px; font-weight: {{i.bugun.w}}">
+<span style="width: 56px; height: 30px; border-radius: 15px; background: {{i.bugun.pill}}; display: flex; align-items: center; justify-content: center">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 10.5 L12 4 L20.5 10.5 V19 C20.5 19.6 20.1 20 19.5 20 H15 V14.5 H9 V20 H4.5 C3.9 20 3.5 19.6 3.5 19 Z"></path></svg>
+</span>
+Bugün
+</a>
+<a href="Explore.dc.html" aria-current="{{i.kesfet.cur}}" style="min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; text-decoration: none; color: {{i.kesfet.c}}; font-size: 12px; font-weight: {{i.kesfet.w}}">
+<span style="width: 56px; height: 30px; border-radius: 15px; background: {{i.kesfet.pill}}; display: flex; align-items: center; justify-content: center">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M15.5 8.5 L13.5 13.5 L8.5 15.5 L10.5 10.5 Z"></path></svg>
+</span>
+Keşfet
+</a>
+<div style="display: flex; justify-content: center">
+<a href="Create.dc.html" aria-label="Yeni challenge oluştur" style="width: 56px; height: 56px; margin-top: -30px; border-radius: 50%; border: 4px solid {{t.bg}}; background: {{t.fab}}; box-shadow: 0 4px 0 {{t.fabShadow}}; display: flex; align-items: center; justify-content: center; color: {{t.fabIcon}}">
+<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5 V19 M5 12 H19"></path></svg>
+</a>
+</div>
+<a href="Friends.dc.html" aria-current="{{i.arkadaslar.cur}}" style="min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; text-decoration: none; color: {{i.arkadaslar.c}}; font-size: 12px; font-weight: {{i.arkadaslar.w}}">
+<span style="width: 56px; height: 30px; border-radius: 15px; background: {{i.arkadaslar.pill}}; display: flex; align-items: center; justify-content: center">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20 C2.5 16 5.5 13.5 9 13.5 C12.5 13.5 15.5 16 15.5 20"></path><path d="M16 4.6 C17.9 5 19.1 6.6 19.1 8.4 C19.1 10.2 17.9 11.7 16 12.1"></path><path d="M17.8 14.1 C20 14.8 21.5 17 21.5 20"></path></svg>
+</span>
+Arkadaşlar
+</a>
+<a href="Garden.dc.html" aria-current="{{i.bahce.cur}}" style="min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; text-decoration: none; color: {{i.bahce.c}}; font-size: 12px; font-weight: {{i.bahce.w}}">
+<span style="width: 56px; height: 30px; border-radius: 15px; background: {{i.bahce.pill}}; display: flex; align-items: center; justify-content: center">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21 V11"></path><path d="M12 11 C12 7 9.5 4.5 5 4.5 C5 8.5 7.5 11 12 11 Z"></path><path d="M12 13.5 C12 10 14.5 7.5 19 7.5 C19 11 16.5 13.5 12 13.5 Z"></path></svg>
+</span>
+Bahçem
+</a>
+</nav>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"active":{"editor":"enum","options":["bugun","kesfet","arkadaslar","bahce"],"default":"bugun"},"dark":{"editor":"boolean","default":false},"$preview":{"width":390,"height":88}}'>
+class Component extends DCLogic {
+renderVals() {
+const active = this.props.active ?? 'bugun';
+const dark = this.props.dark === true || this.props.dark === 'true';
+const t = dark
+? { bg: '#1D1233', border: '#33264F', ink: '#FFF8F2', on: '#8BE0AE', off: '#B7AACF', pill: '#1F4D33', fab: '#3BAE6A', fabShadow: '#1F7A45', fabIcon: '#150E26' }
+: { bg: '#FFFFFF', border: '#EFE6DC', ink: '#24163F', on: '#1F7A45', off: '#5B4A7A', pill: '#DDF3E4', fab: '#24163F', fabShadow: '#0E0820', fabIcon: '#FFF8F2' };
+const item = (key) => {
+const isOn = active === key;
+return { c: isOn ? t.on : t.off, w: isOn ? 800 : 700, pill: isOn ? t.pill : 'transparent', cur: isOn ? 'page' : null };
+};
+return { t, i: { bugun: item('bugun'), kesfet: item('kesfet'), arkadaslar: item('arkadaslar'), bahce: item('bahce') } };
+}
+}
+</script>
+</body>
+</html>

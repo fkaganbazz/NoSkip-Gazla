@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Yeni challenge</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&amp;family=Nunito:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#FFF8F2;font-family:'Nunito',system-ui,sans-serif;color:#24163F}
+a{color:#1F7A45}a:hover{color:#165C34}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; box-sizing: border-box; padding: 56px 20px 0; display: flex; flex-direction: column; background: #FFF8F2; font-family: 'Nunito', system-ui, sans-serif; color: #24163F">
+
+<div style="display: flex; align-items: center; gap: 12px">
+<a href="Today.dc.html" aria-label="Kapat" style="width: 44px; height: 44px; flex-shrink: 0; box-sizing: border-box; border-radius: 22px; background: #FFFFFF; border: 1px solid #EFE6DC; display: flex; align-items: center; justify-content: center; color: #24163F"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6 L18 18 M18 6 L6 18"></path></svg></a>
+<h1 style="flex-grow: 1; margin: 0; font-family: 'Baloo 2', 'Nunito', sans-serif; font-weight: 800; font-size: 26px; line-height: 1.1">Yeni challenge</h1>
+</div>
+
+<div style="margin-top: 16px; display: flex; flex-direction: column; gap: 6px">
+<label for="ad" style="font-size: 14px; font-weight: 800">Challenge adı</label>
+<input id="ad" type="text" value="Akşam 20 dakika yürüyüş" style="height: 52px; box-sizing: border-box; padding: 0 16px; border-radius: 16px; border: 2px solid #1F7A45; background: #FFFFFF; font-family: inherit; font-size: 16px; font-weight: 700; color: #24163F">
+</div>
+
+<div id="sure" style="margin-top: 16px; font-size: 14px; font-weight: 800">Süre</div>
+<div role="radiogroup" aria-labelledby="sure" style="margin-top: 6px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px">
+<sc-for list="{{durations}}" as="d" hint-placeholder-count="4">
+<button type="button" role="radio" aria-checked="{{d.checked}}" onClick="{{d.pick}}" style="height: 46px; box-sizing: border-box; border-radius: 14px; border: 1px solid {{d.border}}; background: {{d.bg}}; font-family: inherit; font-size: 15px; font-weight: 800; color: {{d.color}}; cursor: pointer">{{d.label}}</button>
+</sc-for>
+</div>
+
+<div id="tur" style="margin-top: 16px; font-size: 14px; font-weight: 800">Nasıl tamamlanır?</div>
+<div role="radiogroup" aria-labelledby="tur" style="margin-top: 6px; display: flex; flex-direction: column; gap: 8px">
+<sc-for list="{{types}}" as="t" hint-placeholder-count="3">
+<button type="button" role="radio" aria-checked="{{t.checked}}" onClick="{{t.pick}}" style="min-height: 58px; padding: 0 14px; box-sizing: border-box; border-radius: 18px; border: 1px solid {{t.border}}; box-shadow: {{t.ring}}; background: {{t.bg}}; display: flex; align-items: center; gap: 12px; font-family: inherit; color: #24163F; text-align: left; cursor: pointer">
+<span style="width: 22px; height: 22px; flex-shrink: 0; box-sizing: border-box; border-radius: 11px; border: {{t.dot}}; background: #FFFFFF"></span>
+<span style="display: flex; flex-direction: column; gap: 1px"><span style="font-size: 15px; font-weight: 800">{{t.title}}</span><span style="font-size: 13px; font-weight: 600; color: #5B4A7A">{{t.desc}}</span></span>
+</button>
+</sc-for>
+</div>
+
+<div style="margin-top: 14px; border-radius: 18px; background: #FFFFFF; border: 1px solid #EFE6DC">
+<a href="#" style="height: 52px; padding: 0 14px; display: flex; align-items: center; gap: 12px; text-decoration: none; color: #24163F; border-bottom: 1px solid #F4EDE5">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3F3358" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5 V12 L15 14"></path></svg>
+<span style="flex-grow: 1; font-size: 15px; font-weight: 800">Hatırlatma</span>
+<span style="font-size: 15px; font-weight: 700; color: #5B4A7A">Her gün 20:00</span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B4A7A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5 L16 12 L9 19"></path></svg>
+</a>
+<a href="#" style="height: 52px; padding: 0 14px; display: flex; align-items: center; gap: 12px; text-decoration: none; color: #24163F">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3F3358" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 11 H18 V20 H6 Z"></path><path d="M8.5 11 V8 C8.5 6 10 4.5 12 4.5 C14 4.5 15.5 6 15.5 8 V11"></path></svg>
+<span style="flex-grow: 1; font-size: 15px; font-weight: 800">Kimler görebilir</span>
+<span style="font-size: 15px; font-weight: 700; color: #5B4A7A">Davetliler</span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B4A7A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5 L16 12 L9 19"></path></svg>
+</a>
+</div>
+
+<div style="margin-top: 14px; display: flex; align-items: center; gap: 8px">
+<span style="width: 40px; height: 40px; box-sizing: border-box; border-radius: 20px; border: 2px solid #1F7A45; background: #FFD8C2; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #9A3412">M</span>
+<span style="width: 40px; height: 40px; box-sizing: border-box; border-radius: 20px; border: 2px solid #1F7A45; background: #E4DBF2; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #4B3A78">E</span>
+<button type="button" aria-label="Arkadaş ekle" style="width: 40px; height: 40px; box-sizing: border-box; border-radius: 20px; border: 2px dashed #B9AFA4; background: transparent; display: flex; align-items: center; justify-content: center; color: #5B4A7A; cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5.5 V18.5 M5.5 12 H18.5"></path></svg></button>
+<span style="margin-left: 4px; font-size: 14px; font-weight: 700; color: #3F3358">Mert ve Ece davet edilecek</span>
+</div>
+
+<div style="position: absolute; left: 20px; right: 20px; bottom: 30px">
+<a href="Today.dc.html" style="height: 56px; border-radius: 18px; background: #1F7A45; box-shadow: 0 4px 0 #165C34; color: #FFFFFF; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 17px; font-weight: 800">Challenge'ı başlat</a>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { duration: 1, type: 0 };
+}
+renderVals() {
+const durations = ['7 gün', '10 gün', '30 gün', 'Özel'].map((label, i) => {
+const on = this.state.duration === i;
+return { label, checked: on ? 'true' : 'false', bg: on ? '#24163F' : '#FFFFFF', border: on ? '#24163F' : '#E3D8CC', color: on ? '#FFF8F2' : '#24163F', pick: () => this.setState({ duration: i }) };
+});
+const types = [
+{ title: 'İşaretle', desc: 'Tek dokunuşla günü tamamla' },
+{ title: 'Sayı gir', desc: 'Dakika, adım, sayfa gibi' },
+{ title: 'Fotoğraf kanıtı', desc: 'Grup görsün, tepki versin' }
+].map((t, i) => {
+const on = this.state.type === i;
+return { ...t, checked: on ? 'true' : 'false', bg: on ? '#F3FBF6' : '#FFFFFF', border: on ? '#1F7A45' : '#E3D8CC', ring: on ? '0 0 0 1px #1F7A45' : 'none', dot: on ? '7px solid #1F7A45' : '2px solid #B9AFA4', pick: () => this.setState({ type: i }) };
+});
+return { durations, types };
+}
+}
+</script>
+</body>
+</html>

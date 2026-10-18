@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Profilini oluştur</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&amp;family=Nunito:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#FFF8F2;font-family:'Nunito',system-ui,sans-serif;color:#24163F}
+a{color:#1F7A45}a:hover{color:#165C34}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; box-sizing: border-box; padding: 56px 20px 32px; display: flex; flex-direction: column; background: #FFF8F2; font-family: 'Nunito', system-ui, sans-serif; color: #24163F">
+
+<div style="display: flex; align-items: center; gap: 12px">
+<a href="SignIn.dc.html" aria-label="Geri" style="width: 44px; height: 44px; flex-shrink: 0; box-sizing: border-box; border-radius: 22px; background: #FFFFFF; border: 1px solid #EFE6DC; display: flex; align-items: center; justify-content: center; color: #24163F"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5 L8 12 L15 19"></path></svg></a>
+<div role="progressbar" aria-label="Adım 2 / 4" aria-valuemin="1" aria-valuemax="4" aria-valuenow="2" style="flex-grow: 1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px">
+<span style="height: 8px; border-radius: 4px; background: #1F7A45"></span>
+<span style="height: 8px; border-radius: 4px; background: #1F7A45"></span>
+<span style="height: 8px; border-radius: 4px; background: #E3D8CC"></span>
+<span style="height: 8px; border-radius: 4px; background: #E3D8CC"></span>
+</div>
+<span style="width: 30px; text-align: right; font-size: 14px; font-weight: 800; color: #5B4A7A">2/4</span>
+</div>
+
+<div style="margin-top: 24px; display: flex; flex-direction: column; gap: 6px">
+<h1 style="margin: 0; font-family: 'Baloo 2', 'Nunito', sans-serif; font-weight: 800; font-size: 30px; line-height: 1.1">Seni nasıl çağıralım?</h1>
+<p style="margin: 0; font-size: 15px; font-weight: 600; line-height: 1.45; color: #3F3358">Arkadaşların seni kullanıcı adınla bulur.</p>
+</div>
+
+<div style="margin-top: 22px; display: flex; align-items: center; gap: 16px">
+<div style="position: relative; width: 84px; height: 84px; flex-shrink: 0">
+<div style="width: 84px; height: 84px; border-radius: 42px; background: #FFE3D2; display: flex; align-items: center; justify-content: center; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 36px; color: #9A3412">D</div>
+<button type="button" aria-label="Profil fotoğrafı ekle" style="position: absolute; right: -4px; bottom: -4px; width: 36px; height: 36px; border-radius: 18px; border: 3px solid #FFF8F2; background: #24163F; display: flex; align-items: center; justify-content: center; color: #FFFFFF; cursor: pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8 H7.5 L9 5.5 H15 L16.5 8 H20 V19 H4 Z"></path><path d="M15.5 13 A3.5 3.5 0 1 1 8.5 13 A3.5 3.5 0 1 1 15.5 13 Z"></path></svg></button>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<div style="font-size: 16px; font-weight: 800">Profil fotoğrafı</div>
+<div style="font-size: 14px; font-weight: 600; color: #5B4A7A">İstersen sonra da ekleyebilirsin.</div>
+</div>
+</div>
+
+<div style="margin-top: 24px; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="ad" style="font-size: 14px; font-weight: 800">Adın</label>
+<input id="ad" type="text" value="Deniz" style="height: 52px; box-sizing: border-box; padding: 0 16px; border-radius: 16px; border: 2px solid #E3D8CC; background: #FFFFFF; font-family: inherit; font-size: 16px; font-weight: 700; color: #24163F">
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="kadi" style="font-size: 14px; font-weight: 800">Kullanıcı adın</label>
+<div style="position: relative">
+<input id="kadi" type="text" value="deniz.k" style="width: 100%; height: 52px; box-sizing: border-box; padding: 0 48px 0 36px; border-radius: 16px; border: 2px solid #1F7A45; background: #FFFFFF; font-family: inherit; font-size: 16px; font-weight: 700; color: #24163F">
+<span style="position: absolute; left: 16px; top: 15px; font-size: 16px; font-weight: 800; color: #5B4A7A">@</span>
+<span style="position: absolute; right: 14px; top: 14px; width: 24px; height: 24px; border-radius: 12px; background: #1F7A45; display: flex; align-items: center; justify-content: center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5 L10 17.5 L19 7"></path></svg></span>
+</div>
+<div style="font-size: 13px; font-weight: 700; color: #1F7A45">Bu kullanıcı adı boşta</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="yil" style="font-size: 14px; font-weight: 800">Doğum yılın</label>
+<button id="yil" type="button" aria-haspopup="listbox" style="width: 100%; height: 52px; box-sizing: border-box; padding: 0 16px; border-radius: 16px; border: 2px solid #E3D8CC; background: #FFFFFF; display: flex; align-items: center; justify-content: space-between; font-family: inherit; font-size: 16px; font-weight: 700; color: #24163F; cursor: pointer">1998<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5B4A7A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9 L12 15 L18 9"></path></svg></button>
+<div style="font-size: 13px; font-weight: 600; color: #5B4A7A">Profilinde görünmez, sadece yaş kontrolü için sorulur.</div>
+</div>
+</div>
+
+<div style="margin-top: auto">
+<a href="InviteFriends.dc.html" style="height: 56px; border-radius: 18px; background: #1F7A45; box-shadow: 0 4px 0 #165C34; color: #FFFFFF; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 17px; font-weight: 800">Devam</a>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

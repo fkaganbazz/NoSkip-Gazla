@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Diken bileşeni</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&amp;family=Nunito:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="position: relative; width: {{w}}px; height: {{h}}px; font-family: 'Nunito', system-ui, sans-serif; color: #24163F">
+<svg width="100%" height="100%" viewBox="0 0 240 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="{{label}}" style="display: block; overflow: visible">
+
+<ellipse cx="120" cy="294" rx="66" ry="5" fill="#24163F" opacity="0.1"></ellipse>
+
+<g display="{{v.armsRelaxed}}" fill="none" stroke-linecap="round" stroke-linejoin="round">
+<path d="M88 172 H56 C47 172 42 166 42 157 V122" stroke="#24163F" stroke-width="36"></path>
+<path d="M152 152 H184 C193 152 198 146 198 137 V102" stroke="#24163F" stroke-width="36"></path>
+<path d="M88 172 H56 C47 172 42 166 42 157 V122" stroke="#3BAE6A" stroke-width="24"></path>
+<path d="M152 152 H184 C193 152 198 146 198 137 V102" stroke="#3BAE6A" stroke-width="24"></path>
+<path d="M36 150 V126" stroke="#8BE0AE" stroke-width="4" opacity="0.9"></path>
+<path d="M192 130 V106" stroke="#8BE0AE" stroke-width="4" opacity="0.9"></path>
+</g>
+
+<g display="{{v.armsAkimbo}}" fill="none" stroke-linecap="round" stroke-linejoin="round">
+<path d="M84 162 L56 170 C47 173 45 183 52 188 L80 206" stroke="#24163F" stroke-width="36"></path>
+<path d="M152 152 H184 C193 152 198 146 198 137 V102" stroke="#24163F" stroke-width="36"></path>
+<path d="M84 162 L56 170 C47 173 45 183 52 188 L80 206" stroke="#3BAE6A" stroke-width="24"></path>
+<path d="M152 152 H184 C193 152 198 146 198 137 V102" stroke="#3BAE6A" stroke-width="24"></path>
+<path d="M192 130 V106" stroke="#8BE0AE" stroke-width="4" opacity="0.9"></path>
+</g>
+
+<g display="{{v.armsUp}}" fill="none" stroke-linecap="round" stroke-linejoin="round">
+<path d="M86 158 H60 C51 158 46 152 46 143 V62" stroke="#24163F" stroke-width="36"></path>
+<path d="M154 158 H180 C189 158 194 152 194 143 V62" stroke="#24163F" stroke-width="36"></path>
+<path d="M86 158 H60 C51 158 46 152 46 143 V62" stroke="#3BAE6A" stroke-width="24"></path>
+<path d="M154 158 H180 C189 158 194 152 194 143 V62" stroke="#3BAE6A" stroke-width="24"></path>
+<path d="M40 132 V68" stroke="#8BE0AE" stroke-width="4" opacity="0.9"></path>
+<path d="M188 132 V68" stroke="#8BE0AE" stroke-width="4" opacity="0.9"></path>
+</g>
+
+<g display="{{v.armsDroop}}" fill="none" stroke-linecap="round" stroke-linejoin="round">
+<path d="M86 142 H60 C51 142 46 148 46 157 V198" stroke="#24163F" stroke-width="36"></path>
+<path d="M154 142 H180 C189 142 194 148 194 157 V198" stroke="#24163F" stroke-width="36"></path>
+<path d="M86 142 H60 C51 142 46 148 46 157 V198" stroke="#3BAE6A" stroke-width="24"></path>
+<path d="M154 142 H180 C189 142 194 148 194 157 V198" stroke="#3BAE6A" stroke-width="24"></path>
+</g>
+
+<g display="{{v.armsWave}}" fill="none" stroke-linecap="round" stroke-linejoin="round">
+<path d="M88 172 H56 C47 172 42 166 42 157 V122" stroke="#24163F" stroke-width="36"></path>
+<path d="M152 150 H180 C190 150 196 144 198 134 L210 70" stroke="#24163F" stroke-width="36"></path>
+<path d="M88 172 H56 C47 172 42 166 42 157 V122" stroke="#3BAE6A" stroke-width="24"></path>
+<path d="M152 150 H180 C190 150 196 144 198 134 L210 70" stroke="#3BAE6A" stroke-width="24"></path>
+<path d="M36 150 V126" stroke="#8BE0AE" stroke-width="4" opacity="0.9"></path>
+</g>
+
+<g display="{{v.armsNubs}}" fill="none" stroke-linecap="round" stroke-linejoin="round">
+<path d="M94 190 H80 C75 190 72 187 72 182 V172" stroke="#24163F" stroke-width="30"></path>
+<path d="M146 178 H160 C165 178 168 175 168 170 V160" stroke="#24163F" stroke-width="30"></path>
+<path d="M94 190 H80 C75 190 72 187 72 182 V172" stroke="#3BAE6A" stroke-width="19"></path>
+<path d="M146 178 H160 C165 178 168 175 168 170 V160" stroke="#3BAE6A" stroke-width="19"></path>
+</g>
+
+<g display="{{v.armsWilted}}" fill="none" stroke-linecap="round" stroke-linejoin="round">
+<path d="M88 178 H66 C57 178 52 184 52 193 V218" stroke="#24163F" stroke-width="34"></path>
+<path d="M152 184 H172 C181 184 186 190 186 199 V220" stroke="#24163F" stroke-width="34"></path>
+<path d="M88 178 H66 C57 178 52 184 52 193 V218" stroke="#A3B56B" stroke-width="22"></path>
+<path d="M152 184 H172 C181 184 186 190 186 199 V220" stroke="#A3B56B" stroke-width="22"></path>
+</g>
+
+<g display="{{v.bodyFull}}">
+<path d="M74 240 C66 198 63 152 66 112 C69 68 92 40 120 40 C148 40 171 68 174 112 C177 152 174 198 166 240 Z" fill="#3BAE6A"></path>
+<path d="M131 42 C154 48 171 72 174 112 C177 152 174 198 166 240 L150 240 C156 200 158 156 155 116 C152 82 144 58 131 42 Z" fill="#2C9459"></path>
+<path d="M97 47 C89 100 87 170 92 238" fill="none" stroke="#2A8A52" stroke-width="3" stroke-linecap="round" opacity="0.5"></path>
+<path d="M143 47 C151 100 153 170 148 238" fill="none" stroke="#237A48" stroke-width="3" stroke-linecap="round" opacity="0.45"></path>
+<path d="M79 104 C81 80 93 60 109 51" fill="none" stroke="#8BE0AE" stroke-width="6" stroke-linecap="round"></path>
+<circle cx="77" cy="122" r="3.2" fill="#8BE0AE"></circle>
+<g fill="#E9FFF1"><circle cx="93" cy="166" r="2.2"></circle><circle cx="91" cy="204" r="2.2"></circle><circle cx="148" cy="166" r="2.2"></circle><circle cx="149" cy="204" r="2.2"></circle><circle cx="99" cy="66" r="2.2"></circle><circle cx="141" cy="66" r="2.2"></circle><circle cx="80" cy="176" r="1.8"></circle><circle cx="160" cy="150" r="1.8" opacity="0.7"></circle></g>
+<path d="M67.5 100 L58 96 M173 100 L182 96 M69 214 L60 216 M171 214 L180 216" fill="none" stroke="#24163F" stroke-width="4.5" stroke-linecap="round"></path>
+<path d="M74 240 C66 198 63 152 66 112 C69 68 92 40 120 40 C148 40 171 68 174 112 C177 152 174 198 166 240 Z" fill="none" stroke="#24163F" stroke-width="6" stroke-linejoin="round"></path>
+</g>
+
+<g display="{{v.armsCross}}" fill="none" stroke-linecap="round" stroke-linejoin="round">
+<path d="M171 166 C152 176 122 186 94 186" stroke="#24163F" stroke-width="34"></path>
+<path d="M171 166 C152 176 122 186 94 186" stroke="#2C9459" stroke-width="22"></path>
+<path d="M69 170 C90 182 122 190 148 184" stroke="#24163F" stroke-width="34"></path>
+<path d="M69 170 C90 182 122 190 148 184" stroke="#3BAE6A" stroke-width="22"></path>
+<path d="M92 179 C106 184 122 186 136 184" stroke="#8BE0AE" stroke-width="3.5" opacity="0.9"></path>
+</g>
+
+<g display="{{v.bodyYoung}}">
+<path d="M80 240 C74 208 71 176 73 148 C75 110 95 86 120 86 C145 86 165 110 167 148 C169 176 166 208 160 240 Z" fill="#3BAE6A"></path>
+<path d="M129 88 C148 94 164 116 167 148 C169 176 166 208 160 240 L147 240 C152 208 154 180 152 152 C150 122 142 102 129 88 Z" fill="#2C9459"></path>
+<path d="M100 92 C93 136 92 190 96 238" fill="none" stroke="#2A8A52" stroke-width="3" stroke-linecap="round" opacity="0.5"></path>
+<path d="M140 92 C147 136 148 190 144 238" fill="none" stroke="#237A48" stroke-width="3" stroke-linecap="round" opacity="0.45"></path>
+<path d="M85 142 C87 122 97 106 110 98" fill="none" stroke="#8BE0AE" stroke-width="5.5" stroke-linecap="round"></path>
+<g fill="#E9FFF1"><circle cx="96" cy="212" r="2.2"></circle><circle cx="144" cy="212" r="2.2"></circle><circle cx="101" cy="104" r="2"></circle><circle cx="139" cy="104" r="2"></circle></g>
+<path d="M80 240 C74 208 71 176 73 148 C75 110 95 86 120 86 C145 86 165 110 167 148 C169 176 166 208 160 240 Z" fill="none" stroke="#24163F" stroke-width="6" stroke-linejoin="round"></path>
+</g>
+
+<g display="{{v.bodySprout}}">
+<path d="M88 240 C84 220 84 198 90 184 C97 168 108 160 120 160 C132 160 143 168 150 184 C156 198 156 220 152 240 Z" fill="#3BAE6A"></path>
+<path d="M127 161 C141 165 151 178 153 196 C155 214 154 230 152 240 L141 240 C144 224 144 208 142 196 C140 182 135 168 127 161 Z" fill="#2C9459"></path>
+<path d="M95 200 C96 186 102 176 110 170" fill="none" stroke="#8BE0AE" stroke-width="4.5" stroke-linecap="round"></path>
+<path d="M88 240 C84 220 84 198 90 184 C97 168 108 160 120 160 C132 160 143 168 150 184 C156 198 156 220 152 240 Z" fill="none" stroke="#24163F" stroke-width="5.5" stroke-linejoin="round"></path>
+</g>
+
+<g display="{{v.bodyWilted}}">
+<path d="M76 240 C69 208 66 178 70 152 C74 122 92 98 118 88 C142 79 166 84 178 100 C189 114 186 134 172 142 C164 147 160 156 160 172 C160 198 163 222 164 240 Z" fill="#A3B56B"></path>
+<path d="M172 142 C164 147 160 156 160 172 C160 198 163 222 164 240 L150 240 C149 212 148 184 150 164 C152 152 160 144 172 142 Z" fill="#8C9E58"></path>
+<path d="M82 156 C84 132 96 112 114 102" fill="none" stroke="#C9D69B" stroke-width="5.5" stroke-linecap="round"></path>
+<g fill="#EEF3D8"><circle cx="96" cy="200" r="2.2"></circle><circle cx="146" cy="206" r="2.2"></circle></g>
+<path d="M70 186 L61 186 M179 101 L187 95 M150 86 L152 78" fill="none" stroke="#24163F" stroke-width="4.5" stroke-linecap="round"></path>
+<path d="M76 240 C69 208 66 178 70 152 C74 122 92 98 118 88 C142 79 166 84 178 100 C189 114 186 134 172 142 C164 147 160 156 160 172 C160 198 163 222 164 240 Z" fill="none" stroke="#24163F" stroke-width="6" stroke-linejoin="round"></path>
+</g>
+
+<g display="{{v.tuftFull}}" fill="none" stroke="#24163F" stroke-width="5" stroke-linecap="round">
+<path d="M120 41 L110 26 M120 40 L120 21 M120 41 L130 26"></path>
+</g>
+<g display="{{v.tuftYoung}}" fill="none" stroke="#24163F" stroke-width="4.5" stroke-linecap="round">
+<path d="M120 87 L112 74 M120 86 L120 70 M120 87 L128 74"></path>
+</g>
+<g display="{{v.tuftSprout}}" fill="none" stroke="#24163F" stroke-width="4" stroke-linecap="round">
+<path d="M120 161 L114 150 M120 160 L120 147 M120 161 L126 150"></path>
+</g>
+
+<g display="{{v.flower}}" stroke="#24163F" stroke-width="3.5" stroke-linejoin="round">
+<circle cx="120" cy="15.5" r="11" fill="#FFC83D"></circle>
+<circle cx="131.9" cy="24.1" r="11" fill="#FFC83D"></circle>
+<circle cx="127.3" cy="38.1" r="11" fill="#FFC83D"></circle>
+<circle cx="112.7" cy="38.1" r="11" fill="#FFC83D"></circle>
+<circle cx="108.1" cy="24.1" r="11" fill="#FFC83D"></circle>
+<circle cx="120" cy="28" r="8.5" fill="#FF5A1F"></circle>
+<path d="M116 24.5 Q118 22.5 121 23" fill="none" stroke="#FFB185" stroke-width="2.5" stroke-linecap="round"></path>
+</g>
+
+<g display="{{v.band}}" fill="none" stroke-linecap="round" stroke-linejoin="round">
+<path d="M170 72 L190 62 M170 75 L188 88" stroke="#24163F" stroke-width="13"></path>
+<path d="M170 72 L190 62 M170 75 L188 88" stroke="#FF5A1F" stroke-width="6"></path>
+<path d="M66 74 Q120 56 174 74" stroke="#24163F" stroke-width="21"></path>
+<path d="M66 74 Q120 56 174 74" stroke="#FF5A1F" stroke-width="13"></path>
+<path d="M84 66 Q104 60 116 59" stroke="#FFA06E" stroke-width="3.5"></path>
+</g>
+
+<g style="transform: {{faceT}}">
+
+<g display="{{v.fMutlu}}">
+<ellipse cx="84" cy="134" rx="7" ry="4.2" fill="#FF8A7A" opacity="0.6"></ellipse>
+<ellipse cx="156" cy="134" rx="7" ry="4.2" fill="#FF8A7A" opacity="0.6"></ellipse>
+<ellipse cx="101" cy="114" rx="12" ry="14" fill="#FFFFFF" stroke="#24163F" stroke-width="4"></ellipse>
+<ellipse cx="139" cy="114" rx="12" ry="14" fill="#FFFFFF" stroke="#24163F" stroke-width="4"></ellipse>
+<circle cx="102" cy="116" r="6.5" fill="#24163F"></circle>
+<circle cx="140" cy="116" r="6.5" fill="#24163F"></circle>
+<circle cx="104.3" cy="113.3" r="2.4" fill="#FFFFFF"></circle>
+<circle cx="142.3" cy="113.3" r="2.4" fill="#FFFFFF"></circle>
+<path d="M90 94 Q100 88 111 92 M129 92 Q140 88 150 94" fill="none" stroke="#24163F" stroke-width="5" stroke-linecap="round"></path>
+<path d="M106 134 C109 148 131 148 134 134 Z" fill="#24163F" stroke="#24163F" stroke-width="3" stroke-linejoin="round"></path>
+<path d="M113 142 C116 139.6 124 139.6 127 142 C124 144.2 116 144.2 113 142 Z" fill="#FF7F6E"></path>
+</g>
+
+<g display="{{v.fSelam}}">
+<ellipse cx="84" cy="134" rx="7" ry="4.2" fill="#FF8A7A" opacity="0.6"></ellipse>
+<ellipse cx="156" cy="134" rx="7" ry="4.2" fill="#FF8A7A" opacity="0.6"></ellipse>
+<ellipse cx="101" cy="114" rx="12" ry="14" fill="#FFFFFF" stroke="#24163F" stroke-width="4"></ellipse>
+<circle cx="102" cy="116" r="6.5" fill="#24163F"></circle>
+<circle cx="104.3" cy="113.3" r="2.4" fill="#FFFFFF"></circle>
+<path d="M128 117 Q139 105 150 117" fill="none" stroke="#24163F" stroke-width="5" stroke-linecap="round"></path>
+<path d="M90 94 Q100 88 111 92 M129 96 Q140 90 150 96" fill="none" stroke="#24163F" stroke-width="5" stroke-linecap="round"></path>
+<path d="M106 134 C109 148 131 148 134 134 Z" fill="#24163F" stroke="#24163F" stroke-width="3" stroke-linejoin="round"></path>
+<path d="M113 142 C116 139.6 124 139.6 127 142 C124 144.2 116 144.2 113 142 Z" fill="#FF7F6E"></path>
+</g>
+
+<g display="{{v.fLaf}}">
+<ellipse cx="101" cy="115" rx="12" ry="14" fill="#FFFFFF" stroke="#24163F" stroke-width="4"></ellipse>
+<circle cx="105" cy="119" r="6" fill="#24163F"></circle>
+<circle cx="107" cy="116.6" r="2.1" fill="#FFFFFF"></circle>
+<path d="M87 115 A14 16 0 0 1 115 115 Z" fill="#3BAE6A"></path>
+<path d="M87.5 115 L114.5 115" fill="none" stroke="#24163F" stroke-width="4.5" stroke-linecap="round"></path>
+<ellipse cx="139" cy="114" rx="12.5" ry="14.5" fill="#FFFFFF" stroke="#24163F" stroke-width="4"></ellipse>
+<circle cx="143" cy="117" r="6.5" fill="#24163F"></circle>
+<circle cx="145.3" cy="114.3" r="2.4" fill="#FFFFFF"></circle>
+<path d="M89 101 L112 104" fill="none" stroke="#24163F" stroke-width="5" stroke-linecap="round"></path>
+<path d="M128 91 Q139 78 152 86" fill="none" stroke="#24163F" stroke-width="5" stroke-linecap="round"></path>
+<path d="M108 140 Q123 145 135 133" fill="none" stroke="#24163F" stroke-width="5" stroke-linecap="round"></path>
+<path d="M134 131 Q138.5 131.5 139 136" fill="none" stroke="#24163F" stroke-width="3" stroke-linecap="round"></path>
+</g>
+
+<g display="{{v.fCosku}}">
+<ellipse cx="84" cy="136" rx="7" ry="4.2" fill="#FF8A7A" opacity="0.65"></ellipse>
+<ellipse cx="156" cy="136" rx="7" ry="4.2" fill="#FF8A7A" opacity="0.65"></ellipse>
+<ellipse cx="101" cy="113" rx="12.5" ry="15" fill="#FFFFFF" stroke="#24163F" stroke-width="4"></ellipse>
+<ellipse cx="139" cy="113" rx="12.5" ry="15" fill="#FFFFFF" stroke="#24163F" stroke-width="4"></ellipse>
+<circle cx="102" cy="112" r="7" fill="#24163F"></circle>
+<circle cx="140" cy="112" r="7" fill="#24163F"></circle>
+<circle cx="104.6" cy="109" r="2.8" fill="#FFFFFF"></circle>
+<circle cx="142.6" cy="109" r="2.8" fill="#FFFFFF"></circle>
+<circle cx="99.6" cy="115.4" r="1.3" fill="#FFFFFF"></circle>
+<circle cx="137.6" cy="115.4" r="1.3" fill="#FFFFFF"></circle>
+<path d="M90 90 Q100 83 111 88 M129 88 Q140 83 150 90" fill="none" stroke="#24163F" stroke-width="5" stroke-linecap="round"></path>
+<path d="M102 131 C104 154 136 154 138 131 Z" fill="#24163F" stroke="#24163F" stroke-width="3" stroke-linejoin="round"></path>
+<path d="M110 144 C114 139.5 126 139.5 130 144 C126 147.2 114 147.2 110 144 Z" fill="#FF7F6E"></path>
+</g>
+
+<g display="{{v.fGurur}}">
+<ellipse cx="84" cy="132" rx="7.5" ry="4.5" fill="#FF8A7A" opacity="0.75"></ellipse>
+<ellipse cx="156" cy="132" rx="7.5" ry="4.5" fill="#FF8A7A" opacity="0.75"></ellipse>
+<path d="M90 117 Q101 104 112 117 M128 117 Q139 104 150 117" fill="none" stroke="#24163F" stroke-width="5" stroke-linecap="round"></path>
+<path d="M91 95 Q100 90 110 93 M130 93 Q140 90 149 95" fill="none" stroke="#24163F" stroke-width="5" stroke-linecap="round"></path>
+<path d="M104 134 Q120 149 136 134" fill="none" stroke="#24163F" stroke-width="5" stroke-linecap="round"></path>
+</g>
+
+<g display="{{v.fEndise}}">
+<ellipse cx="101" cy="116" rx="12" ry="14" fill="#FFFFFF" stroke="#24163F" stroke-width="4"></ellipse>
+<ellipse cx="139" cy="116" rx="12" ry="14" fill="#FFFFFF" stroke="#24163F" stroke-width="4"></ellipse>
+<circle cx="100" cy="111" r="6" fill="#24163F"></circle>
+<circle cx="138" cy="111" r="6" fill="#24163F"></circle>
+<circle cx="102.2" cy="108.6" r="2.2" fill="#FFFFFF"></circle>
+<circle cx="140.2" cy="108.6" r="2.2" fill="#FFFFFF"></circle>
+<path d="M89 102 Q100 100 110 94 M130 94 Q140 100 151 102" fill="none" stroke="#24163F" stroke-width="5" stroke-linecap="round"></path>
+<path d="M110 143 Q115 137.5 120 141 Q125 144.5 130 139" fill="none" stroke="#24163F" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"></path>
+</g>
+
+<g display="{{v.fSaskin}}">
+<ellipse cx="101" cy="112" rx="13.5" ry="16" fill="#FFFFFF" stroke="#24163F" stroke-width="4"></ellipse>
+<ellipse cx="139" cy="112" rx="13.5" ry="16" fill="#FFFFFF" stroke="#24163F" stroke-width="4"></ellipse>
+<circle cx="101" cy="113" r="4.4" fill="#24163F"></circle>
+<circle cx="139" cy="113" r="4.4" fill="#24163F"></circle>
+<path d="M88 88 Q100 80 112 85 M128 85 Q140 80 152 88" fill="none" stroke="#24163F" stroke-width="5" stroke-linecap="round"></path>
+<ellipse cx="120" cy="141" rx="7.5" ry="9.5" fill="#24163F"></ellipse>
+</g>
+
+<g display="{{v.fUykulu}}">
+<ellipse cx="84" cy="132" rx="7" ry="4.2" fill="#FF8A7A" opacity="0.45"></ellipse>
+<ellipse cx="156" cy="132" rx="7" ry="4.2" fill="#FF8A7A" opacity="0.45"></ellipse>
+<path d="M90 114 Q101 122 112 114 M128 114 Q139 122 150 114" fill="none" stroke="#24163F" stroke-width="4.5" stroke-linecap="round"></path>
+<path d="M91 101 Q100 98 109 100 M131 100 Q140 98 149 101" fill="none" stroke="#24163F" stroke-width="5" stroke-linecap="round"></path>
+<ellipse cx="120" cy="139" rx="4.5" ry="3.8" fill="#24163F"></ellipse>
+</g>
+
+<g display="{{v.fSolgun}}">
+<ellipse cx="101" cy="116" rx="12" ry="14" fill="#FFFFFF" stroke="#24163F" stroke-width="4"></ellipse>
+<ellipse cx="139" cy="116" rx="12" ry="14" fill="#FFFFFF" stroke="#24163F" stroke-width="4"></ellipse>
+<circle cx="100" cy="121" r="6.5" fill="#24163F"></circle>
+<circle cx="138" cy="121" r="6.5" fill="#24163F"></circle>
+<circle cx="102.2" cy="118.3" r="2.3" fill="#FFFFFF"></circle>
+<circle cx="140.2" cy="118.3" r="2.3" fill="#FFFFFF"></circle>
+<circle cx="97.8" cy="124" r="1.2" fill="#FFFFFF"></circle>
+<circle cx="135.8" cy="124" r="1.2" fill="#FFFFFF"></circle>
+<path d="M89 102 Q100 100 110 94 M130 94 Q140 100 151 102" fill="none" stroke="#24163F" stroke-width="5" stroke-linecap="round"></path>
+<path d="M110 146 Q120 137 130 146" fill="none" stroke="#24163F" stroke-width="4.5" stroke-linecap="round"></path>
+<path d="M87 133 C90.5 138.5 91.5 141 91.5 143 C91.5 145.5 89.5 147.5 87 147.5 C84.5 147.5 82.5 145.5 82.5 143 C82.5 141 83.5 138.5 87 133 Z" fill="#8FD0FF" stroke="#24163F" stroke-width="2.5" stroke-linejoin="round"></path>
+</g>
+
+</g>
+
+<g display="{{v.glasses}}">
+<path d="M84 106 L68 101 M156 106 L172 101" fill="none" stroke="#24163F" stroke-width="4" stroke-linecap="round"></path>
+<path d="M116 109 Q120 105.5 124 109" fill="none" stroke="#24163F" stroke-width="4" stroke-linecap="round"></path>
+<path d="M83 103 H117 V115 C117 124 111 129 102 129 H98 C89 129 83 124 83 115 Z" fill="#24163F"></path>
+<path d="M123 103 H157 V115 C157 124 151 129 142 129 H138 C129 129 123 124 123 115 Z" fill="#24163F"></path>
+<path d="M89 110 L97 110 M129 110 L137 110" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" opacity="0.85"></path>
+<path d="M89 116 L92 116 M129 116 L132 116" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" opacity="0.5"></path>
+</g>
+
+<path d="M66 250 H174 L166 288 C165 292 162 294 158 294 H82 C78 294 75 292 74 288 Z" fill="#FF5A1F"></path>
+<path d="M150 250 H174 L166 288 C165 292 162 294 158 294 H144 Z" fill="#E0470F"></path>
+<path d="M66 250 H174 L166 288 C165 292 162 294 158 294 H82 C78 294 75 292 74 288 Z" fill="none" stroke="#24163F" stroke-width="6" stroke-linejoin="round"></path>
+<path d="M71 255.5 H169" fill="none" stroke="#C93A08" stroke-width="4" stroke-linecap="round" opacity="0.5"></path>
+<rect x="58" y="226" width="124" height="25" rx="10" fill="#FF7A3D" stroke="#24163F" stroke-width="6"></rect>
+<path d="M71 233.5 H138" fill="none" stroke="#FFB185" stroke-width="4" stroke-linecap="round"></path>
+<g display="{{v.crack}}">
+<path d="M104 253 L111 263 L105 273 L112 286" fill="none" stroke="#24163F" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>
+</g>
+
+<g style="transform: {{fxT}}">
+<g display="{{v.fxSparkle}}" stroke="#24163F" stroke-width="2.5" stroke-linejoin="round">
+<path d="M204 34 L207.4 44.6 L218 48 L207.4 51.4 L204 62 L200.6 51.4 L190 48 L200.6 44.6 Z" fill="#FFC83D"></path>
+<path d="M34 52 L36.5 59.5 L44 62 L36.5 64.5 L34 72 L31.5 64.5 L24 62 L31.5 59.5 Z" fill="#FFC83D"></path>
+<path d="M214 114 L216 120 L222 122 L216 124 L214 130 L212 124 L206 122 L212 120 Z" fill="#FFC83D"></path>
+</g>
+<g display="{{v.fxSweat}}">
+<path d="M168 56 C173 64 176 69 176 73.5 C176 78.5 172.4 82 168 82 C163.6 82 160 78.5 160 73.5 C160 69 163 64 168 56 Z" fill="#8FD0FF" stroke="#24163F" stroke-width="3" stroke-linejoin="round"></path>
+</g>
+<g display="{{v.fxZzz}}" fill="none" stroke="#24163F" stroke-linecap="round" stroke-linejoin="round">
+<path d="M160 62 H171 L160 74 H171" stroke-width="3.5"></path>
+<path d="M180 34 H195 L180 51 H195" stroke-width="4"></path>
+</g>
+<g display="{{v.fxWave}}" fill="none" stroke="#24163F" stroke-width="4" stroke-linecap="round">
+<path d="M222 60 Q229 70 224 82"></path>
+<path d="M228 46 Q238 62 233 80"></path>
+</g>
+<g display="{{v.fxShock}}" fill="none" stroke="#24163F" stroke-width="4" stroke-linecap="round">
+<path d="M72 50 L62 40 M62 68 L50 64 M168 50 L178 40 M178 68 L190 64"></path>
+</g>
+</g>
+
+</svg>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"mood":{"editor":"enum","options":["mutlu","selam","laf","cosku","gurur","endise","saskin","uykulu","solgun"],"default":"mutlu"},"stage":{"editor":"enum","options":["filiz","genc","tam","cicek"],"default":"tam"},"gear":{"editor":"enum","options":["yok","bant","gozluk"],"default":"yok"},"size":{"editor":"int","min":24,"max":600,"default":240},"$preview":{"width":240,"height":300}}'>
+class Component extends DCLogic {
+renderVals() {
+const mood = this.props.mood ?? 'mutlu';
+const stage = this.props.stage ?? 'tam';
+const gear = this.props.gear ?? 'yok';
+const size = Number(this.props.size ?? 240) || 240;
+const wilted = mood === 'solgun';
+const full = !wilted && (stage === 'tam' || stage === 'cicek');
+const young = !wilted && stage === 'genc';
+const sprout = !wilted && stage === 'filiz';
+const poses = { mutlu: 'relaxed', selam: 'wave', laf: 'cross', cosku: 'up', gurur: 'up', endise: 'droop', saskin: 'up', uykulu: 'droop' };
+const pose = this.props.pose || poses[mood] || 'relaxed';
+const on = (b) => (b ? 'inline' : 'none');
+const v = {
+armsRelaxed: on(full && pose === 'relaxed'),
+armsAkimbo: on(full && pose === 'akimbo'),
+armsCross: on(full && pose === 'cross'),
+armsUp: on(full && pose === 'up'),
+armsDroop: on(full && pose === 'droop'),
+armsWave: on(full && pose === 'wave'),
+armsNubs: on(young),
+armsWilted: on(wilted),
+bodyFull: on(full),
+bodyYoung: on(young),
+bodySprout: on(sprout),
+bodyWilted: on(wilted),
+tuftFull: on(full && stage === 'tam'),
+flower: on(full && stage === 'cicek'),
+tuftYoung: on(young),
+tuftSprout: on(sprout),
+band: on(full && gear === 'bant'),
+glasses: on(full && gear === 'gozluk'),
+fMutlu: on(mood === 'mutlu'),
+fSelam: on(mood === 'selam'),
+fLaf: on(mood === 'laf'),
+fCosku: on(mood === 'cosku'),
+fGurur: on(mood === 'gurur'),
+fEndise: on(mood === 'endise'),
+fSaskin: on(mood === 'saskin'),
+fUykulu: on(mood === 'uykulu'),
+fSolgun: on(wilted),
+crack: on(wilted),
+fxSparkle: on(mood === 'gurur' || mood === 'cosku'),
+fxSweat: on(mood === 'endise'),
+fxZzz: on(mood === 'uykulu'),
+fxWave: on(mood === 'selam' && full),
+fxShock: on(mood === 'saskin')
+};
+const faceT = wilted ? 'translate(126px, 126px) rotate(12deg) translate(-120px, -122px)' : young ? 'translate(0px, 34px)' : sprout ? 'translate(120px, 204px) scale(0.62) translate(-120px, -122px)' : 'none';
+const fxT = young ? 'translate(-8px, 40px)' : sprout ? 'translate(120px, 204px) scale(0.62) translate(-120px, -122px)' : 'none';
+const labels = { mutlu: 'mutlu', selam: 'el sallıyor', laf: 'laf sokuyor', cosku: 'coşkulu', gurur: 'gururlu', endise: 'endişeli', saskin: 'şaşkın', uykulu: 'uykulu', solgun: 'solmuş' };
+return { v, faceT, fxT, w: size, h: Math.round(size * 1.25), label: 'Diken, ' + (labels[mood] || 'mutlu') };
+}
+}
+</script>
+</body>
+</html>

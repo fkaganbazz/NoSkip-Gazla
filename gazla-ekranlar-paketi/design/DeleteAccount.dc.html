@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Hesabı sil</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&amp;family=Nunito:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#FFF8F2;font-family:'Nunito',system-ui,sans-serif;color:#24163F}
+a{color:#1F7A45}a:hover{color:#165C34}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; box-sizing: border-box; padding: 56px 20px 30px; display: flex; flex-direction: column; background: #FFF8F2; font-family: 'Nunito', system-ui, sans-serif; color: #24163F">
+
+<div style="display: flex; align-items: center; gap: 12px">
+<a href="Settings.dc.html" aria-label="Geri" style="width: 44px; height: 44px; flex-shrink: 0; box-sizing: border-box; border-radius: 22px; background: #FFFFFF; border: 1px solid #EFE6DC; display: flex; align-items: center; justify-content: center; color: #24163F"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5 L8 12 L15 19"></path></svg></a>
+<div style="font-size: 17px; font-weight: 800">Hesabı sil</div>
+</div>
+
+<div style="margin-top: 6px; display: flex; justify-content: center">
+<dc-import name="Diken" mood="solgun" size="150" hint-size="150px,188px"></dc-import>
+</div>
+
+<div style="margin-top: 6px; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center">
+<h1 style="margin: 0; font-family: 'Baloo 2', 'Nunito', sans-serif; font-weight: 800; font-size: 28px; line-height: 1.1">Gitmek mi istiyorsun?</h1>
+<p style="margin: 0; font-size: 15px; font-weight: 600; line-height: 1.45; color: #3F3358">Hesabını silersen bunlar kalıcı olarak silinir. Bu işlem geri alınamaz.</p>
+</div>
+
+<div style="margin-top: 16px; border-radius: 20px; background: #FFFFFF; border: 1px solid #EFE6DC">
+<div style="min-height: 52px; padding: 0 16px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #F4EDE5"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#B42318" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21 V10"></path><path d="M12 10 C12 6 9.5 3.5 5 3.5 C5 7.5 7.5 10 12 10 Z"></path><path d="M12 13 C12 9.5 14.5 7 19 7 C19 10.5 16.5 13 12 13 Z"></path></svg><span style="font-size: 15px; font-weight: 800">12 günlük serin ve bahçen</span></div>
+<div style="min-height: 52px; padding: 0 16px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #F4EDE5"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#B42318" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20 C2.5 16 5.5 13.5 9 13.5 C12.5 13.5 15.5 16 15.5 20"></path><path d="M16 4.6 C17.9 5 19.1 6.6 19.1 8.4 C19.1 10.2 17.9 11.7 16 12.1"></path><path d="M17.8 14.1 C20 14.8 21.5 17 21.5 20"></path></svg><span style="font-size: 15px; font-weight: 800">Arkadaşların ve grupların</span></div>
+<div style="min-height: 52px; padding: 0 16px; display: flex; align-items: center; gap: 12px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#B42318" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8 H7.5 L9 5.5 H15 L16.5 8 H20 V19 H4 Z"></path><path d="M15.5 13 A3.5 3.5 0 1 1 8.5 13 A3.5 3.5 0 1 1 15.5 13 Z"></path></svg><span style="font-size: 15px; font-weight: 800">Fotoğraf kanıtların ve mesajların</span></div>
+</div>
+
+<div style="margin-top: 16px; display: flex; flex-direction: column; gap: 6px">
+<label for="onay" style="font-size: 14px; font-weight: 800">Onaylamak için SİL yaz</label>
+<input id="onay" type="text" placeholder="SİL" style="height: 52px; box-sizing: border-box; padding: 0 16px; border-radius: 16px; border: 2px solid #E3D8CC; background: #FFFFFF; font-family: inherit; font-size: 16px; font-weight: 800; letter-spacing: 1px; color: #24163F">
+</div>
+
+<div style="margin-top: auto; display: flex; flex-direction: column; gap: 4px">
+<button type="button" style="height: 56px; border-radius: 18px; border: none; background: #B42318; box-shadow: 0 4px 0 #7A1810; font-family: inherit; font-size: 17px; font-weight: 800; color: #FFFFFF; cursor: pointer">Hesabımı kalıcı olarak sil</button>
+<a href="Settings.dc.html" style="height: 48px; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 16px; font-weight: 800; color: #24163F">Vazgeç, kalıyorum</a>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

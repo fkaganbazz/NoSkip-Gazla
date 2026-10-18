@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Sayı gir</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&amp;family=Nunito:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#8C8398;font-family:'Nunito',system-ui,sans-serif;color:#24163F}
+a{color:#1F7A45}a:hover{color:#165C34}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; background: #FFF8F2; font-family: 'Nunito', system-ui, sans-serif; color: #24163F">
+
+<div style="position: absolute; left: 20px; top: 56px; width: 350px; display: flex; flex-direction: column; gap: 14px">
+<div style="height: 52px; border-radius: 14px; background: #EFE6DC"></div>
+<div style="height: 164px; border-radius: 28px; background: #DDF3E4"></div>
+<div style="height: 72px; border-radius: 22px; background: #FFFFFF"></div>
+<div style="height: 72px; border-radius: 22px; background: #FFFFFF"></div>
+</div>
+<div style="position: absolute; inset: 0; background: rgba(36, 22, 63, 0.55)"></div>
+
+<div style="position: absolute; right: 18px; top: 196px; width: 150px">
+<div style="position: relative; padding: 10px 12px; border-radius: 16px; background: #FFFFFF; font-size: 13px; font-weight: 800; line-height: 1.3; color: #24163F">70 yeter, abartma. Ama abartırsan saygı duyarım.</div>
+<svg width="16" height="22" viewBox="0 0 16 22" aria-hidden="true" style="position: absolute; left: -12px; top: 26px"><path d="M16 0 V22 L0 16 Z" fill="#FFFFFF"></path></svg>
+</div>
+<div style="position: absolute; left: 34px; top: 196px">
+<dc-import name="Diken" mood="laf" stage="tam" size="118" hint-size="118px,148px"></dc-import>
+</div>
+
+<div style="position: absolute; left: 0; bottom: 0; width: 390px; height: 506px; box-sizing: border-box; padding: 10px 20px 30px; border-radius: 28px 28px 0 0; background: #FFF8F2; display: flex; flex-direction: column">
+<div style="align-self: center; width: 44px; height: 5px; border-radius: 3px; background: #D8CCBF"></div>
+
+<div style="margin-top: 14px; display: flex; align-items: center; gap: 12px">
+<span style="width: 44px; height: 44px; flex-shrink: 0; border-radius: 14px; background: #DDF3E4; display: flex; align-items: center; justify-content: center; color: #1F6B40"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13.5 A8 8 0 1 1 4 13.5 A8 8 0 1 1 20 13.5 Z M12 9.5 V13.5 L14.5 16 M9.5 2.5 H14.5"></path></svg></span>
+<div style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px">
+<div style="font-size: 17px; font-weight: 800">Plank: her gün +5 saniye</div>
+<div style="font-size: 13px; font-weight: 700; color: #5B4A7A">3. gün · Bugünkü hedef 70 sn</div>
+</div>
+<a href="Today.dc.html" aria-label="Kapat" style="width: 44px; height: 44px; flex-shrink: 0; box-sizing: border-box; border-radius: 22px; background: #FFFFFF; border: 1px solid #EFE6DC; display: flex; align-items: center; justify-content: center; color: #24163F"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6 L18 18 M18 6 L6 18"></path></svg></a>
+</div>
+
+<div style="margin-top: 26px; display: flex; align-items: center; justify-content: space-between">
+<button type="button" onClick="{{minus}}" aria-label="5 saniye azalt" style="width: 64px; height: 64px; box-sizing: border-box; border-radius: 32px; border: 2px solid #E3D8CC; background: #FFFFFF; box-shadow: 0 4px 0 #E3D8CC; display: flex; align-items: center; justify-content: center; color: #24163F; cursor: pointer"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M5.5 12 H18.5"></path></svg></button>
+<div style="display: flex; align-items: baseline; gap: 6px">
+<span style="font-family: 'Baloo 2', 'Nunito', sans-serif; font-weight: 800; font-size: 84px; line-height: 0.9; color: #24163F">{{value}}</span>
+<span style="font-size: 20px; font-weight: 800; color: #5B4A7A">sn</span>
+</div>
+<button type="button" onClick="{{plus}}" aria-label="5 saniye artır" style="width: 64px; height: 64px; border-radius: 32px; border: none; background: #1F7A45; box-shadow: 0 4px 0 #165C34; display: flex; align-items: center; justify-content: center; color: #FFFFFF; cursor: pointer"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M12 5.5 V18.5 M5.5 12 H18.5"></path></svg></button>
+</div>
+
+<div style="margin-top: 16px; display: flex; justify-content: center">
+<sc-if value="{{onTarget}}" hint-placeholder-val="{{ true }}">
+<span style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; background: #DDF3E4; color: #165C34; font-size: 14px; font-weight: 800"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5 L10 17.5 L19 7"></path></svg>{{targetText}}</span>
+</sc-if>
+<sc-if value="{{belowTarget}}" hint-placeholder-val="{{ false }}">
+<span style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; background: #FFE3D2; color: #9A3412; font-size: 14px; font-weight: 800">{{targetText}}</span>
+</sc-if>
+</div>
+
+<div style="margin-top: 18px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px">
+<button type="button" onClick="{{add5}}" style="height: 44px; box-sizing: border-box; border-radius: 14px; border: 1px solid #E3D8CC; background: #FFFFFF; font-family: inherit; font-size: 15px; font-weight: 800; color: #24163F; cursor: pointer">+5 sn</button>
+<button type="button" onClick="{{add10}}" style="height: 44px; box-sizing: border-box; border-radius: 14px; border: 1px solid #E3D8CC; background: #FFFFFF; font-family: inherit; font-size: 15px; font-weight: 800; color: #24163F; cursor: pointer">+10 sn</button>
+<button type="button" onClick="{{add30}}" style="height: 44px; box-sizing: border-box; border-radius: 14px; border: 1px solid #E3D8CC; background: #FFFFFF; font-family: inherit; font-size: 15px; font-weight: 800; color: #24163F; cursor: pointer">+30 sn</button>
+</div>
+
+<div style="margin-top: 16px; display: flex; justify-content: space-between; padding: 12px 14px; border-radius: 16px; background: #F6EEE5; font-size: 14px; font-weight: 700; color: #3F3358">
+<span>Dün: <b style="color: #24163F">65 sn</b></span>
+<span>En iyin: <b style="color: #24163F">65 sn</b></span>
+<span>Grupta en iyi: <b style="color: #24163F">90 sn</b></span>
+</div>
+
+<a href="Completion.dc.html" style="margin-top: auto; height: 56px; border-radius: 18px; background: #1F7A45; box-shadow: 0 4px 0 #165C34; color: #FFFFFF; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 17px; font-weight: 800">Kaydet</a>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { value: 70 };
+}
+renderVals() {
+const v = this.state.value;
+const target = 70;
+const set = (n) => this.setState({ value: Math.max(0, Math.min(600, n)) });
+return {
+value: v,
+onTarget: v >= target,
+belowTarget: v < target,
+targetText: v > target ? 'Hedefi ' + (v - target) + ' sn geçtin' : v === target ? 'Tam hedefinde' : 'Hedefe ' + (target - v) + ' sn kaldı',
+minus: () => set(this.state.value - 5),
+plus: () => set(this.state.value + 5),
+add5: () => set(this.state.value + 5),
+add10: () => set(this.state.value + 10),
+add30: () => set(this.state.value + 30)
+};
+}
+}
+</script>
+</body>
+</html>
