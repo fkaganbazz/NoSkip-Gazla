@@ -252,3 +252,18 @@ Tasarımda ya da CLAUDE.md'de açık olmayan noktalarda verilen kararlar:
 - `template_stats` "şu an yapıyor" sayısını sunucu gününe göre (±1 gün) hesaplar.
 - Storage dosya adlarını uygulama üretir (`{uuid}.jpg` gibi; harf, rakam, `.`, `_`, `-`); galeri
   dosya adıyla yükleme reddedilir.
+
+## Ekranların beklediği, henüz olmayanlar
+Ekranlar mevcut veriyle çalışıyor; aşağıdakiler eklendiğinde tasarımın tamamı gösterilebilir.
+- **Reklamla seri kurtarma:** `rescue_streak(method 'ad')` için ödülü sunucuda doğrulayan (AdMob SSV) RPC ya da Edge Function; kurtarmadan vazgeçmeyi bildiren RPC.
+- **Reklam izni:** UMP/ATT sonucunu saklayacak alan (`user_settings`).
+- **Challenge oluşturma:** `create_challenge`'a özel challenge için `icon`, `tint`, sayı `step` parametreleri.
+- **Challenge durumu:** `Challenge` için sunucudan `day_index` ve `status` (bitti/başlamadı); şu an bitiş tarihinden okunuyor.
+- **Sayı girişi:** grubun günlük en iyi değeri (`challenge_board`'a bugünün değeri / en iyisi).
+- **Sosyal:** arkadaş isteği ve aramada ortak arkadaş sayısı; `friends_today`'de kısa challenge adı; davet önizlemesinde `challenge_id`.
+- **Bahçe:** rozetler (tablo + RPC), bitki ifadesi/aksesuarı.
+- **Keşfet:** şablon popülerlik sırası; şablon derin bağlantısı.
+- **Bildirim tercihleri:** "arkadaşın bitirdi", haftalık özet, seri koptu için ayrı anahtarlar; tema tercihi; doğum yılını güncelleme.
+- **Davet:** oturumsuz açılan davet kodunun girişten sonra otomatik katılması (istemcide sakla + katıl).
+- **Paketler (istemci):** `expo-notifications` (izin + `register_push_token`), `react-native-google-mobile-ads`, `react-native-view-shot` (görsel paylaşım), `expo-clipboard`, `expo-contacts` (rehberden bul), `expo-apple-authentication`.
+- **İçerik:** Kullanım Koşulları, Gizlilik, KVKK, destek adresleri.
