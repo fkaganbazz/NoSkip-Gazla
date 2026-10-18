@@ -18,7 +18,6 @@ import { onboardingColors, onboardingMetrics as m, onboardingTypography as t } f
 // Hesabını aç — design/SignIn.dc.html (adım 2/4, yarım). Apple, Google ya da e-posta bağlantısı.
 // Oturum açılınca (onboarding)/_layout profil adımına geçirir.
 
-
 export default function SignInScreen() {
   const router = useRouter();
   const { colors, scheme } = useTheme();
