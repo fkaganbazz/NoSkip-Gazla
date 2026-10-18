@@ -8,6 +8,7 @@ import { useEffect } from 'react';
 
 import { DataProvider, useAuth } from '@/data';
 import { OnboardingProvider, useOnboarding } from '@/features/onboarding/OnboardingProvider';
+import { restoreThemePreference } from '@/features/settings/themePreference';
 import { fontAssets, radius, useTheme } from '@/theme';
 
 // Fontlar ve oturum bilgisi gelene kadar açılış ekranı açık kalsın.
@@ -46,6 +47,11 @@ function RootNavigator() {
   const authReady = status !== 'loading';
   // Uygulama: oturum ve profil hazır, onboarding'in son adımları da bitti
   const appOpen = status === 'ready' && !onboarding.inProgress;
+
+  // Ayarlar'da seçilen görünüm (Açık / Koyu / Sistem) cihazda saklanır
+  useEffect(() => {
+    restoreThemePreference();
+  }, []);
 
   useEffect(() => {
     SystemUI.setBackgroundColorAsync(colors.background);
