@@ -5,9 +5,10 @@ import { useMemo, useState } from 'react';
 import { Image, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { CameraIcon, LockIcon, SendIcon } from '@/components/icons';
+import { CameraIcon, ChevronRightIcon, LockIcon, SendIcon } from '@/components/icons';
 import { Button, ErrorState, IconButton, LoadingState, TextField } from '@/components/ui';
 import { useCheckinMutation, useToday } from '@/data';
+import GroupSheet from '@/features/checkin/GroupSheet';
 import { formatClock } from '@/features/checkin/logic';
 import { componentMetrics, layout, radius, typography } from '@/theme';
 import { photoProofColors as c, photoProofMetrics as m, photoProofTypography as t } from '@/theme/checkin';
@@ -34,6 +35,7 @@ export default function PhotoProofScreen() {
   const [note, setNote] = useState('');
   const [cameraBlock, setCameraBlock] = useState<CameraBlock>(null);
   const [pickError, setPickError] = useState<string | null>(null);
+  const [groupOpen, setGroupOpen] = useState(false);
 
   const takePhoto = async () => {
     setPickError(null);
@@ -168,14 +170,20 @@ export default function PhotoProofScreen() {
             style={styles.field}
           />
 
-          {/* Fotoğraf grubun tüm üyelerine görünür; ayrı bir görünürlük ayarı yok (yalnızca bilgi). */}
-          <View style={[styles.row, { backgroundColor: c.rowBg }]}>
+          {/* Fotoğraf grubun tüm üyelerine görünür; ayrı bir görünürlük ayarı yok. Dokununca üyeler (alt sayfa). */}
+          <Pressable
+            onPress={() => setGroupOpen(true)}
+            accessibilityRole="button"
+            accessibilityLabel={`Kimler görecek: Grup, ${task.memberCount} kişi`}
+            accessibilityHint="Grubun üyelerini gösterir"
+            style={({ pressed }) => [styles.row, { backgroundColor: pressed ? c.rowPressedBg : c.rowBg }]}>
             <LockIcon color={c.rowIcon} size={m.rowIconSize} strokeWidth={m.rowIconStrokeWidth} />
             <Text style={[t.row, styles.rowText, { color: c.text }]}>
               {'Kimler görecek: '}
               <Text style={t.rowStrong}>{`Grup (${task.memberCount} kişi)`}</Text>
             </Text>
-          </View>
+            <ChevronRightIcon color={c.rowIcon} size={m.chevronSize} strokeWidth={m.chevronStrokeWidth} />
+          </Pressable>
 
           <View style={styles.footer}>
             {error && (
@@ -202,6 +210,7 @@ export default function PhotoProofScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      <GroupSheet visible={groupOpen} challengeId={task.challengeId} onClose={() => setGroupOpen(false)} />
     </SafeAreaView>
   );
 }

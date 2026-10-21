@@ -1,9 +1,11 @@
 /**
- * Yeni challenge formunun yardımcıları: süre seçenekleri, saat/gün biçimi, sayı ayrıştırma,
- * formdan CreateChallengeInput üretimi. Sınırlar (süre 3–60, başlangıç bugün…+7) sunucuda da denetlenir.
+ * Yeni challenge formunun yardımcıları: süre seçenekleri, saat/gün biçimi, sayı ayrıştırma, ad denetimi,
+ * formdan CreateChallengeInput üretimi. Sınırlar (ad 3–60, süre 3–60, başlangıç bugün/yarın) sunucuda da denetlenir.
  */
-import type { CreateChallengeInput, FriendToday, TaskType, Template } from '@/data';
+import type { ChallengeVisibility, CreateChallengeInput, FriendToday, TaskType, Template } from '@/data';
 import { addLocalDays, deviceToday } from '@/features/checkin/logic';
+import { formatDayLabel } from '@/features/today/logic';
+import { createMetrics } from '@/theme/create';
 
 export type DurationChoice = 7 | 10 | 30 | 'custom';
 
@@ -20,6 +22,9 @@ export const TASK_OPTIONS: { value: TaskType; title: string; desc: string }[] = 
   { value: 'photo', title: 'Fotoğraf kanıtı', desc: 'Grup görsün, tepki versin' },
 ];
 
+/** Başlangıç: spesifikasyon "yarın veya bugün" */
+export type StartOffset = 0 | 1;
+
 export type CreateForm = {
   templateId: string | null;
   title: string;
@@ -29,10 +34,44 @@ export type CreateForm = {
   unit: string;
   target: string;
   increment: string;
-  startOffset: number;
+  startOffset: StartOffset;
   reminder: string | null;
+  visibility: ChallengeVisibility;
   invitees: string[];
 };
+
+/** Seçim sayfasındaki seçenek (TaskOption kartıyla çizilir) */
+export type Choice<T> = { value: T; title: string; desc: string };
+
+export const VISIBILITY_OPTIONS: Choice<ChallengeVisibility>[] = [
+  { value: 'invited', title: 'Davetliler', desc: 'Yalnızca davet ettiğin kişiler görür' },
+  { value: 'friends', title: 'Arkadaşlarım', desc: 'Arkadaşların profilinde görür ve katılabilir' },
+];
+
+export const visibilityLabel = (v: ChallengeVisibility) =>
+  VISIBILITY_OPTIONS.find((o) => o.value === v)?.title ?? '';
+
+export const startLabel = (offset: StartOffset) => (offset === 0 ? 'Bugün' : 'Yarın');
+
+/** "Bugün" / "Yarın" + takvim günü ("Salı, 21 Ekim") */
+export function startOptions(now: Date): Choice<StartOffset>[] {
+  return ([0, 1] as const).map((offset) => ({
+    value: offset,
+    title: startLabel(offset),
+    desc: formatDayLabel(new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset)),
+  }));
+}
+
+/** Ad uzunluğu (baştaki/sondaki boşluk sayılmaz; harf sayısı, UTF-16 birimi değil) */
+const titleLength = (title: string) => Array.from(title.trim()).length;
+
+/** Ad 3–60 karakter değilse alanın altındaki hata metni */
+export function titleError(title: string): string | null {
+  const n = titleLength(title);
+  if (n < createMetrics.titleMinLength) return `Ad en az ${createMetrics.titleMinLength} karakter olmalı`;
+  if (n > createMetrics.titleMaxLength) return `Ad en fazla ${createMetrics.titleMaxLength} karakter olabilir`;
+  return null;
+}
 
 /** "2,5" → 2.5; boş ya da geçersizse null */
 export function parseAmount(text: string) {
@@ -48,16 +87,6 @@ export function shiftTime(time: string, minutes: number) {
   const total = (((h * 60 + m + minutes) % 1440) + 1440) % 1440;
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${pad(Math.floor(total / 60))}:${pad(total % 60)}`;
-}
-
-const SHORT_DAYS = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
-
-/** Başlangıç çipi: "Bugün", "Yarın", "Çar 21" */
-export function startChipLabel(offset: number, now: Date) {
-  if (offset === 0) return 'Bugün';
-  if (offset === 1) return 'Yarın';
-  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset);
-  return `${SHORT_DAYS[d.getDay()]} ${d.getDate()}`;
 }
 
 /** "Mert", "Mert ve Ece", "Mert, Ece ve Can" davet edilecek */
@@ -90,13 +119,14 @@ export function durationDays(form: CreateForm) {
 export function toCreateInput(form: CreateForm, template: Template | undefined): CreateChallengeInput | null {
   const title = form.title.trim();
   const days = durationDays(form);
-  if (!title || days < 3 || days > 60) return null;
+  if (titleError(title) || days < createMetrics.customMin || days > createMetrics.customMax) return null;
 
   const common = {
     durationDays: days,
     startDate: addLocalDays(deviceToday(), form.startOffset),
     reminderTime: form.reminder,
     inviteeIds: form.invitees,
+    visibility: form.visibility,
   };
   // Şablon süreleri 7/10/30 (challenges_template_duration); özel sürede şablonun alanları ayrı gönderilir
   if (template && form.duration !== 'custom') {

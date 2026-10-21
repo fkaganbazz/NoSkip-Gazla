@@ -8,8 +8,8 @@ import { CheckIcon } from '@/components/icons';
 import Sheet, { type SheetHandle } from '@/components/Sheet';
 import SpeechBubble from '@/components/SpeechBubble';
 import { Button, Chip, ErrorState, IconButton, LoadingState } from '@/components/ui';
-import { useChallenge, useChallengeCalendar, useCheckinMutation, useToday } from '@/data';
-import { formatNumber, pastValues, targetText, unitName } from '@/features/checkin/logic';
+import { useChallenge, useCheckinMutation, useNumberStats, useToday } from '@/data';
+import { formatNumber, targetText, unitName } from '@/features/checkin/logic';
 import StepButton from '@/features/checkin/StepButton';
 import { borderWidth, componentTypography, spacing, typography, useTheme } from '@/theme';
 import {
@@ -23,7 +23,7 @@ const d = sheetDikenMetrics.numberEntry;
 
 // Sayı gir — design/NumberEntry.dc.html. Alt sayfa (`Sheet`, route transparentModal); hedefli görevde
 // sayfanın üstünde Diken + balon. Hedef, birim ve gün numarası my_today'den; adım ve üst sınır challenge'ın
-// sayı ayarlarından.
+// sayı ayarlarından; "Dün / En iyin / Grupta en iyi" useNumberStats'tan (o günün değerleri).
 export default function NumberEntryScreen() {
   const { id, date } = useLocalSearchParams<{ id: string; date?: string }>();
   const router = useRouter();
@@ -33,13 +33,13 @@ export default function NumberEntryScreen() {
 
   const today = useToday();
   const challenge = useChallenge(id);
-  const calendar = useChallengeCalendar(id);
   const checkin = useCheckinMutation();
 
   const task = useMemo(
     () => today.data?.find((x) => x.challengeId === id && (!date || x.localDate === date)),
     [today.data, id, date],
   );
+  const stats = useNumberStats(id, task?.localDate ?? date);
   const [picked, setPicked] = useState<number | null>(null);
 
   const close = () => sheet.current?.close();
@@ -78,7 +78,16 @@ export default function NumberEntryScreen() {
   const max = challenge.data?.number?.max ?? null;
   const value = picked ?? task.value ?? target ?? 0;
   const set = (n: number) => setPicked(Math.max(0, max === null ? n : Math.min(max, n)));
-  const past = calendar.data ? pastValues(calendar.data.checkins, task.localDate) : null;
+  const s = stats.data;
+  // Tasarımdaki üç kutu; değeri olmayan "—". Hiçbiri yoksa (ilk gün, tek kişi) satır gösterilmez.
+  const statItems = s
+    ? [
+        { label: 'Dün', value: s.yesterday },
+        { label: 'En iyin', value: s.best },
+        { label: 'Grupta en iyi', value: s.groupBest?.value ?? null, who: s.groupBest?.person.displayName },
+      ]
+    : [];
+  const showStats = statItems.some((x) => x.value !== null);
   const targetLabel = target === null ? null : targetText(value, target, unit);
 
   // Kaydedince sayfa kapanır; hepsi bittiyse Bugün odağa dönünce tamamlama anını açar
@@ -166,20 +175,24 @@ export default function NumberEntryScreen() {
         })}
       </View>
 
-      {past && (past.yesterday !== null || past.best !== null) && (
+      {showStats && (
         <View style={[styles.stats, { backgroundColor: c.statsBg }]}>
-          {past.yesterday !== null && (
-            <Text style={[typography.caption, { color: c.statsText }]}>
-              {'Dün: '}
-              <Text style={[styles.statsValue, { color: c.statsValue }]}>{`${formatNumber(past.yesterday)} ${unit}`}</Text>
-            </Text>
-          )}
-          {past.best !== null && (
-            <Text style={[typography.caption, { color: c.statsText }]}>
-              {'En iyin: '}
-              <Text style={[styles.statsValue, { color: c.statsValue }]}>{`${formatNumber(past.best)} ${unit}`}</Text>
-            </Text>
-          )}
+          {statItems.map((x) => {
+            const shown = x.value === null ? '—' : `${formatNumber(x.value)} ${unit}`.trim();
+            return (
+              <Text
+                key={x.label}
+                accessibilityLabel={
+                  x.value === null
+                    ? `${x.label}: yok`
+                    : `${x.label}: ${formatNumber(x.value)} ${unitName(unit)}${x.who ? `, ${x.who}` : ''}`
+                }
+                style={[typography.caption, { color: c.statsText }]}>
+                {`${x.label}: `}
+                <Text style={[styles.statsValue, { color: c.statsValue }]}>{shown}</Text>
+              </Text>
+            );
+          })}
         </View>
       )}
 
@@ -258,7 +271,9 @@ const styles = StyleSheet.create({
   stats: {
     marginTop: m.statsMarginTop,
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
+    columnGap: spacing.xs,
     paddingVertical: m.statsPaddingY,
     paddingHorizontal: m.statsPaddingX,
     borderRadius: m.statsRadius,

@@ -7,6 +7,8 @@
 import type { TextStyle } from 'react-native';
 
 import { lightColors, palette } from './colors';
+import { layout, spacing } from './spacing';
+import { tabBarMetrics } from './tabBar';
 import { fonts } from './typography';
 
 export type TodayColors = {
@@ -68,6 +70,16 @@ export const todayMetrics = {
 
   // Görev listesi
   taskGap: 8,
+  /** Yüklenirken gösterilen iskelet kart sayısı (tasarımdaki 3 görev) */
+  skeletonTaskCount: 3,
+
+  /**
+   * İçeriğin alt boşluğu: alt menünün + butonu sahnenin üstüne 30 taşar; arkadaş şeridi onun altında
+   * kalmasın diye taşma + kenar boşluğu (50)
+   */
+  contentPaddingBottom: tabBarMetrics.fabLift + layout.screenPadding,
+  /** Çevrimdışı tostu: + butonunun üst kenarının 12 üstünde */
+  toastBottom: tabBarMetrics.fabLift + spacing.sm,
 } as const;
 
 /** Bu ekrana özgü metin stilleri */

@@ -114,6 +114,8 @@ export const photoProofColors = {
   emptyFrameBorder: '#3A2C5C',
   stampBg: 'rgba(21, 14, 38, 0.72)',
   rowBg: palette.darkSurface,
+  /** Görünürlük satırı basılıyken: koyu ikincil yüzey */
+  rowPressedBg: palette.darkFill,
   rowIcon: palette.darkTextSecondary,
   /** Hata metni: koyu `dangerText` (#F97066, koyu zeminde 6.7:1) */
   error: darkColors.dangerText,
@@ -144,6 +146,12 @@ export const photoProofMetrics = {
   rowGap: 10,
   rowIconSize: 20,
   rowIconStrokeWidth: 2.2,
+  /** Satırın sağındaki ok (›) · 18, çizgi 2.4 */
+  chevronSize: 18,
+  chevronStrokeWidth: 2.4,
+  /** Grup üyeleri sayfası (tasarımda yok): açıklama ile liste arası, yüklenirken/hatada en az yükseklik */
+  sheetLeadGap: 8,
+  sheetStateMinHeight: 160,
   buttonsMarginTop: 16,
   buttonsGap: 10,
   /** Butonlar ortak Button md (16 yazı) ama tasarımda 56 yükseklik */

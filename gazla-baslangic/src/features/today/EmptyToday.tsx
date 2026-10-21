@@ -5,8 +5,8 @@ import Svg, { Circle, Path } from 'react-native-svg';
 
 import Diken from '@/components/Diken';
 import { Button } from '@/components/ui';
-import { useActivity, useAuth } from '@/data';
-import { layout, typography, useTheme } from '@/theme';
+import { useAuth, useUnreadCount } from '@/data';
+import { layout, todayMetrics, typography, useTheme } from '@/theme';
 import { emptyTodayColors as sc, emptyTodayMetrics as m, emptyTodayTypography as t } from '@/theme/create';
 
 import { formatDayLabel } from './logic';
@@ -24,8 +24,7 @@ export default function EmptyToday({ name }: Props) {
   const router = useRouter();
   const now = useNow();
   const { profile } = useAuth();
-  const activity = useActivity();
-  const unread = (activity.data ?? []).filter((a) => !a.readAt).length;
+  const unread = useUnreadCount().data ?? 0;
 
   return (
     <SafeAreaView edges={['top']} style={styles.screen}>
@@ -97,7 +96,8 @@ const styles = StyleSheet.create({
   content: {
     paddingTop: layout.screenTopGap,
     paddingHorizontal: layout.screenPadding,
-    paddingBottom: layout.screenPadding,
+    // Alt menünün + butonu sahneye taşar; butonlar onun altında kalmasın
+    paddingBottom: todayMetrics.contentPaddingBottom,
   },
   scene: {
     marginTop: m.sceneMarginTop,

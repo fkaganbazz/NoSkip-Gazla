@@ -65,9 +65,6 @@ export const createMetrics = {
   sectionMarginTop: 16,
   /** Etiket ile içerik arası · 6 */
   labelGap: 6,
-  /** Şablon çipleri (tasarımda yok; ad alanının altında) */
-  templatesMarginTop: 10,
-  templatesGap: 8,
 
   // Süre
   durationGap: 8,
@@ -111,8 +108,8 @@ export const createMetrics = {
   /** Hatırlatma adımı (dakika) ve tasarımdaki varsayılan saat */
   reminderStepMinutes: 30,
   reminderDefault: '20:00',
-  /** Başlangıç: bugün … +7 (create_challenge) */
-  startMaxOffset: 7,
+  /** Seçim sayfası (Kimler görebilir, Başlangıç): seçenek kartları arası, tamamlama kartlarıyla aynı */
+  choiceGap: 8,
 
   // Davet satırı
   inviteMarginTop: 14,
@@ -121,13 +118,15 @@ export const createMetrics = {
   avatarRing: 2,
   inviteTextMarginLeft: 4,
   friendsMarginTop: 10,
+  friendsGap: 8,
   /** Arkadaş seçim çipindeki küçük avatar */
   friendChipAvatar: 24,
 
   /** Alttaki buton: kenarlardan 20, alttan 30 */
   footerPaddingTop: 12,
   footerPaddingBottom: 30,
-  /** challenges.title ≤ 60, number_unit ≤ 20 */
+  /** challenges.title 3–60 (create_challenge), number_unit ≤ 20 */
+  titleMinLength: 3,
   titleMaxLength: 60,
   unitMaxLength: 20,
 } as const;

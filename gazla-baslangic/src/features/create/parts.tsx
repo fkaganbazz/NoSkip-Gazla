@@ -1,14 +1,17 @@
 /**
- * Yeni challenge formunun parçaları (Create.dc.html): süre hücresi, tamamlama şekli kartı, ayar kartı satırı.
- * Artı/eksi: ortak IconButton; davet satırının kesikli ekle yuvası: ortak AddAvatar.
+ * Yeni challenge formunun parçaları (Create.dc.html): süre hücresi, tamamlama şekli kartı, ayar kartı satırı,
+ * ayar seçim sayfası. Artı/eksi: ortak IconButton; davet satırının kesikli ekle yuvası: ortak AddAvatar.
  */
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ChevronRightIcon } from '@/components/icons';
+import Sheet from '@/components/Sheet';
 import { Radio } from '@/components/ui';
 import { borderWidth, useTheme } from '@/theme';
 import { createColors, createMetrics as m, createTypography as t } from '@/theme/create';
+
+import type { Choice } from './logic';
 
 /** Süre ızgarasındaki tek hücre (7 gün / 10 gün / 30 gün / Özel) */
 export function DurationCell({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
@@ -19,6 +22,7 @@ export function DurationCell({ label, selected, onPress }: { label: string; sele
       onPress={onPress}
       accessibilityRole="radio"
       accessibilityState={{ checked: selected }}
+      aria-checked={selected}
       style={[
         styles.cell,
         selected
@@ -59,6 +63,7 @@ export function TaskOption({ title, desc, selected, onPress, children }: OptionP
         onPress={onPress}
         accessibilityRole="radio"
         accessibilityState={{ checked: selected }}
+        aria-checked={selected}
         accessibilityLabel={`${title}. ${desc}`}
         style={styles.optionRow}>
         <Radio selected={selected} />
@@ -106,7 +111,44 @@ export function SettingRow({ icon, label, value, onPress, expanded, divider }: R
   );
 }
 
+type ChoiceSheetProps<T extends string | number> = {
+  visible: boolean;
+  title: string;
+  options: Choice<T>[];
+  value: T;
+  onSelect: (value: T) => void;
+  onClose: () => void;
+};
+
+/**
+ * Ayar satırının seçim sayfası (Kimler görebilir, Başlangıç): ortak Sheet içinde "Nasıl tamamlanır?"
+ * kartlarıyla aynı tek seçimli kartlar; seçince kapanır. Tasarımda sayfası çizilmedi.
+ */
+export function ChoiceSheet<T extends string | number>({ visible, title, options, value, onSelect, onClose }: ChoiceSheetProps<T>) {
+  return (
+    <Sheet visible={visible} onClose={onClose} title={title}>
+      <View accessibilityRole="radiogroup" accessibilityLabel={title} style={styles.choices}>
+        {options.map((o) => (
+          <TaskOption
+            key={String(o.value)}
+            title={o.title}
+            desc={o.desc}
+            selected={o.value === value}
+            onPress={() => {
+              onSelect(o.value);
+              onClose();
+            }}
+          />
+        ))}
+      </View>
+    </Sheet>
+  );
+}
+
 const styles = StyleSheet.create({
+  choices: {
+    gap: m.choiceGap,
+  },
   cell: {
     flex: 1,
     height: m.cellHeight,

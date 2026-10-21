@@ -2,7 +2,7 @@
  * İşaretleme ekranlarının küçük yardımcıları: sayı biçimi, birim adları, yerel gün aritmetiği.
  * İş kuralı yok; hedef ve gün numarası sunucudan (my_today) gelir.
  */
-import type { Checkin, LocalDate } from '@/data';
+import type { LocalDate } from '@/data';
 
 /** 70 → "70", 2.5 → "2,5" */
 export function formatNumber(n: number) {
@@ -38,19 +38,6 @@ export function addLocalDays(day: LocalDate, delta: number): LocalDate {
 export function deviceToday(now = new Date()): LocalDate {
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-}
-
-/** Takvimdeki kendi değerlerinden "Dün" ve "En iyin" (yalnızca gösterim) */
-export function pastValues(checkins: Checkin[], day: LocalDate) {
-  const yesterday = addLocalDays(day, -1);
-  let best: number | null = null;
-  let previous: number | null = null;
-  for (const c of checkins) {
-    if (c.value === null || c.localDate >= day) continue;
-    if (c.localDate === yesterday) previous = c.value;
-    if (best === null || c.value > best) best = c.value;
-  }
-  return { yesterday: previous, best };
 }
 
 /** "22:31" */

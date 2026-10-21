@@ -1,15 +1,29 @@
 import { useIsFocused, useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FriendBubble, InviteBubble } from '@/components/FriendRow';
+import { Skeleton, SkeletonTaskCard } from '@/components/Skeleton';
 import { TaskCard } from '@/components/TaskCard';
-import { LoadingState } from '@/components/ui';
+import { ErrorState, useToast } from '@/components/ui';
+import {
+  ApiError,
+  useAuth,
+  useCheckinMutation,
+  useFriendsToday,
+  usePendingRescues,
+  useStreak,
+  useToday,
+  useUndoCheckinMutation,
+  useUnreadCount,
+  useUnseenFinished,
+} from '@/data';
 import EmptyToday from '@/features/today/EmptyToday';
 import HeroCard from '@/features/today/HeroCard';
 import SectionHeader from '@/features/today/SectionHeader';
 import TodayHeader from '@/features/today/TodayHeader';
+import TodayToasts from '@/features/today/TodayToasts';
 import {
   formatDayLabel,
   greeting,
@@ -19,20 +33,11 @@ import {
   toTaskRow,
 } from '@/features/today/logic';
 import { useNow } from '@/features/today/useNow';
-import {
-  useActivity,
-  useAuth,
-  useCheckinMutation,
-  useFriendsToday,
-  usePendingRescues,
-  useStreak,
-  useToday,
-  useUndoCheckinMutation,
-} from '@/data';
-import { layout, todayColors, todayMetrics as m, useTheme } from '@/theme';
+import { layout, spacing, todayColors, todayMetrics as m, useTheme } from '@/theme';
 
 // Bugün — design/Today.dc.html (açık) ve design/TodayDark.dc.html (koyu).
 // Veri: my_today, my_streak, friends_today (src/data). Görev yoksa EmptyToday.dc.html.
+// Durumlar: yükleniyor (iskelet kartlar), hata (Tekrar dene), boş (veri geldi, görev yok), çevrimdışı (alt tost).
 export default function TodayScreen() {
   const { scheme } = useTheme();
   const router = useRouter();
@@ -42,10 +47,13 @@ export default function TodayScreen() {
   const today = useToday();
   const streak = useStreak();
   const friends = useFriendsToday();
-  const activity = useActivity();
+  const unreadCount = useUnreadCount();
   const rescues = usePendingRescues();
+  const finished = useUnseenFinished();
   const checkin = useCheckinMutation();
   const undo = useUndoCheckinMutation();
+  const toast = useToast();
+  const [toastHeight, setToastHeight] = useState(0);
 
   const tasks = useMemo(() => today.data ?? [], [today.data]);
   const rows = useMemo(() => tasks.map((t) => toTaskRow(t, now)), [tasks, now]);
@@ -67,54 +75,138 @@ export default function TodayScreen() {
     if (!allDone) celebrate.current = null;
     prevAllDone.current = allDone;
   }, [allDone, today.isPending, tasks]);
-  useEffect(() => {
-    const day = celebrate.current;
-    if (!focused || !allDone || !day) return;
-    celebrate.current = null;
-    celebrated.current.add(day);
-    router.push('/completion');
-  }, [focused, allDone, router]);
 
-  // Seri koptuysa kurtarma ekranı (her kaçırılan gün için oturumda bir kez)
+  // Otomatik açılan anlar, odaktayken birer birer (biri kapanınca Bugün yeniden odak alır, sıradaki açılır):
+  // 1) tamamlama anı, 2) seri koptu (her kaçırılan gün için oturumda bir kez), 3) challenge bitti
+  // (her challenge bir kez; Finished ekranı açılınca "görüldü" işaretler, sunucu bir daha döndürmez).
   const rescueShown = useRef(new Set<string>());
+  const finishShown = useRef(new Set<string>());
   useEffect(() => {
-    const first = rescues.data?.[0];
-    if (!focused || !first) return;
-    const key = `${first.challengeId}|${first.missedDate}`;
-    if (rescueShown.current.has(key)) return;
-    rescueShown.current.add(key);
-    router.push('/streak-lost');
-  }, [focused, rescues.data, router]);
+    if (!focused) return;
+    const day = celebrate.current;
+    if (allDone && day) {
+      celebrate.current = null;
+      celebrated.current.add(day);
+      router.push('/completion');
+      return;
+    }
+    const rescue = rescues.data?.[0];
+    const rescueKey = rescue && `${rescue.challengeId}|${rescue.missedDate}`;
+    if (rescueKey && !rescueShown.current.has(rescueKey)) {
+      rescueShown.current.add(rescueKey);
+      router.push('/streak-lost');
+      return;
+    }
+    const done = finished.data?.find((f) => !finishShown.current.has(f.challengeId));
+    if (done) {
+      finishShown.current.add(done.challengeId);
+      router.push({ pathname: '/challenge/[id]/finished', params: { id: done.challengeId } });
+    }
+  }, [focused, allDone, rescues.data, finished.data, router]);
 
-  const onTask = useCallback(
+  const findTask = useCallback(
+    (rowId: string) => tasks.find((t) => `${t.challengeId}|${t.localDate}` === rowId),
+    [tasks],
+  );
+  const showError = useCallback((error: Error) => toast.show({ message: error.message }), [toast]);
+
+  // Sağdaki buton: işaretle tipi tek dokunuşla işaretler; tamamlanmış görev geri alınır (iyimser, ağ beklemez).
+  // Sayı ve fotoğraf tipi kendi ekranını açar.
+  const onAction = useCallback(
     (rowId: string) => {
-      const task = tasks.find((t) => `${t.challengeId}|${t.localDate}` === rowId);
+      const task = findTask(rowId);
       if (!task) return;
+      const target = { challengeId: task.challengeId, localDate: task.localDate };
       if (task.done) {
-        undo.mutate({ challengeId: task.challengeId, localDate: task.localDate });
-        return;
-      }
-      if (task.taskType === 'check') {
-        checkin.mutate({ challengeId: task.challengeId, localDate: task.localDate });
+        undo.mutate(target, { onError: showError });
+      } else if (task.taskType === 'check') {
+        checkin.mutate(target, { onError: showError });
       } else if (task.taskType === 'number') {
         router.push({ pathname: '/checkin/number/[id]', params: { id: task.challengeId, date: task.localDate } });
       } else {
         router.push({ pathname: '/checkin/photo/[id]', params: { id: task.challengeId, date: task.localDate } });
       }
     },
-    [tasks, checkin, undo, router],
+    [findTask, checkin, undo, router, showError],
   );
 
+  // Kart gövdesi: işaretle tipi → challenge detayı; sayı → sayı gir; fotoğraf → fotoğraf kanıtı
+  const onBody = useCallback(
+    (rowId: string) => {
+      const task = findTask(rowId);
+      if (!task) return;
+      const params = { id: task.challengeId, date: task.localDate };
+      if (task.taskType === 'number') {
+        router.push({ pathname: '/checkin/number/[id]', params });
+      } else if (task.taskType === 'photo') {
+        router.push({ pathname: '/checkin/photo/[id]', params });
+      } else {
+        router.push({ pathname: '/challenge/[id]', params: { id: task.challengeId } });
+      }
+    },
+    [findTask, router],
+  );
+
+  const retry = () => {
+    today.refetch();
+    streak.refetch();
+    friends.refetch();
+  };
+
+  const header = (
+    <TodayHeader
+      dayLabel={formatDayLabel(now)}
+      title={`${greeting(now)}, ${profile?.displayName ?? ''}`}
+      unread={unreadCount.data ?? 0}
+      onPressBell={() => router.push('/activity')}
+    />
+  );
+  const toasts = <TodayToasts toast={toast} onHeightChange={setToastHeight} />;
+  // Tost görünürken içeriğin sonu onun üstünde kalsın
+  const paddingBottom = Math.max(m.contentPaddingBottom, toastHeight > 0 ? m.toastBottom + toastHeight + spacing.sm : 0);
+
+  // Hata yalnızca hiç veri yokken; yenileme hatasında eldeki liste kalır
+  const loadError = (today.isError && !today.data ? today.error : null) ?? (streak.isError && !streak.data ? streak.error : null);
+  if (loadError) {
+    return (
+      <SafeAreaView edges={['top']} style={styles.screen}>
+        <View style={[styles.content, styles.fill]}>
+          {header}
+          <ErrorState message={loadError instanceof ApiError ? loadError.message : undefined} onRetry={retry} />
+        </View>
+        {toasts}
+      </SafeAreaView>
+    );
+  }
+
+  // Yükleniyor (çevrimdışı açılışta sorgu bekler): üst satır gerçek, kahraman kart ve görevler iskelet
   if (today.isPending || streak.isPending) {
     return (
       <SafeAreaView edges={['top']} style={styles.screen}>
-        <LoadingState />
+        <ScrollView contentContainerStyle={[styles.content, { paddingBottom }]}>
+          {header}
+          <View accessible accessibilityLabel="Yükleniyor" accessibilityState={{ busy: true }}>
+            <Skeleton height={m.heroHeight} radius={m.heroRadius} style={styles.hero} />
+            <SectionHeader title="Bugünkü görevler" style={styles.tasksHeader} />
+            <View style={styles.tasks}>
+              {Array.from({ length: m.skeletonTaskCount }, (_, i) => (
+                <SkeletonTaskCard key={i} />
+              ))}
+            </View>
+          </View>
+        </ScrollView>
+        {toasts}
       </SafeAreaView>
     );
   }
 
   if (tasks.length === 0) {
-    return <EmptyToday name={profile?.displayName ?? ''} />;
+    return (
+      <View style={styles.screen}>
+        <EmptyToday name={profile?.displayName ?? ''} />
+        {toasts}
+      </View>
+    );
   }
 
   const total = tasks.length;
@@ -125,28 +217,13 @@ export default function TodayScreen() {
   const streakBefore = s ? s.currentStreak - (serverAllDone ? 1 : 0) : 0;
   const hero = heroState(doneCount, total, streakBefore, minutesUntilMidnight(now));
   const waiting = friendRows.filter((f) => !f.doneToday).length;
-  const unread = (activity.data ?? []).filter((a) => !a.readAt).length;
 
   return (
     <SafeAreaView edges={['top']} style={styles.screen}>
       <ScrollView
-        contentContainerStyle={styles.content}
-        refreshControl={
-          <RefreshControl
-            refreshing={today.isRefetching}
-            onRefresh={() => {
-              today.refetch();
-              streak.refetch();
-              friends.refetch();
-            }}
-          />
-        }>
-        <TodayHeader
-          dayLabel={formatDayLabel(now)}
-          title={`${greeting(now)}, ${profile?.displayName ?? ''}`}
-          unread={unread}
-          onPressBell={() => router.push('/activity')}
-        />
+        contentContainerStyle={[styles.content, { paddingBottom }]}
+        refreshControl={<RefreshControl refreshing={today.isRefetching} onRefresh={retry} />}>
+        {header}
 
         <HeroCard done={doneCount} total={total} hero={hero} />
 
@@ -160,8 +237,8 @@ export default function TodayScreen() {
             <TaskCard
               key={row.id}
               task={row}
-              onPressAction={() => onTask(row.id)}
-              onPressBody={() => router.push({ pathname: '/challenge/[id]', params: { id: row.challengeId } })}
+              onPressAction={() => onAction(row.id)}
+              onPressBody={() => onBody(row.id)}
             />
           ))}
         </View>
@@ -189,6 +266,7 @@ export default function TodayScreen() {
           </>
         )}
       </ScrollView>
+      {toasts}
     </SafeAreaView>
   );
 }
@@ -197,10 +275,16 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
   },
+  fill: {
+    flex: 1,
+  },
   content: {
     paddingTop: layout.screenTopGap,
     paddingHorizontal: layout.screenPadding,
-    paddingBottom: layout.screenPadding,
+    paddingBottom: m.contentPaddingBottom,
+  },
+  hero: {
+    marginTop: m.heroMarginTop,
   },
   tasksHeader: {
     marginTop: m.tasksHeaderMarginTop,
