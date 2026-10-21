@@ -52,7 +52,8 @@ export default function ActivityScreen() {
   /** Tebrik gönderilen bildirimler → gönderilen dürtme (geri alınca listeden çıkar) */
   const [congratulated, setCongratulated] = useState<Record<string, string>>({});
   const [congratsPendingId, setCongratsPendingId] = useState<string | null>(null);
-  const [contentHeight, setContentHeight] = useState(0);
+  // İçerik yüksekliği hangi satır sayısıyla ölçüldü: yükleniyor halinin yüksekliğiyle "ekran dolmadı" sanılmasın
+  const [content, setContent] = useState({ height: 0, items: -1 });
   const [viewportHeight, setViewportHeight] = useState(0);
 
   const items = useMemo(() => activity.data?.pages.flatMap((p) => p.items) ?? [], [activity.data]);
@@ -69,13 +70,15 @@ export default function ActivityScreen() {
   const onScroll = ({ nativeEvent: e }: NativeSyntheticEvent<NativeScrollEvent>) => {
     if (e.layoutMeasurement.height + e.contentOffset.y >= e.contentSize.height - LOAD_MORE_THRESHOLD) loadMore();
   };
-  // Yüklenen sayfalar ekranı doldurmuyorsa kaydırma olmaz; devamı hemen istenir
-  const fillsScreen = contentHeight > viewportHeight + LOAD_MORE_THRESHOLD;
+  // Yüklenen sayfalar ekranı doldurmuyorsa kaydırma olmaz; devamı hemen istenir. Yalnızca ölçüm son gelen
+  // satırlarla yapıldıysa karar verilir (veri geldiği an eski — yükleniyor — yüksekliği hâlâ duruyor olabilir).
+  const measured = content.items === items.length && content.height > 0;
+  const fillsScreen = content.height > viewportHeight + LOAD_MORE_THRESHOLD;
   useEffect(() => {
-    if (viewportHeight > 0 && contentHeight > 0 && !fillsScreen && hasNextPage && !isFetchingNextPage && !isFetchNextPageError) {
+    if (measured && viewportHeight > 0 && !fillsScreen && hasNextPage && !isFetchingNextPage && !isFetchNextPageError) {
       fetchNextPage();
     }
-  }, [fillsScreen, viewportHeight, contentHeight, hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage]);
+  }, [measured, fillsScreen, viewportHeight, hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage]);
 
   const sendCongrats = (item: ActivityItem) => {
     const actor = item.actor;
@@ -201,7 +204,7 @@ export default function ActivityScreen() {
         onScroll={onScroll}
         scrollEventThrottle={100}
         // İlk sayfa ekranı doldurmuyorsa da devamı istenir
-        onContentSizeChange={(_, height) => setContentHeight(height)}
+        onContentSizeChange={(_, height) => setContent({ height, items: items.length })}
         onLayout={(e) => setViewportHeight(e.nativeEvent.layout.height)}
         refreshControl={<RefreshControl refreshing={activity.isRefetching && !isFetchingNextPage} onRefresh={() => activity.refetch()} />}>
         <ScreenHeader title="Aktivite" trailing={markAll} />
