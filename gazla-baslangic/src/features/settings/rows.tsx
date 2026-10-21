@@ -56,9 +56,16 @@ type LinkRowProps = {
   titleColor?: string;
   /** Destek ve yasal satırları: 54 */
   compact?: boolean;
+  /**
+   * Alt ayraç en az yüksekliğin içinde mi. Tasarımdaki satırlar `<a>` (content-box): ayraç yüksekliğe
+   * eklenir (56 + 1). "Çıkış yap" `<button>` (tarayıcıda border-box): 56'nın içinde.
+   */
+  dividerInside?: boolean;
   disabled?: boolean;
   last?: boolean;
   accessibilityLabel?: string;
+  /** Dış sayfa açan satır (Destek ve yasal): `link` */
+  accessibilityRole?: 'button' | 'link';
 };
 
 /** Basılabilir satır: başlık, değer ve sağa ok */
@@ -70,9 +77,11 @@ export function LinkRow({
   chevron = true,
   titleColor,
   compact,
+  dividerInside,
   disabled,
   last,
   accessibilityLabel,
+  accessibilityRole = 'button',
 }: LinkRowProps) {
   const { colors } = useTheme();
   const divider = useDivider(last);
@@ -90,7 +99,10 @@ export function LinkRow({
   );
   const rowStyle = [
     styles.linkRow,
-    { minHeight: compact ? m.linkRowHeightCompact : m.linkRowHeight },
+    {
+      minHeight:
+        (compact ? m.linkRowHeightCompact : m.linkRowHeight) + (divider && !dividerInside ? borderWidth.thin : 0),
+    },
     detail ? styles.linkRowTall : null,
     divider,
   ];
@@ -100,7 +112,7 @@ export function LinkRow({
     <Pressable
       onPress={onPress}
       disabled={disabled}
-      accessibilityRole="button"
+      accessibilityRole={accessibilityRole}
       accessibilityLabel={accessibilityLabel ?? (value ? `${title}, ${value}` : title)}
       accessibilityState={{ disabled }}
       style={({ pressed }) => [rowStyle, pressed && { backgroundColor: colors.surfaceMuted }]}>

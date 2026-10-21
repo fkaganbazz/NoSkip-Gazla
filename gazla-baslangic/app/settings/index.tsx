@@ -1,12 +1,11 @@
 import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import Sheet from '@/components/Sheet';
 import {
-  Button,
   ErrorState,
   LoadingState,
   ScreenHeader,
@@ -15,6 +14,7 @@ import {
   ToastHost,
   useToast,
 } from '@/components/ui';
+import { SUPPORT_EMAIL, legalLinks, supportMailto, type LegalLink } from '@/config/links';
 import {
   useAuth,
   useBlockedUsers,
@@ -22,26 +22,36 @@ import {
   useSignOutMutation,
   useUpdateProfileMutation,
   useUpdateSettingsMutation,
+  type ProfileUpdate,
   type SettingsUpdate,
 } from '@/data';
 import {
+  DAY_END_OPTIONS,
   DISCOVERABILITY_OPTIONS,
-  LOCALE_OPTIONS,
+  dayEndDetail,
   errorText,
   formatTime,
   labelOf,
 } from '@/features/settings/logic';
 import OptionSheet from '@/features/settings/OptionSheet';
+import { useOptimisticPatch } from '@/features/settings/optimistic';
 import ProfileCard from '@/features/settings/ProfileCard';
 import ProfileEditSheet from '@/features/settings/ProfileEditSheet';
 import { LinkRow, SettingsGroup, ToggleRow } from '@/features/settings/rows';
 import { THEME_OPTIONS, useThemePreference } from '@/features/settings/themePreference';
-import { layout, typography, useTheme } from '@/theme';
+import { layout, useTheme } from '@/theme';
 import { settingsMetrics as m, settingsTypography as t } from '@/theme/settings';
 
-type OpenSheet = 'profile' | 'discoverability' | 'locale' | 'dayEnd' | null;
+type OpenSheet = 'profile' | 'discoverability' | 'dayEnd' | null;
 
-const LEGAL_ROWS = ['Yardım ve SSS', 'Bize yaz', 'KVKK Aydınlatma Metni', 'Gizlilik Politikası', 'Kullanım Koşulları'];
+/** DESTEK VE YASAL (Settings.dc.html sırası): web sayfaları uygulama içi tarayıcıda, "Bize yaz" e-postada */
+const SUPPORT_ROWS: { title: string; page?: LegalLink }[] = [
+  { title: 'Yardım ve SSS', page: 'help' },
+  { title: 'Bize yaz' },
+  { title: 'KVKK Aydınlatma Metni', page: 'kvkk' },
+  { title: 'Gizlilik Politikası', page: 'privacy' },
+  { title: 'Kullanım Koşulları', page: 'terms' },
+];
 
 // Ayarlar — design/Settings.dc.html. Profil useAuth'tan, ayarlar user_settings'ten (useMySettings).
 export default function SettingsScreen() {
@@ -60,7 +70,17 @@ export default function SettingsScreen() {
   const flash = (message: string) => toast.show({ message });
   const [sheet, setSheet] = useState<OpenSheet>(null);
 
-  const saveSettings = (update: SettingsUpdate) => updateSettings.mutate(update, { onError: (e) => flash(errorText(e)) });
+  // İyimser: anahtar ve seçim anında değişir; sunucu reddederse eski değere döner ve tost çıkar
+  const onSaveError = (e: unknown) => flash(errorText(e));
+  const settingsPatch = useOptimisticPatch<SettingsUpdate>((u) => updateSettings.mutateAsync(u), onSaveError);
+  const profilePatch = useOptimisticPatch<ProfileUpdate>((u) => updateProfile.mutateAsync(u), onSaveError);
+
+  const openPage = (page: LegalLink) =>
+    WebBrowser.openBrowserAsync(legalLinks[page]).catch(() => flash('Sayfa açılamadı. Biraz sonra tekrar dene.'));
+  const writeToUs = () =>
+    Linking.openURL(supportMailto('Gazla destek')).catch(() =>
+      flash(`E-posta uygulaması açılamadı. Bize ${SUPPORT_EMAIL} adresinden yazabilirsin.`),
+    );
 
   const top = { paddingTop: insets.top + layout.screenTopGap };
 
@@ -81,7 +101,8 @@ export default function SettingsScreen() {
     );
   }
 
-  const s = settings.data;
+  const s = settingsPatch.merge(settings.data);
+  const me = profilePatch.merge(profile);
   const version = Constants.expoConfig?.version ?? '';
   const appName = Constants.expoConfig?.name ?? 'Gazla';
 
@@ -102,15 +123,13 @@ export default function SettingsScreen() {
           <ToggleRow
             title="Sert mod"
             detail="Arkadaşların sana laf sokabilir. Kapalıyken sadece gaz verebilirler."
-            value={profile.harshMode}
-            disabled={updateProfile.isPending}
-            onChange={(harshMode) => updateProfile.mutate({ harshMode }, { onError: (e) => flash(errorText(e)) })}
+            value={me.harshMode}
+            onChange={(harshMode) => profilePatch.apply({ harshMode })}
           />
           <ToggleRow
             title="Dürtme bildirimleri"
             value={s.pokePushEnabled}
-            disabled={updateSettings.isPending}
-            onChange={(pokePushEnabled) => saveSettings({ pokePushEnabled })}
+            onChange={(pokePushEnabled) => settingsPatch.apply({ pokePushEnabled })}
           />
           <LinkRow
             title="Günlük hatırlatma"
@@ -119,8 +138,8 @@ export default function SettingsScreen() {
           />
           <LinkRow
             title="Gün bitişi"
-            detail="Gece yarısından sonra 2 saat daha işaretleyebilirsin. Saat dilimine göre hesaplanır."
-            value="+2 saat"
+            detail={dayEndDetail(s.dayEndGraceHours)}
+            value={labelOf(DAY_END_OPTIONS, s.dayEndGraceHours)}
             onPress={() => setSheet('dayEnd')}
             last
           />
@@ -136,10 +155,6 @@ export default function SettingsScreen() {
           accessibilityLabel="Tema"
           style={styles.themePicker}
         />
-        {/* Tasarımda yok: dil seçimi (user_settings.locale) */}
-        <SettingsGroup>
-          <LinkRow title="Dil" value={labelOf(LOCALE_OPTIONS, s.locale)} onPress={() => setSheet('locale')} last />
-        </SettingsGroup>
 
         <SectionLabel style={styles.section}>GİZLİLİK VE GÜVENLİK</SectionLabel>
         <SettingsGroup>
@@ -153,19 +168,20 @@ export default function SettingsScreen() {
             value={blocked.data ? String(blocked.data.length) : undefined}
             onPress={() => router.push('/settings/blocked')}
           />
+          {/* UMP gizlilik seçenekleri formu kurulana kadar (Madde 3) reklam izni ön ekranı */}
           <LinkRow title="Reklam tercihleri" onPress={() => router.push('/ad-consent')} last />
         </SettingsGroup>
 
         <SectionLabel style={styles.section}>DESTEK VE YASAL</SectionLabel>
         <SettingsGroup>
-          {LEGAL_ROWS.map((title, i) => (
+          {SUPPORT_ROWS.map(({ title, page }, i) => (
             <LinkRow
               key={title}
               title={title}
               compact
-              // Bağlantılar henüz yok (backend/içerik boşluğu)
-              onPress={() => flash('Bu sayfa yakında burada olacak.')}
-              last={i === LEGAL_ROWS.length - 1}
+              onPress={() => (page ? openPage(page) : writeToUs())}
+              accessibilityRole="link"
+              last={i === SUPPORT_ROWS.length - 1}
             />
           ))}
         </SettingsGroup>
@@ -174,6 +190,7 @@ export default function SettingsScreen() {
           <LinkRow
             title={signOut.isPending ? 'Çıkış yapılıyor…' : 'Çıkış yap'}
             chevron={false}
+            dividerInside
             disabled={signOut.isPending}
             // Başarıda oturum kapanır; kök düzen onboarding'e geçirir
             onPress={() => signOut.mutate(undefined, { onError: (e) => flash(errorText(e)) })}
@@ -206,24 +223,18 @@ export default function SettingsScreen() {
         title="Beni kimler bulabilir"
         options={DISCOVERABILITY_OPTIONS}
         value={s.discoverability}
-        onSelect={(discoverability) => saveSettings({ discoverability })}
+        onSelect={(discoverability) => settingsPatch.apply({ discoverability })}
         onClose={() => setSheet(null)}
       />
       <OptionSheet
-        visible={sheet === 'locale'}
-        title="Dil"
-        options={LOCALE_OPTIONS}
-        value={s.locale}
-        onSelect={(locale) => saveSettings({ locale })}
+        visible={sheet === 'dayEnd'}
+        title="Gün bitişi"
+        description={`Gece yarısından sonra dünkü görevlerini ne kadar süre daha işaretleyebileceğini seç. Saat dilimine göre hesaplanır: ${s.timezone}.`}
+        options={DAY_END_OPTIONS}
+        value={s.dayEndGraceHours}
+        onSelect={(dayEndGraceHours) => settingsPatch.apply({ dayEndGraceHours })}
         onClose={() => setSheet(null)}
       />
-      <Sheet visible={sheet === 'dayEnd'} onClose={() => setSheet(null)} title="Gün bitişi" surface>
-        <Text style={[typography.body, { color: colors.textBody }]}>
-          Gece yarısından sonra 2 saat daha işaretleyebilirsin. Saat dilimine göre hesaplanır.
-        </Text>
-        <Text style={[t.rowValue, styles.timezone, { color: colors.textSecondary }]}>Saat dilimin: {s.timezone}</Text>
-        <Button title="Tamam" variant="secondary" onPress={() => setSheet(null)} style={styles.sheetButton} />
-      </Sheet>
 
       <ToastHost toast={toast} />
     </View>
@@ -249,11 +260,5 @@ const styles = StyleSheet.create({
   footer: {
     marginTop: m.footerMarginTop,
     textAlign: 'center',
-  },
-  timezone: {
-    marginTop: m.groupMarginTop,
-  },
-  sheetButton: {
-    marginTop: m.editFieldsMarginTop,
   },
 });

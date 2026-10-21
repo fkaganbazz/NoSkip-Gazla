@@ -78,6 +78,8 @@ const styles = StyleSheet.create({
   },
   title: {
     marginTop: m.adTitleMarginTop,
+    // Kırılım tasarımdaki gibi "… ücretsiz / tutuyor" (açıklama: settingsMetrics.adTitleOverhang)
+    marginRight: -m.adTitleOverhang,
   },
   lead: {
     marginTop: m.adLeadMarginTop,

@@ -2,14 +2,16 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import Sheet from '@/components/Sheet';
 import { Radio } from '@/components/ui';
-import { borderWidth, useTheme } from '@/theme';
+import { borderWidth, typography, useTheme } from '@/theme';
 import { settingsColors, settingsMetrics as m, settingsTypography as t } from '@/theme/settings';
 
-type Option<T extends string> = { value: T; label: string; detail?: string };
+type Option<T extends string | number> = { value: T; label: string; detail?: string };
 
-type Props<T extends string> = {
+type Props<T extends string | number> = {
   visible: boolean;
   title: string;
+  /** Listenin üstünde kısa açıklama (Gün bitişi) */
+  description?: string;
   options: Option<T>[];
   value: T | undefined;
   onSelect: (value: T) => void;
@@ -17,20 +19,32 @@ type Props<T extends string> = {
 };
 
 /** Tek seçimli liste (ortak Sheet, kart zemini): satır basılır, sağda seçim düğmesi; seçince kapanır */
-export default function OptionSheet<T extends string>({ visible, title, options, value, onSelect, onClose }: Props<T>) {
+export default function OptionSheet<T extends string | number>({
+  visible,
+  title,
+  description,
+  options,
+  value,
+  onSelect,
+  onClose,
+}: Props<T>) {
   const { colors, scheme } = useTheme();
   return (
     // Hatırlatma saatleri (16 satır) ekrana sığmıyor: kaydırılabilir gövde
     <Sheet visible={visible} onClose={onClose} title={title} surface scrollable>
-      <View accessibilityRole="radiogroup">
+      {description ? (
+        <Text style={[typography.body, styles.description, { color: colors.textBody }]}>{description}</Text>
+      ) : null}
+      <View role="radiogroup" aria-label={title}>
         {options.map((o, i) => {
           const selected = o.value === value;
           return (
             <Pressable
-              key={o.value}
-              accessibilityRole="radio"
-              accessibilityState={{ selected }}
-              accessibilityLabel={o.label}
+              key={String(o.value)}
+              // Seçim durumu iOS/Android'de ve web'de (aria-checked) okunur; Segmented ile aynı
+              role="radio"
+              aria-checked={selected}
+              aria-label={o.label}
               onPress={() => {
                 onSelect(o.value);
                 onClose();
@@ -57,6 +71,9 @@ export default function OptionSheet<T extends string>({ visible, title, options,
 }
 
 const styles = StyleSheet.create({
+  description: {
+    marginBottom: m.optionDescriptionGap,
+  },
   row: {
     minHeight: m.optionRowHeight,
     flexDirection: 'row',

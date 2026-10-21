@@ -56,7 +56,9 @@ export default function DeleteAccountScreen() {
               key={label}
               style={[
                 styles.lossRow,
+                // Tasarımda content-box: ayraç 52'nin dışında (52 + 1)
                 i < losses.length - 1 && {
+                  minHeight: m.deleteRowHeight + borderWidth.thin,
                   borderBottomWidth: borderWidth.thin,
                   borderBottomColor: settingsColors[scheme].rowDivider,
                 },

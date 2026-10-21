@@ -82,6 +82,8 @@ export const settingsMetrics = {
   // Seçenek listesi (ortak Sheet içinde)
   optionRowHeight: 52,
   optionRowPaddingY: 10,
+  /** Liste üstündeki açıklama ile ilk satır arası (Gün bitişi) · etiket → kart boşluğu */
+  optionDescriptionGap: 8,
 
   // Profil düzenleme (Profile.dc.html)
   /** Avatar 84; kamera rozeti ortak `componentMetrics.cameraBadge` */
@@ -115,6 +117,12 @@ export const settingsMetrics = {
   adCircleTop: 20,
   adDikenSize: 176,
   adTitleMarginTop: 14,
+  /**
+   * Başlığın sağ boşluğa taşabileceği pay. Uygulamadaki Baloo 2 800 (expo-google-fonts statik TTF)
+   * tasarımı üreten Google Fonts dosyasından ~%1 geniş: "Reklamlar Diken'i ücretsiz" 352.8 px ölçülüyor,
+   * içerik 350. Bu payla 390 genişlikte kırılım tasarımdaki gibi ("… ücretsiz / tutuyor"); sağda en az 16 kalır.
+   */
+  adTitleOverhang: 4,
   adLeadMarginTop: 8,
   adListMarginTop: 14,
   adListGap: 12,
