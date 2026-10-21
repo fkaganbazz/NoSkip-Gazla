@@ -1,9 +1,10 @@
 import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ErrorState, LoadingState, ScreenHeader } from '@/components/ui';
+import { FriendList } from '@/components/FriendRow';
+import { Button, ErrorState, LoadingState, ScreenHeader, SectionLabel } from '@/components/ui';
 import {
   ApiError,
   useAcceptFriendRequestMutation,
@@ -13,7 +14,6 @@ import {
 } from '@/data';
 import ActivityRow, { type ActivityActions } from '@/features/activity/ActivityRow';
 import { groupByDay } from '@/features/activity/logic';
-import { ListCard, SectionTitle } from '@/features/friends/list';
 import { componentTypography, layout, radius, typography, useTheme } from '@/theme';
 import { socialMetrics as m } from '@/theme/social';
 
@@ -45,15 +45,17 @@ export default function ActivityScreen() {
   };
   const error = [accept.error, remove.error, markRead.error].find((e) => e instanceof ApiError) as ApiError | undefined;
 
+  // Metin buton: 44 yükseklik, 14/800 yeşil (okunmamış yokken pasif gri)
   const markAll = (
-    <Pressable
-      onPress={() => markRead.mutate(undefined)}
+    <Button
+      title="Tümü okundu"
+      variant="text"
+      size="sm"
+      color={unread > 0 ? colors.actionText : undefined}
       disabled={unread === 0 || markRead.isPending}
-      accessibilityRole="button"
-      accessibilityState={{ disabled: unread === 0 }}
-      style={({ pressed }) => [styles.markAll, (pressed || unread === 0) && styles.dimmed]}>
-      <Text style={[typography.captionStrong, { color: colors.actionText }]}>Tümü okundu</Text>
-    </Pressable>
+      onPress={() => markRead.mutate(undefined)}
+      style={styles.markAll}
+    />
   );
 
   const body = () => {
@@ -68,10 +70,10 @@ export default function ActivityScreen() {
     }
     return groups.map((g, gi) => (
       <View key={g.key}>
-        <SectionTitle style={{ marginTop: gi === 0 ? m.activitySectionMarginTop : m.activityNextSectionMarginTop }}>
+        <SectionLabel style={{ marginTop: gi === 0 ? m.activitySectionMarginTop : m.activityNextSectionMarginTop }}>
           {g.label}
-        </SectionTitle>
-        <ListCard radius={radius.card} style={styles.list}>
+        </SectionLabel>
+        <FriendList style={styles.list}>
           {g.items.map((item, i) => (
             <ActivityRow
               key={item.id}
@@ -82,7 +84,7 @@ export default function ActivityScreen() {
               actions={actions}
             />
           ))}
-        </ListCard>
+        </FriendList>
       </View>
     ));
   };
@@ -117,15 +119,12 @@ const styles = StyleSheet.create({
     paddingBottom: layout.screenPadding,
   },
   markAll: {
-    height: layout.minTouchTarget,
     paddingHorizontal: m.markAllPaddingX,
-    justifyContent: 'center',
   },
-  dimmed: {
-    opacity: 0.5,
-  },
+  // Aktivite kartı köşesi 22 (Friends listesi 20)
   list: {
     marginTop: m.sectionListMarginTop,
+    borderRadius: radius.card,
   },
   error: {
     marginTop: m.sectionListMarginTop,

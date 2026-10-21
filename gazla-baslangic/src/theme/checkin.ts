@@ -1,6 +1,8 @@
 /**
  * İşaretleme ekranlarına özel token'lar — kaynak: design/NumberEntry.dc.html (sayı girişi, alt sayfa)
  * ve design/PhotoProof.dc.html (fotoğraf kanıtı). Genel rollerle aynı olanlar `lightColors`/`darkColors`tan.
+ * Alt sayfa (karartma, köşe, tutamaç, Diken + balon) ortak `Sheet`/`SpeechBubble` ile: `sheet.ts`; başlıktaki karo
+ * ortak `CategoryTile`; fotoğraf ekranının butonları ortak `Button` (`scheme="dark"`) ve `IconButton` (`onDark`).
  */
 import type { TextStyle } from 'react-native';
 
@@ -10,11 +12,6 @@ import { fonts } from './typography';
 // Sayı girişi --------------------------------------------------------------------------------------
 
 export type NumberEntryColors = {
-  /** Kendi çizdiğimiz tutamaç (iOS'ta sistemin tutamacı var) */
-  grabber: string;
-  /** Diken'in konuşma balonu */
-  bubbleBg: string;
-  bubbleText: string;
   /** Eksi butonu: zemin, kenar ve alt gölge */
   minusBg: string;
   minusBorder: string;
@@ -36,9 +33,6 @@ export type NumberEntryColors = {
 // Koyu tasarım yok: zeminler en yakın koyu yüzeye, çipler TodayDark'taki yeşil/turuncu tonlarına bağlandı.
 export const numberEntryColors: Record<'light' | 'dark', NumberEntryColors> = {
   light: {
-    grabber: '#D8CCBF',
-    bubbleBg: palette.white,
-    bubbleText: palette.nightPurple,
     minusBg: palette.white,
     minusBorder: palette.strongLine,
     onTargetBg: palette.green100,
@@ -52,9 +46,6 @@ export const numberEntryColors: Record<'light' | 'dark', NumberEntryColors> = {
     statsValue: lightColors.text,
   },
   dark: {
-    grabber: palette.darkLine,
-    bubbleBg: palette.darkSurface,
-    bubbleText: palette.sand,
     minusBg: palette.darkSurface,
     minusBorder: palette.darkLine,
     onTargetBg: palette.darkActionTint,
@@ -70,35 +61,13 @@ export const numberEntryColors: Record<'light' | 'dark', NumberEntryColors> = {
 };
 
 export const numberEntryMetrics = {
-  /** Alt sayfa iç boşluğu: 10 20 30; tasarımdaki sayfa yüksekliği 506 (içerik sığmazsa uzar) */
-  sheetPaddingTop: 10,
-  sheetPaddingBottom: 30,
+  /** Tasarımdaki sayfa yüksekliği 506 (içerik sığmazsa uzar); iç boşluklar ortak `Sheet`te */
   sheetMinHeight: 506,
-  grabberWidth: 44,
-  grabberHeight: 5,
-  grabberRadius: 3,
 
-  // Diken ve balon (tasarımda sayfanın üstünde, karartılmış zeminde)
-  dikenSize: 118,
-  dikenLeft: 14,
-  bubbleWidth: 150,
-  bubbleTop: 0,
-  bubblePaddingY: 10,
-  bubblePaddingX: 12,
-  bubbleRadius: 16,
-  bubbleTailWidth: 16,
-  bubbleTailHeight: 22,
-  bubbleTailLeft: -12,
-  bubbleTailTop: 26,
-
-  // Başlık satırı
-  headerMarginTop: 14,
+  // Başlık satırı (karo: ortak CategoryTile 44)
   headerGap: 12,
   headerTextGap: 2,
   iconTile: 44,
-  iconTileRadius: 14,
-  iconSize: 24,
-  iconStrokeWidth: 2,
 
   // Sayaç
   stepperMarginTop: 26,
@@ -134,8 +103,6 @@ export const numberEntryMetrics = {
 } as const;
 
 export const numberEntryTypography = {
-  /** Balon · Nunito 800 · 13 · 1.3 */
-  bubble: { fontFamily: fonts.extraBold, fontSize: 13, lineHeight: 13 * 1.3 },
   /** Challenge adı · Nunito 800 · 17 */
   title: { fontFamily: fonts.extraBold, fontSize: 17 },
   /** Büyük sayı · Baloo 2 800 · 84 · 0.9 */
@@ -155,7 +122,8 @@ export const photoProofColors = {
   background: palette.darkBackground,
   text: palette.sand,
   textSecondary: palette.darkTextSecondary,
-  closeBg: palette.darkFill,
+  /** Koyu aksiyon yeşili: yükleniyor göstergesi, "Ayarları aç" bağlantısı */
+  action: palette.darkAction,
   /** Fotoğraf çerçevesi (fotoğraf yokken görünen zemin) */
   frameBg: '#FFE9D6',
   /** Fotoğraf yokken çerçevenin koyu hali (tasarımda yok; koyu yüzey) */
@@ -168,13 +136,6 @@ export const photoProofColors = {
   placeholder: palette.darkTextSecondary,
   rowBg: palette.darkSurface,
   rowIcon: palette.darkTextSecondary,
-  retakeBg: palette.darkFill,
-  retakeShadow: palette.fabShadow,
-  sendBg: palette.darkAction,
-  sendShadow: palette.actionGreen,
-  sendText: palette.darkBackground,
-  disabledBg: palette.darkLine,
-  disabledText: palette.darkTextSecondary,
   error: '#FF9A6B',
 } as const;
 
@@ -182,7 +143,6 @@ export const photoProofMetrics = {
   /** Ekran altı boşluğu · 30 */
   paddingBottom: 30,
   headerGap: 12,
-  closeSize: 44,
   frameMarginTop: 16,
   frameHeight: 420,
   frameRadius: 28,
@@ -210,12 +170,8 @@ export const photoProofMetrics = {
   rowIconStrokeWidth: 2.2,
   buttonsMarginTop: 16,
   buttonsGap: 10,
+  /** Butonlar ortak Button md (16 yazı) ama tasarımda 56 yükseklik */
   buttonHeight: 56,
-  buttonRadius: 18,
-  buttonShadow: 4,
-  buttonGap: 8,
-  sendIconSize: 20,
-  sendIconStrokeWidth: 2.6,
   /** Seçilen fotoğrafın sıkıştırma kalitesi (Storage'a yüklenecek) */
   pickQuality: 0.7,
 } as const;
@@ -232,6 +188,6 @@ export const photoProofTypography = {
   /** Görünürlük satırı · Nunito 700 · 15 (kalın kısım 800) */
   row: { fontFamily: fonts.bold, fontSize: 15 },
   rowStrong: { fontFamily: fonts.extraBold, fontSize: 15 },
-  /** Butonlar · Nunito 800 · 16 */
-  button: { fontFamily: fonts.extraBold, fontSize: 16 },
+  /** Boş çerçevedeki "Fotoğraf çek" · Nunito 800 · 16 (butonlarla aynı) */
+  emptyLabel: { fontFamily: fonts.extraBold, fontSize: 16 },
 } as const satisfies Record<string, TextStyle>;

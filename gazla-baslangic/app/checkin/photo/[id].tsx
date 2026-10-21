@@ -17,12 +17,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { CameraIcon, CloseIcon, LockIcon } from '@/components/icons';
+import { CameraIcon, LockIcon, SendIcon } from '@/components/icons';
+import { Button, IconButton } from '@/components/ui';
 import { useCheckinMutation, useToday } from '@/data';
-import { SendIcon } from '@/features/checkin/icons';
 import { formatClock } from '@/features/checkin/logic';
-import PhotoButton from '@/features/checkin/PhotoButton';
-import { iconMetrics, layout, radius, typography } from '@/theme';
+import { componentMetrics, layout, radius, typography } from '@/theme';
 import { photoProofColors as c, photoProofMetrics as m, photoProofTypography as t } from '@/theme/checkin';
 
 type Picked = { uri: string; fromCamera: boolean; takenAt: Date };
@@ -95,19 +94,20 @@ export default function PhotoProofScreen() {
       <SafeAreaView style={[styles.screen, styles.center]}>
         <StatusBar style="light" />
         {today.isPending ? (
-          <ActivityIndicator color={c.sendBg} />
+          <ActivityIndicator color={c.action} />
         ) : (
           <View style={styles.stateBox}>
             <Text style={[t.row, styles.centerText, { color: c.text }]}>
               {today.isError ? 'Şu an yüklenemedi. Bağlantını kontrol edip tekrar dene.' : 'Bu görev bugün işaretlenemiyor.'}
             </Text>
-            <View style={styles.stateButton}>
-              <PhotoButton
-                variant="retake"
-                title={today.isError ? 'Tekrar dene' : 'Kapat'}
-                onPress={today.isError ? () => today.refetch() : close}
-              />
-            </View>
+            <Button
+              scheme="dark"
+              variant="ink"
+              size="md"
+              title={today.isError ? 'Tekrar dene' : 'Kapat'}
+              onPress={today.isError ? () => today.refetch() : close}
+              style={styles.stateButton}
+            />
           </View>
         )}
       </SafeAreaView>
@@ -130,13 +130,7 @@ export default function PhotoProofScreen() {
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.header}>
-            <Pressable
-              onPress={close}
-              accessibilityRole="button"
-              accessibilityLabel="Kapat"
-              style={[styles.close, { backgroundColor: c.closeBg }]}>
-              <CloseIcon color={c.text} size={iconMetrics.closeSize} strokeWidth={iconMetrics.closeStrokeWidth} />
-            </Pressable>
+            <IconButton icon="close" tone="onDark" accessibilityLabel="Kapat" onPress={close} />
             <View style={styles.headerTexts}>
               <Text accessibilityRole="header" numberOfLines={1} style={[t.title, { color: c.text }]}>
                 {task.title}
@@ -168,7 +162,7 @@ export default function PhotoProofScreen() {
               accessibilityLabel={CAN_USE_CAMERA ? 'Fotoğraf çek' : 'Fotoğraf seç'}
               style={[styles.frame, styles.emptyFrame, { backgroundColor: c.emptyFrameBg, borderColor: c.emptyFrameBorder }]}>
               <CameraIcon color={c.textSecondary} size={m.emptyIconSize} strokeWidth={m.emptyIconStrokeWidth} />
-              <Text style={[t.button, { color: c.text }]}>{CAN_USE_CAMERA ? 'Fotoğraf çek' : 'Fotoğraf seç'}</Text>
+              <Text style={[t.emptyLabel, { color: c.text }]}>{CAN_USE_CAMERA ? 'Fotoğraf çek' : 'Fotoğraf seç'}</Text>
               {cameraBlock && (
                 <Text style={[t.row, styles.centerText, { color: c.textSecondary }]}>
                   {cameraBlock === 'blocked'
@@ -178,7 +172,7 @@ export default function PhotoProofScreen() {
               )}
               {cameraBlock === 'blocked' && (
                 <Pressable onPress={() => Linking.openSettings()} accessibilityRole="button" hitSlop={8} style={styles.link}>
-                  <Text style={[t.rowStrong, { color: c.sendBg }]}>Ayarları aç</Text>
+                  <Text style={[t.rowStrong, { color: c.action }]}>Ayarları aç</Text>
                 </Pressable>
               )}
             </Pressable>
@@ -215,15 +209,20 @@ export default function PhotoProofScreen() {
                 {error}
               </Text>
             )}
+            {/* Ekran iki modda koyu: butonlar koyu temayla (scheme="dark"); tasarımda 56 yükseklik, 16 yazı */}
             <View style={styles.buttons}>
-              <PhotoButton variant="retake" title={leftTitle} onPress={leftAction} />
-              <PhotoButton
-                variant="send"
+              <Button scheme="dark" variant="ink" size="md" title={leftTitle} onPress={leftAction} style={styles.button} />
+              <Button
+                scheme="dark"
+                size="md"
                 title="Gönder"
                 onPress={send}
                 disabled={!photo}
                 loading={checkin.isPending}
-                icon={<SendIcon color={photo ? c.sendText : c.disabledText} size={m.sendIconSize} strokeWidth={m.sendIconStrokeWidth} />}
+                icon={(color) => (
+                  <SendIcon color={color} size={componentMetrics.buttonIconSize} strokeWidth={componentMetrics.buttonIconStroke} />
+                )}
+                style={styles.button}
               />
             </View>
           </View>
@@ -250,9 +249,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: layout.screenPadding,
     gap: m.emptyGap,
   },
-  stateButton: {
-    flexDirection: 'row',
-  },
   centerText: {
     textAlign: 'center',
   },
@@ -267,19 +263,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: m.headerGap,
   },
-  close: {
-    width: m.closeSize,
-    height: m.closeSize,
-    borderRadius: m.closeSize / 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   headerTexts: {
     flex: 1,
     alignItems: 'center',
   },
+  // Başlık ortada kalsın diye kapat butonu genişliğinde boşluk
   headerSpacer: {
-    width: m.closeSize,
+    width: componentMetrics.iconButton,
   },
   frame: {
     marginTop: m.frameMarginTop,
@@ -341,5 +331,12 @@ const styles = StyleSheet.create({
   buttons: {
     flexDirection: 'row',
     gap: m.buttonsGap,
+  },
+  button: {
+    flex: 1,
+    height: m.buttonHeight,
+  },
+  stateButton: {
+    height: m.buttonHeight,
   },
 });

@@ -1,10 +1,9 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import Diken from '@/components/Diken';
+import { FriendRowButton } from '@/components/FriendRow';
 import { typography, useTheme } from '@/theme';
 import { socialColors, socialMetrics as m, socialTypography } from '@/theme/social';
-
-import { SmallButton } from './list';
 
 // "Arkadaşını davet et" yeşil kartı: metin, Paylaş butonu, sağ altta selam veren Diken (Friends.dc.html).
 export default function InviteCard({ onShare }: { onShare: () => void }) {
@@ -19,12 +18,11 @@ export default function InviteCard({ onShare }: { onShare: () => void }) {
           Linkle gelen, doğrudan grubuna katılır.
         </Text>
       </View>
-      <SmallButton
+      <FriendRowButton
         title="Paylaş"
         variant="ink"
         onPress={onShare}
         accessibilityLabel="Davet linkini paylaş"
-        paddingX={m.sharePaddingX}
         style={styles.share}
       />
       <View style={styles.diken}>
@@ -50,8 +48,10 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     gap: m.inviteTextGap,
   },
+  // Satır butonundan büyük: 40 yükseklik, 0 14 iç boşluk, köşe 14
   share: {
     height: m.shareHeight,
+    paddingHorizontal: m.sharePaddingX,
     borderRadius: m.shareRadius,
     marginLeft: 'auto',
     marginRight: m.shareMarginRight,

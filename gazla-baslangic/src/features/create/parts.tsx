@@ -1,13 +1,12 @@
 /**
- * Yeni challenge formunun parçaları (Create.dc.html): süre hücresi, tamamlama şekli kartı,
- * ayar kartı satırı, küçük artı/eksi butonu, davet satırının kesikli ekle butonu.
+ * Yeni challenge formunun parçaları (Create.dc.html): süre hücresi, tamamlama şekli kartı, ayar kartı satırı.
+ * Artı/eksi: ortak IconButton; davet satırının kesikli ekle yuvası: ortak AddAvatar.
  */
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { AddIcon, ChevronRightIcon } from '@/components/icons';
+import { ChevronRightIcon } from '@/components/icons';
 import { Radio } from '@/components/ui';
-import { MinusIcon } from '@/features/checkin/icons';
 import { borderWidth, useTheme } from '@/theme';
 import { createColors, createMetrics as m, createTypography as t } from '@/theme/create';
 
@@ -107,51 +106,6 @@ export function SettingRow({ icon, label, value, onPress, expanded, divider }: R
   );
 }
 
-/** 40 px yuvarlak artı/eksi (özel süre, hatırlatma saati) */
-export function RoundStep({
-  kind,
-  onPress,
-  accessibilityLabel,
-}: {
-  kind: 'minus' | 'plus';
-  onPress: () => void;
-  accessibilityLabel: string;
-}) {
-  const { colors, scheme } = useTheme();
-  const c = createColors[scheme];
-  const Icon = kind === 'plus' ? AddIcon : MinusIcon;
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel}
-      hitSlop={4}
-      style={({ pressed }) => [
-        styles.step,
-        { backgroundColor: pressed ? colors.surfaceMuted : c.cellBg, borderColor: c.cellBorder },
-      ]}>
-      <Icon color={colors.text} size={m.stepIconSize} strokeWidth={m.stepIconStrokeWidth} />
-    </Pressable>
-  );
-}
-
-/** Davet satırındaki kesikli "Arkadaş ekle" butonu */
-export function AddFriendButton({ onPress, expanded }: { onPress: () => void; expanded: boolean }) {
-  const { scheme } = useTheme();
-  const c = createColors[scheme];
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel="Arkadaş ekle"
-      accessibilityState={{ expanded }}
-      hitSlop={4}
-      style={[styles.add, { borderColor: c.addBorder }]}>
-      <AddIcon color={c.addIcon} size={m.addIconSize} strokeWidth={m.addIconStrokeWidth} />
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
   cell: {
     flex: 1,
@@ -188,22 +142,5 @@ const styles = StyleSheet.create({
   },
   chevronOpen: {
     transform: [{ rotate: '90deg' }],
-  },
-  step: {
-    width: m.stepSize,
-    height: m.stepSize,
-    borderRadius: m.stepSize / 2,
-    borderWidth: borderWidth.thin,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  add: {
-    width: m.avatarSize,
-    height: m.avatarSize,
-    borderRadius: m.avatarSize / 2,
-    borderWidth: m.addBorder,
-    borderStyle: 'dashed',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

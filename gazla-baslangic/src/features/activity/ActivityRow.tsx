@@ -1,14 +1,14 @@
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { Avatar } from '@/components/Avatar';
+import { FriendRowButton } from '@/components/FriendRow';
+import { DikenFaceIcon, MessageIcon, StarIcon } from '@/components/icons';
+import SpeechBubble from '@/components/SpeechBubble';
 import { useMyMembership, useRespondToInviteMutation, type ActivityItem } from '@/data';
-import { ChatIcon, StarIcon } from '@/features/friends/icons';
-import { SmallButton } from '@/features/friends/list';
-import PersonAvatar from '@/features/friends/PersonAvatar';
-import { borderWidth, todayTypography, useTheme } from '@/theme';
+import { borderWidth, cardColors, cardMetrics, cardTypography, useTheme } from '@/theme';
 import { socialColors, socialMetrics as m, socialTypography } from '@/theme/social';
 
-import DikenAvatar from './DikenAvatar';
 import { activityText, isPoke, timeLabel } from './logic';
 
 export type ActivityActions = {
@@ -48,20 +48,22 @@ export default function ActivityRow({ item, now, rich, divider, actions }: Props
       <View
         style={[styles.badge, { backgroundColor: poke ? c.pokeBadge : c.finishBadge, borderColor: colors.surface }]}>
         {poke ? (
-          <ChatIcon color={c.badgeIcon} size={m.activityBadgeIconSize} strokeWidth={m.activityBadgeChatStroke} />
+          <MessageIcon color={c.badgeIcon} size={m.activityBadgeIconSize} strokeWidth={m.activityBadgeChatStroke} />
         ) : (
           <StarIcon color={c.badgeIcon} size={m.activityBadgeIconSize} strokeWidth={m.activityBadgeStarStroke} />
         )}
       </View>
     ) : null;
 
+  // Kişi avatarı (dürtme/bitirme rozeti üstünde) ya da sistem mesajında koyu daire içinde Diken'in yüzü
   const avatar = actor ? (
-    <View>
-      <PersonAvatar person={actor} size={m.activityAvatar} textStyle={todayTypography.avatarInitial} />
+    <Avatar name={actor.displayName} tint={actor.avatarTint} url={actor.avatarUrl} size={m.activityAvatar} decorative>
       {badge}
-    </View>
+    </Avatar>
   ) : (
-    <DikenAvatar size={m.activityAvatar} scheme={scheme} />
+    <View style={[styles.diken, { backgroundColor: c.dikenAvatarBg }]}>
+      <DikenFaceIcon size={m.activityAvatar} />
+    </View>
   );
 
   // Aksiyonlar
@@ -70,21 +72,21 @@ export default function ActivityRow({ item, now, rich, divider, actions }: Props
     const friendshipId = item.friendshipId;
     action = (
       <View style={styles.buttons}>
-        <SmallButton
+        <FriendRowButton
           title="Kabul et"
           variant="action"
-          paddingX={m.activityButtonPaddingX}
           loading={actions.busyFriendshipId === friendshipId}
           onPress={() => actions.onAccept(friendshipId)}
           accessibilityLabel={`${actor.displayName} isteğini kabul et`}
+          style={styles.button}
         />
-        <SmallButton
+        <FriendRowButton
           title="Sil"
           variant="muted"
-          paddingX={m.activityButtonPaddingX}
           loading={actions.busyUserId === actor.id}
           onPress={() => actions.onDecline(actor.id)}
           accessibilityLabel={`${actor.displayName} isteğini sil`}
+          style={styles.button}
         />
       </View>
     );
@@ -92,24 +94,22 @@ export default function ActivityRow({ item, now, rich, divider, actions }: Props
     action = <InviteActions challengeId={inviteId} />;
   } else if (rich && actor && poke) {
     action = (
-      <SmallButton
+      <FriendRowButton
         title="Karşılık ver"
         variant="ink"
-        paddingX={m.activityButtonPaddingX}
         onPress={() => actions.onReply(actor.id)}
         accessibilityLabel={`${actor.displayName} kişisine karşılık ver`}
-        style={styles.alignStart}
+        style={[styles.button, styles.alignStart]}
       />
     );
   } else if (rich && actor && item.kind === 'friend_finished_challenge') {
     action = (
-      <SmallButton
+      <FriendRowButton
         title="Tebrik et"
         variant="hype"
-        paddingX={m.activityButtonPaddingX}
         onPress={() => actions.onCongrats(actor.id)}
         accessibilityLabel={`${actor.displayName} kişisini tebrik et`}
-        style={[styles.alignStart, { borderRadius: m.smallButtonRadius }]}
+        style={[styles.button, styles.squareButton, styles.alignStart]}
       />
     );
   }
@@ -122,14 +122,14 @@ export default function ActivityRow({ item, now, rich, divider, actions }: Props
     <View style={[styles.texts, { gap: expanded ? m.activityRichGap : m.activityPlainGap }]}>
       <View style={styles.titleRow}>
         <Text style={[socialTypography.activityTitle, styles.title, { color: colors.text }]}>{text.title}</Text>
-        <Text style={[socialTypography.rowSub, styles.time, { color: colors.textSecondary }]}>
+        <Text style={[cardTypography.rowSub, styles.time, { color: colors.textSecondary }]}>
           {timeLabel(item.createdAt, now)}
         </Text>
       </View>
       {showBubble ? (
-        <View style={[styles.bubble, { backgroundColor: colors.surfaceMuted }]}>
-          <Text style={[socialTypography.bubble, { color: colors.textBody }]}>{text.sub}</Text>
-        </View>
+        <SpeechBubble variant="quote" style={styles.alignStart}>
+          {text.sub}
+        </SpeechBubble>
       ) : (
         !!text.sub && <Text style={[socialTypography.activitySub, { color: colors.textBody }]}>{text.sub}</Text>
       )}
@@ -140,7 +140,7 @@ export default function ActivityRow({ item, now, rich, divider, actions }: Props
   const rowStyle = [
     styles.row,
     { alignItems: expanded ? ('flex-start' as const) : ('center' as const) },
-    divider && { borderBottomWidth: borderWidth.thin, borderBottomColor: c.rowDivider },
+    divider && { borderBottomWidth: borderWidth.thin, borderBottomColor: cardColors[scheme].rowDivider },
   ];
   const children = (
     <>
@@ -172,25 +172,25 @@ function InviteActions({ challengeId }: { challengeId: string }) {
   return (
     <View style={styles.actionColumn}>
       <View style={styles.buttons}>
-        <SmallButton
+        <FriendRowButton
           title="Katıl"
           variant="action"
-          paddingX={m.activityButtonPaddingX}
+          style={styles.button}
           loading={busy === true}
           disabled={respond.isPending && busy !== true}
           onPress={() => respond.mutate({ challengeId, accept: true })}
         />
-        <SmallButton
+        <FriendRowButton
           title="Reddet"
           variant="muted"
-          paddingX={m.activityButtonPaddingX}
+          style={styles.button}
           loading={busy === false}
           disabled={respond.isPending && busy !== false}
           onPress={() => respond.mutate({ challengeId, accept: false })}
         />
       </View>
       {respond.error && (
-        <Text style={[socialTypography.rowSub, { color: colors.danger }]}>{respond.error.message}</Text>
+        <Text style={[cardTypography.rowSub, { color: colors.danger }]}>{respond.error.message}</Text>
       )}
     </View>
   );
@@ -230,14 +230,18 @@ const styles = StyleSheet.create({
   time: {
     flexShrink: 0,
   },
-  bubble: {
-    alignSelf: 'flex-start',
-    paddingVertical: m.bubblePaddingY,
-    paddingHorizontal: m.bubblePaddingX,
-    borderTopLeftRadius: m.bubbleRadiusSmall,
-    borderTopRightRadius: m.bubbleRadius,
-    borderBottomLeftRadius: m.bubbleRadius,
-    borderBottomRightRadius: m.bubbleRadius,
+  diken: {
+    width: m.activityAvatar,
+    height: m.activityAvatar,
+    borderRadius: m.activityAvatar / 2,
+    overflow: 'hidden',
+  },
+  // Aktivite butonları satır butonundan geniş (0 14) ve "Tebrik et" hap değil, köşe 12
+  button: {
+    paddingHorizontal: m.activityButtonPaddingX,
+  },
+  squareButton: {
+    borderRadius: cardMetrics.rowButtonRadius,
   },
   buttons: {
     flexDirection: 'row',

@@ -2,15 +2,16 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useRef, useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { CategoryTile } from '@/components/CategoryTile';
 import Diken from '@/components/Diken';
-import { CheckIcon, challengeIcons } from '@/components/icons';
+import { CheckIcon } from '@/components/icons';
 import Sheet, { type SheetHandle } from '@/components/Sheet';
 import SpeechBubble from '@/components/SpeechBubble';
 import { Button, ErrorState, IconButton, LoadingState } from '@/components/ui';
 import { useChallenge, useChallengeCalendar, useCheckinMutation, useToday } from '@/data';
 import { formatNumber, pastValues, targetText, unitName } from '@/features/checkin/logic';
 import StepButton from '@/features/checkin/StepButton';
-import { borderWidth, challengeTints, componentTypography, radius, spacing, typography, useTheme } from '@/theme';
+import { borderWidth, componentTypography, radius, spacing, typography, useTheme } from '@/theme';
 import {
   numberEntryColors,
   numberEntryMetrics as m,
@@ -78,8 +79,6 @@ export default function NumberEntryScreen() {
   const value = picked ?? task.value ?? target ?? 0;
   const set = (n: number) => setPicked(Math.max(0, max === null ? n : Math.min(max, n)));
   const past = calendar.data ? pastValues(calendar.data.checkins, task.localDate) : null;
-  const tint = challengeTints[task.tint][scheme];
-  const Icon = challengeIcons[task.icon];
   const targetLabel = target === null ? null : targetText(value, target, unit);
 
   // Kaydedince sayfa kapanır; hepsi bittiyse Bugün odağa dönünce tamamlama anını açar
@@ -102,9 +101,7 @@ export default function NumberEntryScreen() {
   return shell(
     <>
       <View style={styles.header}>
-        <View style={[styles.iconTile, { backgroundColor: tint.bg }]}>
-          <Icon color={tint.ink} size={m.iconSize} strokeWidth={m.iconStrokeWidth} />
-        </View>
+        <CategoryTile icon={task.icon} tint={task.tint} size={m.iconTile} />
         <View style={styles.headerTexts}>
           <Text accessibilityRole="header" numberOfLines={2} style={[t.title, { color: colors.text }]}>
             {task.title}
@@ -229,13 +226,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: m.headerGap,
-  },
-  iconTile: {
-    width: m.iconTile,
-    height: m.iconTile,
-    borderRadius: m.iconTileRadius,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   headerTexts: {
     flex: 1,

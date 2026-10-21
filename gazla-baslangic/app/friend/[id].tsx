@@ -1,37 +1,33 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ErrorState, IconButton, LoadingState, upperTr } from '@/components/ui';
+import ActionSheet, { type ActionSheetItem } from '@/components/ActionSheet';
+import { HandIcon } from '@/components/icons';
+import { Avatar, ErrorState, IconButton, LoadingState, SectionLabel } from '@/components/ui';
 import { useBlockUserMutation, useFriendProfile, useRemoveFriendshipMutation, type FriendProfile } from '@/data';
-import ActionSheet, { type SheetConfirm, type SheetItem } from '@/features/friends/ActionSheet';
-import { BlockIcon, DotsIcon, FlagIcon, PokeHandIcon, UserMinusIcon } from '@/features/friends/icons';
-import { SectionTitle } from '@/features/friends/list';
+import { BlockIcon, FlagIcon, UserMinusIcon } from '@/features/friends/icons';
 import { toAccusative } from '@/features/friends/names';
 import SharedChallenges from '@/features/friends/SharedChallenges';
-import { avatarTints, borderWidth, layout, typography, useTheme } from '@/theme';
+import { borderWidth, layout, typography, useTheme } from '@/theme';
 import { socialMetrics as m, socialTypography } from '@/theme/social';
 
-type Pending = 'remove' | 'block' | null;
-
 // Arkadaş profili — design/FriendProfile.dc.html. Veri: friend_profile. Sağ üstteki "Seçenekler"
-// işlem menüsünü açar: dürt, arkadaşlıktan çıkar, engelle (sayfa içi onayla), şikayet et.
+// işlem sayfasını açar: dürt, arkadaşlıktan çıkar ve engelle (sayfa içi onayla), şikayet et.
 export default function FriendProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { colors, scheme } = useTheme();
+  const { colors } = useTheme();
 
   const profile = useFriendProfile(id);
   const remove = useRemoveFriendshipMutation();
   const block = useBlockUserMutation();
 
   const [menuOpen, setMenuOpen] = useState(false);
-  const [pending, setPending] = useState<Pending>(null);
 
   const closeMenu = () => {
     setMenuOpen(false);
-    setPending(null);
     remove.reset();
     block.reset();
   };
@@ -39,19 +35,7 @@ export default function FriendProfileScreen() {
   const header = (trailing?: boolean) => (
     <View style={styles.topRow}>
       <IconButton icon="back" accessibilityLabel="Geri" />
-      {trailing && (
-        <Pressable
-          onPress={() => setMenuOpen(true)}
-          accessibilityRole="button"
-          accessibilityLabel="Seçenekler"
-          hitSlop={4}
-          style={({ pressed }) => [
-            styles.options,
-            { backgroundColor: pressed ? colors.surfaceMuted : colors.surface, borderColor: colors.border },
-          ]}>
-          <DotsIcon color={colors.text} size={m.optionsIconSize} strokeWidth={0} />
-        </Pressable>
-      )}
+      {trailing && <IconButton icon="options" accessibilityLabel="Seçenekler" onPress={() => setMenuOpen(true)} />}
     </View>
   );
 
@@ -77,33 +61,40 @@ export default function FriendProfileScreen() {
   }
 
   const p: FriendProfile = profile.data;
-  const tint = avatarTints[p.avatarTint][scheme];
   const shared = p.sharedChallenges;
   const sub = shared.length > 0 ? `@${p.username} · ${shared.length} ortak challenge` : `@${p.username}`;
 
-  const openPoke = () => {
+  const done = () => {
     closeMenu();
-    // Arkadaş değilse dürtme yalnızca ortak challenge üzerinden
-    const challengeId = !p.isFriend ? shared[0]?.challengeId : undefined;
-    router.push({ pathname: '/poke/[userId]', params: challengeId ? { userId: p.id, challengeId } : { userId: p.id } });
+    router.back();
   };
 
-  const items: SheetItem[] = [
+  // Onaysız satırlar sayfa kapandıktan sonra çalışır; onaylı satırlar işlem bitince ekranı kapatır
+  const items: ActionSheetItem[] = [
     {
       key: 'poke',
       label: `${toAccusative(p.displayName)} dürt`,
-      icon: (color) => <PokeHandIcon color={color} size={m.menuIconSize} strokeWidth={m.menuIconStrokeWidth} />,
-      onPress: openPoke,
+      icon: HandIcon,
+      onPress: () => {
+        // Arkadaş değilse dürtme yalnızca ortak challenge üzerinden
+        const challengeId = !p.isFriend ? shared[0]?.challengeId : undefined;
+        router.push({ pathname: '/poke/[userId]', params: challengeId ? { userId: p.id, challengeId } : { userId: p.id } });
+      },
     },
     ...(p.isFriend
       ? [
           {
             key: 'remove',
             label: 'Arkadaşlıktan çıkar',
-            icon: (color: string) => (
-              <UserMinusIcon color={color} size={m.menuIconSize} strokeWidth={m.menuIconStrokeWidth} />
-            ),
-            onPress: () => setPending('remove'),
+            icon: UserMinusIcon,
+            confirm: {
+              title: `${p.displayName} arkadaşlıktan çıkarılsın mı?`,
+              message: 'İstersen sonra yeniden arkadaşlık isteği gönderebilirsin.',
+              confirmLabel: 'Arkadaşlıktan çıkar',
+              loading: remove.isPending,
+              error: remove.error?.message,
+            },
+            onPress: () => remove.mutate(p.id, { onSuccess: done }),
           },
         ]
       : []),
@@ -111,46 +102,24 @@ export default function FriendProfileScreen() {
       key: 'block',
       label: 'Engelle',
       danger: true,
-      icon: (color) => <BlockIcon color={color} size={m.menuIconSize} strokeWidth={m.menuIconStrokeWidth} />,
-      onPress: () => setPending('block'),
+      icon: BlockIcon,
+      confirm: {
+        title: `${toAccusative(p.displayName)} engelle?`,
+        message: "Engellediğin kişi seni bulamaz ve dürtemez. Engeli Ayarlar'dan kaldırabilirsin.",
+        confirmLabel: 'Engelle',
+        loading: block.isPending,
+        error: block.error?.message,
+      },
+      onPress: () => block.mutate(p.id, { onSuccess: done }),
     },
     {
       key: 'report',
       label: 'Şikayet et',
       danger: true,
-      icon: (color) => <FlagIcon color={color} size={m.menuIconSize} strokeWidth={m.menuIconStrokeWidth} />,
-      onPress: () => {
-        closeMenu();
-        router.push({ pathname: '/report', params: { targetType: 'user', targetId: p.id } });
-      },
+      icon: FlagIcon,
+      onPress: () => router.push({ pathname: '/report', params: { targetType: 'user', targetId: p.id } }),
     },
   ];
-
-  const done = () => {
-    closeMenu();
-    router.back();
-  };
-
-  const confirm: SheetConfirm | null =
-    pending === 'remove'
-      ? {
-          title: `${p.displayName} arkadaşlıktan çıkarılsın mı?`,
-          message: 'İstersen sonra yeniden arkadaşlık isteği gönderebilirsin.',
-          confirmLabel: 'Arkadaşlıktan çıkar',
-          loading: remove.isPending,
-          error: remove.error?.message,
-          onConfirm: () => remove.mutate(p.id, { onSuccess: done }),
-        }
-      : pending === 'block'
-        ? {
-            title: `${toAccusative(p.displayName)} engelle?`,
-            message: "Engellediğin kişi seni bulamaz ve dürtemez. Engeli Ayarlar'dan kaldırabilirsin.",
-            confirmLabel: 'Engelle',
-            loading: block.isPending,
-            error: block.error?.message,
-            onConfirm: () => block.mutate(p.id, { onSuccess: done }),
-          }
-        : null;
 
   return (
     <SafeAreaView edges={['top']} style={styles.screen}>
@@ -158,11 +127,7 @@ export default function FriendProfileScreen() {
         {header(true)}
 
         <View style={styles.identity}>
-          <View accessible accessibilityLabel={p.displayName} style={[styles.avatar, { backgroundColor: tint.bg }]}>
-            <Text style={[socialTypography.profileInitial, { color: tint.ink }]}>
-              {upperTr(p.displayName.charAt(0))}
-            </Text>
-          </View>
+          <Avatar name={p.displayName} tint={p.avatarTint} url={p.avatarUrl} size={m.profileAvatar} />
           <Text accessibilityRole="header" style={[socialTypography.profileName, styles.name, { color: colors.text }]}>
             {p.displayName}
           </Text>
@@ -177,7 +142,7 @@ export default function FriendProfileScreen() {
 
         {shared.length > 0 && (
           <>
-            <SectionTitle style={styles.section}>ORTAK CHALLENGE&apos;LAR</SectionTitle>
+            <SectionLabel style={styles.section}>ORTAK CHALLENGE&apos;LAR</SectionLabel>
             <SharedChallenges
               items={shared}
               onOpen={(challengeId) => router.push({ pathname: '/challenge/[id]', params: { id: challengeId } })}
@@ -189,9 +154,9 @@ export default function FriendProfileScreen() {
       <ActionSheet
         visible={menuOpen}
         onClose={closeMenu}
-        header={`${p.displayName} · @${p.username}`}
+        title={`${p.displayName} · @${p.username}`}
+        accessibilityLabel={`${p.displayName} için işlemler`}
         items={items}
-        confirm={confirm}
       />
     </SafeAreaView>
   );
@@ -225,25 +190,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  options: {
-    width: layout.minTouchTarget,
-    height: layout.minTouchTarget,
-    borderRadius: layout.minTouchTarget / 2,
-    borderWidth: borderWidth.thin,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   identity: {
     marginTop: m.profileMarginTop,
     alignItems: 'center',
     gap: m.profileGap,
-  },
-  avatar: {
-    width: m.profileAvatar,
-    height: m.profileAvatar,
-    borderRadius: m.profileAvatar / 2,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   name: {
     marginTop: m.profileNameMarginTop,

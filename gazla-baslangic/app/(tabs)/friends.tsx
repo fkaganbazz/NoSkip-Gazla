@@ -1,19 +1,10 @@
 import { useRouter } from 'expo-router';
-import { useMemo, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { useMemo, useRef, useState, type ReactNode } from 'react';
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { CloseIcon } from '@/components/icons';
-import { ErrorState } from '@/components/ui';
+import { FriendList, FriendRow, FriendRowButton } from '@/components/FriendRow';
+import { ErrorState, IconButton, SectionLabel, type SectionLabelTone } from '@/components/ui';
 import {
   ApiError,
   useAcceptFriendRequestMutation,
@@ -28,18 +19,15 @@ import {
 } from '@/data';
 import { UserPlusIcon } from '@/features/friends/icons';
 import InviteCard from '@/features/friends/InviteCard';
-import { ListCard, PersonRow, SectionTitle, SmallButton } from '@/features/friends/list';
 import { friendSub, groupFriends, searchTerm, useDebounced } from '@/features/friends/logic';
-import PersonAvatar from '@/features/friends/PersonAvatar';
 import SearchField from '@/features/friends/SearchField';
 import { componentTypography, layout, typography, useTheme } from '@/theme';
-import { socialColors, socialMetrics as m } from '@/theme/social';
+import { socialMetrics as m } from '@/theme/social';
 
 // Arkadaşlar — design/Friends.dc.html. Veri: friends_today, bekleyen istekler, search_profiles.
 // Arama 2 harften sonra (gecikmeli) sonuçları gösterir; boşken istekler ve bugünkü durum listelenir.
 export default function FriendsScreen() {
-  const { colors, scheme } = useTheme();
-  const c = socialColors[scheme];
+  const { colors } = useTheme();
   const router = useRouter();
   const searchRef = useRef<TextInput>(null);
 
@@ -70,105 +58,71 @@ export default function FriendsScreen() {
     router.push({ pathname: '/poke/[userId]', params: tone ? { userId, tone } : { userId } });
 
   const requestRow = (r: FriendRequest, i: number, all: FriendRequest[]) => (
-    <PersonRow
+    <FriendRow
       key={r.id}
       divider={i < all.length - 1}
-      avatar={<PersonAvatar person={r.person} size={m.rowAvatar} />}
-      title={r.person.displayName}
+      person={r.person}
       sub={`@${r.person.username}`}
-      trailing={
-        <>
-          {r.direction === 'incoming' && (
-            <SmallButton
-              title="Kabul et"
-              variant="action"
-              loading={accept.isPending && accept.variables === r.id}
-              onPress={() => accept.mutate(r.id)}
-              accessibilityLabel={`${r.person.displayName} isteğini kabul et`}
-            />
-          )}
-          <SmallButton
-            title=""
-            variant="muted"
-            icon={<CloseIcon color={colors.textBody} size={m.dismissIconSize} strokeWidth={m.dismissIconStrokeWidth} />}
-            loading={remove.isPending && remove.variables === r.person.id}
-            onPress={() => remove.mutate(r.person.id)}
-            accessibilityLabel={r.direction === 'incoming' ? 'İsteği sil' : 'İsteği geri çek'}
-          />
-        </>
+      action={{
+        type: 'request',
+        onAccept: r.direction === 'incoming' ? () => accept.mutate(r.id) : undefined,
+        accepting: accept.isPending && accept.variables === r.id,
+        onDismiss: () => remove.mutate(r.person.id),
+        dismissing: remove.isPending && remove.variables === r.person.id,
+      }}
+    />
+  );
+
+  const friendRow = (f: FriendToday, i: number, all: FriendToday[]) => (
+    <FriendRow
+      key={f.id}
+      divider={i < all.length - 1}
+      onPress={() => openProfile(f.id)}
+      accessibilityLabel={`${f.displayName} profili`}
+      person={f}
+      status={f.doneToday === true ? 'done' : f.doneToday === false ? 'pending' : null}
+      sub={friendSub(f)}
+      action={
+        f.doneToday === false
+          ? { type: 'poke', onPress: () => openPoke(f.id) }
+          : f.doneToday === true
+            ? { type: 'hype', onPress: () => openPoke(f.id, 'hype') }
+            : undefined
       }
     />
   );
 
-  const friendRow = (f: FriendToday, i: number, all: FriendToday[]) => {
-    const state = f.doneToday === true ? 'done' : f.doneToday === false ? 'pending' : 'plain';
-    return (
-      <PersonRow
-        key={f.id}
-        divider={i < all.length - 1}
-        onPress={() => openProfile(f.id)}
-        accessibilityLabel={`${f.displayName} profili`}
-        avatar={<PersonAvatar person={f} size={m.rowAvatar} state={state} />}
-        title={f.displayName}
-        sub={friendSub(f)}
-        trailing={
-          state === 'pending' ? (
-            <SmallButton
-              title="Dürt"
-              variant="poke"
-              paddingX={m.pokePillPaddingX}
-              onPress={() => openPoke(f.id)}
-              accessibilityLabel={`${f.displayName} kişisini dürt`}
-            />
-          ) : state === 'done' ? (
-            <SmallButton
-              title="Gaz ver"
-              variant="hype"
-              onPress={() => openPoke(f.id, 'hype')}
-              accessibilityLabel={`${f.displayName} kişisine gaz ver`}
-            />
-          ) : undefined
-        }
-      />
-    );
-  };
-
   const resultRow = (p: SearchResult, i: number, all: SearchResult[]) => {
     const incoming = incomingBy.get(p.id);
-    let trailing;
-    if (p.isFriend) {
-      trailing = undefined;
-    } else if (incoming) {
-      trailing = (
-        <SmallButton
-          title="Kabul et"
-          variant="action"
-          loading={accept.isPending && accept.variables === incoming.id}
-          onPress={() => accept.mutate(incoming.id)}
-        />
-      );
-    } else if (p.requestPending) {
-      trailing = <SmallButton title="Gönderildi" variant="muted" disabled />;
-    } else {
-      trailing = (
-        <SmallButton
-          title="Ekle"
-          variant="action"
-          loading={sendRequest.isPending && sendRequest.variables === p.id}
-          onPress={() => sendRequest.mutate(p.id)}
-          accessibilityLabel={`${p.displayName} kişisine arkadaşlık isteği gönder`}
-        />
-      );
-    }
     return (
-      <PersonRow
+      <FriendRow
         key={p.id}
         divider={i < all.length - 1}
         onPress={p.isFriend ? () => openProfile(p.id) : undefined}
-        avatar={<PersonAvatar person={p} size={m.rowAvatar} />}
-        title={p.displayName}
+        person={p}
         sub={`@${p.username}`}
-        trailing={trailing}
+        action={
+          p.isFriend || incoming
+            ? undefined
+            : p.requestPending
+              ? { type: 'sent' }
+              : {
+                  type: 'add',
+                  onPress: () => sendRequest.mutate(p.id),
+                  loading: sendRequest.isPending && sendRequest.variables === p.id,
+                }
+        }
+        // Gelen isteği olan kişi aramada yalnızca "Kabul et" ile çıkar (silmek İstekler'de)
+        trailing={
+          !p.isFriend && incoming ? (
+            <FriendRowButton
+              title="Kabul et"
+              variant="action"
+              loading={accept.isPending && accept.variables === incoming.id}
+              onPress={() => accept.mutate(incoming.id)}
+            />
+          ) : undefined
+        }
       />
     );
   };
@@ -190,7 +144,7 @@ export default function FriendsScreen() {
         <Text style={[typography.body, styles.status, { color: colors.textBody }]}>Bu kullanıcı adıyla kimse yok.</Text>
       );
     }
-    return <ListCard style={styles.list}>{results.map(resultRow)}</ListCard>;
+    return <FriendList style={styles.list}>{results.map(resultRow)}</FriendList>;
   };
 
   const renderLists = () => {
@@ -213,20 +167,24 @@ export default function FriendsScreen() {
     }
     const none = requestList.length === 0 && (friends.data ?? []).length === 0;
     // Bölümler: istekler, bekleyenler, tamamlayanlar, bugün görevi olmayanlar (boşlar gösterilmez)
-    const sections = [
-      { key: 'requests', label: 'İSTEKLER', color: undefined, rows: requestList.map(requestRow) },
-      { key: 'pending', label: 'BUGÜN BEKLEYENLER', color: c.pendingLabel, rows: groups.pending.map(friendRow) },
-      { key: 'done', label: 'BUGÜNÜ TAMAMLAYANLAR', color: c.doneLabel, rows: groups.done.map(friendRow) },
-      { key: 'idle', label: 'BUGÜN GÖREVİ OLMAYANLAR', color: undefined, rows: groups.idle.map(friendRow) },
-    ].filter((s) => s.rows.length > 0);
+    const all: { key: string; label: string; tone: SectionLabelTone; rows: ReactNode[] }[] = [
+      { key: 'requests', label: 'İSTEKLER', tone: 'default', rows: requestList.map(requestRow) },
+      { key: 'pending', label: 'BUGÜN BEKLEYENLER', tone: 'orange', rows: groups.pending.map(friendRow) },
+      { key: 'done', label: 'BUGÜNÜ TAMAMLAYANLAR', tone: 'green', rows: groups.done.map(friendRow) },
+      { key: 'idle', label: 'BUGÜN GÖREVİ OLMAYANLAR', tone: 'default', rows: groups.idle.map(friendRow) },
+    ];
+    const sections = all.filter((s) => s.rows.length > 0);
     return (
       <>
         {sections.map((s, i) => (
           <View key={s.key}>
-            <SectionTitle color={s.color} style={{ marginTop: i === 0 ? m.sectionFirstMarginTop : m.sectionMarginTop }}>
-              {`${s.label} · ${s.rows.length}`}
-            </SectionTitle>
-            <ListCard style={styles.list}>{s.rows}</ListCard>
+            <SectionLabel
+              tone={s.tone}
+              count={s.rows.length}
+              style={{ marginTop: i === 0 ? m.sectionFirstMarginTop : m.sectionMarginTop }}>
+              {s.label}
+            </SectionLabel>
+            <FriendList style={styles.list}>{s.rows}</FriendList>
           </View>
         ))}
         {none && (
@@ -256,13 +214,13 @@ export default function FriendsScreen() {
           <Text accessibilityRole="header" style={[typography.title1, { color: colors.text }]}>
             Arkadaşlar
           </Text>
-          <Pressable
+          <IconButton
+            icon={UserPlusIcon}
+            tone="ink"
+            iconStrokeWidth={m.addIconStrokeWidth}
             onPress={() => searchRef.current?.focus()}
-            accessibilityRole="button"
             accessibilityLabel="Arkadaş ekle"
-            style={({ pressed }) => [styles.addButton, { backgroundColor: c.inkButtonBg }, pressed && styles.pressed]}>
-            <UserPlusIcon color={c.inkButtonText} size={m.addIconSize} strokeWidth={m.addIconStrokeWidth} />
-          </Pressable>
+          />
         </View>
 
         <SearchField ref={searchRef} value={query} onChangeText={setQuery} />
@@ -307,16 +265,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-  },
-  addButton: {
-    width: m.addButtonSize,
-    height: m.addButtonSize,
-    borderRadius: m.addButtonSize / 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pressed: {
-    opacity: 0.8,
   },
   list: {
     marginTop: m.sectionListMarginTop,

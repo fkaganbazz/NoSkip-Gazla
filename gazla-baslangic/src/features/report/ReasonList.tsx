@@ -1,9 +1,9 @@
 import { Pressable, StyleSheet, Text } from 'react-native';
 
+import { FriendList } from '@/components/FriendRow';
 import { Radio } from '@/components/ui';
 import type { ReportReason } from '@/data';
-import { ListCard } from '@/features/friends/list';
-import { borderWidth, useTheme } from '@/theme';
+import { borderWidth, cardColors, useTheme } from '@/theme';
 import { socialColors, socialMetrics as m, socialTypography } from '@/theme/social';
 
 /** Şikayet nedenleri, tasarımdaki sırayla (report_reason enum'u) */
@@ -26,7 +26,7 @@ export default function ReasonList({ value, onChange }: Props) {
   const c = socialColors[scheme];
 
   return (
-    <ListCard style={styles.card}>
+    <FriendList style={styles.card}>
       {REPORT_REASONS.map((r) => {
         const selected = r.value === value;
         return (
@@ -37,14 +37,17 @@ export default function ReasonList({ value, onChange }: Props) {
             accessibilityState={{ checked: selected }}
             style={[
               styles.row,
-              { backgroundColor: selected ? c.reasonSelectedBg : colors.surface, borderBottomColor: c.rowDivider },
+              {
+                backgroundColor: selected ? c.reasonSelectedBg : colors.surface,
+                borderBottomColor: cardColors[scheme].rowDivider,
+              },
             ]}>
             <Radio selected={selected} />
             <Text style={[socialTypography.reason, styles.label, { color: colors.text }]}>{r.label}</Text>
           </Pressable>
         );
       })}
-    </ListCard>
+    </FriendList>
   );
 }
 

@@ -21,16 +21,12 @@ export type CreateColors = {
   optionBg: string;
   optionBorder: string;
   optionSelectedBg: string;
-  /** Ayar kartı (hatırlatma, görünürlük) */
-  cardBg: string;
-  cardBorder: string;
+  /** Ayar kartı (ortak Card: yüzey + kenar) satırları: ayraç, ikon, değer */
   rowDivider: string;
   rowIcon: string;
   rowValue: string;
-  /** Davet satırı: seçili avatar halkası, kesikli ekle butonu */
+  /** Davet satırı: seçili avatarın kenarı (kesikli ekle yuvası ortak AddAvatar) */
   inviteRing: string;
-  addBorder: string;
-  addIcon: string;
 };
 
 // Koyu tasarım yok: seçili hücre Components'taki seçili çipin koyu karşılığına, diğerleri en yakın koyu role bağlandı.
@@ -44,14 +40,10 @@ export const createColors: Record<'light' | 'dark', CreateColors> = {
     optionBg: palette.white,
     optionBorder: palette.strongLine,
     optionSelectedBg: componentColors.light.selectedCardBg,
-    cardBg: palette.white,
-    cardBorder: palette.line,
     rowDivider: '#F4EDE5',
     rowIcon: lightColors.textBody,
     rowValue: lightColors.textSecondary,
     inviteRing: lightColors.action,
-    addBorder: componentColors.light.radioOff,
-    addIcon: lightColors.textSecondary,
   },
   dark: {
     cellBg: palette.darkSurface,
@@ -62,19 +54,14 @@ export const createColors: Record<'light' | 'dark', CreateColors> = {
     optionBg: palette.darkSurface,
     optionBorder: palette.darkLine,
     optionSelectedBg: componentColors.dark.selectedCardBg,
-    cardBg: palette.darkSurface,
-    cardBorder: palette.darkLine,
     rowDivider: palette.darkLine,
     rowIcon: darkColors.textBody,
     rowValue: darkColors.textSecondary,
     inviteRing: darkColors.action,
-    addBorder: '#5E4F82', // TodayDark: davet halkası
-    addIcon: darkColors.textSecondary,
   },
 };
 
 export const createMetrics = {
-  headerGap: 12,
   sectionMarginTop: 16,
   /** Etiket ile içerik arası · 6 */
   labelGap: 6,
@@ -90,7 +77,6 @@ export const createMetrics = {
   customMin: 3,
   customMax: 60,
   customDefault: 14,
-  presetDurations: [7, 10, 30] as const,
 
   // Tamamlama şekli
   optionGap: 8,
@@ -117,7 +103,9 @@ export const createMetrics = {
   /** Açılan ayar paneli (hatırlatma saati, başlangıç günü) */
   panelPaddingBottom: 14,
   panelGap: 12,
-  stepSize: 40,
+  /** Panel değerinin en az genişliği (artı/eksi arası sabit kalsın) */
+  panelValueMinWidth: 80,
+  /** Artı/eksi: ortak IconButton (44) içinde ikon */
   stepIconSize: 18,
   stepIconStrokeWidth: 2.8,
   /** Hatırlatma adımı (dakika) ve tasarımdaki varsayılan saat */
@@ -131,9 +119,6 @@ export const createMetrics = {
   inviteGap: 8,
   avatarSize: 40,
   avatarRing: 2,
-  addBorder: 2,
-  addIconSize: 18,
-  addIconStrokeWidth: 2.8,
   inviteTextMarginLeft: 4,
   friendsMarginTop: 10,
   /** Arkadaş seçim çipindeki küçük avatar */

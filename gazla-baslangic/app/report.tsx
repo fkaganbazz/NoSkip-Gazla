@@ -1,15 +1,14 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ClockIcon } from '@/components/icons';
-import { Button, Checkbox, IconButton } from '@/components/ui';
+import { Button, Checkbox, IconButton, TextField } from '@/components/ui';
 import { useFriendProfile, useSubmitReportMutation, type ReportReason, type ReportTarget } from '@/data';
 import { toAccusative } from '@/features/friends/names';
-import InkButton from '@/features/report/InkButton';
 import ReasonList from '@/features/report/ReasonList';
-import { borderWidth, componentColors, componentTypography, layout, typography, useTheme } from '@/theme';
+import { componentTypography, layout, typography, useTheme } from '@/theme';
 import { socialMetrics as m, socialTypography } from '@/theme/social';
 
 /** Sunucudaki reports.details sınırı */
@@ -36,7 +35,7 @@ const toTarget = (t: string | undefined): ReportTarget =>
 export default function ReportScreen() {
   const params = useLocalSearchParams<Params>();
   const router = useRouter();
-  const { colors, scheme } = useTheme();
+  const { colors } = useTheme();
 
   const target = toTarget(params.targetType);
   const userId = target === 'user' ? params.targetId : params.userId;
@@ -130,31 +129,15 @@ export default function ReportScreen() {
 
           <ReasonList value={reason} onChange={setReason} />
 
-          <View style={styles.detail}>
-            <Text nativeID="report-detail-label" style={[componentTypography.inputLabel, { color: colors.text }]}>
-              Ayrıntı ekle (isteğe bağlı)
-            </Text>
-            <TextInput
-              value={details}
-              onChangeText={setDetails}
-              placeholder="Ne olduğunu kısaca yaz"
-              placeholderTextColor={componentColors[scheme].placeholder}
-              accessibilityLabel="Ayrıntı ekle (isteğe bağlı)"
-              accessibilityLabelledBy="report-detail-label"
-              multiline
-              maxLength={DETAILS_MAX}
-              textAlignVertical="top"
-              style={[
-                styles.detailInput,
-                socialTypography.detail,
-                {
-                  color: colors.text,
-                  backgroundColor: componentColors[scheme].inputBg,
-                  borderColor: componentColors[scheme].inputBorder,
-                },
-              ]}
-            />
-          </View>
+          <TextField
+            label="Ayrıntı ekle (isteğe bağlı)"
+            value={details}
+            onChangeText={setDetails}
+            placeholder="Ne olduğunu kısaca yaz"
+            multiline
+            maxLength={DETAILS_MAX}
+            style={styles.detail}
+          />
 
           {!!userId && (
             <Pressable
@@ -184,7 +167,7 @@ export default function ReportScreen() {
                 {submit.error.message}
               </Text>
             )}
-            <InkButton title="Şikayeti gönder" onPress={onSubmit} loading={submit.isPending} />
+            <Button title="Şikayeti gönder" variant="ink" onPress={onSubmit} loading={submit.isPending} />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -220,14 +203,6 @@ const styles = StyleSheet.create({
   },
   detail: {
     marginTop: m.detailMarginTop,
-    gap: m.detailGap,
-  },
-  detailInput: {
-    height: m.detailHeight,
-    paddingVertical: m.detailPaddingY,
-    paddingHorizontal: m.detailPaddingX,
-    borderRadius: m.detailRadius,
-    borderWidth: borderWidth.thick,
   },
   block: {
     marginTop: m.blockMarginTop,

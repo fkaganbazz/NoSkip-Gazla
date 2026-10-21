@@ -1,11 +1,9 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { FlatShadowUnderlay, flatShadowStyle } from '@/components/FlatShadow';
-import { AddIcon } from '@/components/icons';
+import { AddIcon, MinusIcon } from '@/components/icons';
 import { numberEntryColors, numberEntryMetrics as m } from '@/theme/checkin';
 import { useTheme } from '@/theme';
-
-import { MinusIcon } from './icons';
 
 type Props = {
   kind: 'minus' | 'plus';

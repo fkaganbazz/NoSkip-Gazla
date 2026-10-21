@@ -3,9 +3,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import Diken from '@/components/Diken';
+import { SendIcon } from '@/components/icons';
 import Sheet, { type SheetHandle } from '@/components/Sheet';
 import SpeechBubble from '@/components/SpeechBubble';
-import { Button, ErrorState, IconButton, LoadingState, Segmented, Toast } from '@/components/ui';
+import { Avatar, Button, ErrorState, IconButton, LoadingState, Segmented, Toast } from '@/components/ui';
 import {
   ApiError,
   useFriendProfile,
@@ -15,11 +16,10 @@ import {
   useUndoPokeMutation,
   type PokeTone,
 } from '@/data';
-import { SendIcon, ShieldIcon } from '@/features/friends/icons';
+import { ShieldIcon } from '@/features/friends/icons';
 import { toDative } from '@/features/friends/names';
-import PersonAvatar from '@/features/friends/PersonAvatar';
 import MessageGrid from '@/features/poke/MessageGrid';
-import { componentTypography, todayTypography, typography, useTheme } from '@/theme';
+import { componentMetrics as cm, componentTypography, typography, useTheme } from '@/theme';
 import { sheetDikenMetrics } from '@/theme/sheet';
 import { socialColors, socialMetrics as m, socialTypography } from '@/theme/social';
 
@@ -107,12 +107,13 @@ export default function PokeSheet() {
     return (
       <>
         <View style={styles.header}>
-          <PersonAvatar
-            person={person}
+          <Avatar
+            name={person.displayName}
+            tint={person.avatarTint}
+            url={person.avatarUrl}
             size={m.pokeAvatarOuter}
-            state={doneToday === false ? 'pending' : 'plain'}
-            ringPadding={m.pokeAvatarRingPadding}
-            textStyle={todayTypography.avatarInitial}
+            ring={doneToday === false ? 'pending' : null}
+            decorative
           />
           <View style={styles.headerTexts}>
             <Text accessibilityRole="header" style={[socialTypography.pokeTitle, { color: colors.text }]}>
@@ -169,7 +170,7 @@ export default function PokeSheet() {
           ) : (
             <Button
               title={`${toDative(name)} gönder`}
-              icon={<SendIcon color={colors.onAction} size={m.sendIconSize} strokeWidth={m.sendIconStrokeWidth} />}
+              icon={(color) => <SendIcon color={color} size={cm.buttonIconSize} strokeWidth={cm.buttonIconStroke} />}
               loading={send.isPending}
               disabled={!selectedKey}
               onPress={() => {

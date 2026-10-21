@@ -1,11 +1,10 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text } from 'react-native';
 
-import { challengeIcons } from '@/components/icons';
+import { CategoryTile } from '@/components/CategoryTile';
+import { FriendList } from '@/components/FriendRow';
 import type { FriendProfile } from '@/data';
-import { borderWidth, challengeTints, typography, useTheme } from '@/theme';
-import { socialColors, socialMetrics as m, socialTypography } from '@/theme/social';
-
-import { ListCard } from './list';
+import { borderWidth, cardColors, cardTypography, typography, useTheme } from '@/theme';
+import { socialMetrics as m } from '@/theme/social';
 
 type Props = {
   items: FriendProfile['sharedChallenges'];
@@ -15,13 +14,10 @@ type Props = {
 // Ortak challenge listesi: renkli ikon karosu, ad, arkadaşın ilerlemesi "11/30" (FriendProfile.dc.html).
 export default function SharedChallenges({ items, onOpen }: Props) {
   const { colors, scheme } = useTheme();
-  const c = socialColors[scheme];
 
   return (
-    <ListCard style={styles.card}>
+    <FriendList style={styles.card}>
       {items.map((item, i) => {
-        const tint = challengeTints[item.tint][scheme];
-        const Icon = challengeIcons[item.icon];
         const progress = item.dayIndex === 0 ? 'Başlamadı' : `${item.daysDone}/${item.durationDays}`;
         return (
           <Pressable
@@ -31,20 +27,18 @@ export default function SharedChallenges({ items, onOpen }: Props) {
             accessibilityLabel={`${item.title}, ${progress}`}
             style={({ pressed }) => [
               styles.row,
-              i < items.length - 1 && { borderBottomWidth: borderWidth.thin, borderBottomColor: c.rowDivider },
+              i < items.length - 1 && { borderBottomWidth: borderWidth.thin, borderBottomColor: cardColors[scheme].rowDivider },
               pressed && { backgroundColor: colors.surfaceMuted },
             ]}>
-            <View style={[styles.tile, { backgroundColor: tint.bg }]}>
-              <Icon color={tint.ink} size={m.sharedIconSize} strokeWidth={m.sharedIconStrokeWidth} />
-            </View>
-            <Text numberOfLines={1} style={[socialTypography.rowTitle, styles.title, { color: colors.text }]}>
+            <CategoryTile icon={item.icon} tint={item.tint} size={36} iconSize={m.sharedIconSize} />
+            <Text numberOfLines={1} style={[cardTypography.rowTitle, styles.title, { color: colors.text }]}>
               {item.title}
             </Text>
             <Text style={[typography.metaStrong, { color: colors.textSecondary }]}>{progress}</Text>
           </Pressable>
         );
       })}
-    </ListCard>
+    </FriendList>
   );
 }
 
@@ -58,13 +52,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: m.rowGap,
-  },
-  tile: {
-    width: m.sharedTile,
-    height: m.sharedTile,
-    borderRadius: m.sharedTileRadius,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   title: {
     flex: 1,

@@ -1,12 +1,12 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ClockIcon, LockIcon } from '@/components/icons';
-import { Avatar, Button, Chip, ScreenHeader, TextField, Toggle } from '@/components/ui';
+import { AddAvatar } from '@/components/Avatar';
+import { AddIcon, CalendarIcon, ClockIcon, LockIcon, MinusIcon } from '@/components/icons';
+import { Avatar, Button, Card, Chip, IconButton, ScreenHeader, TextField, Toggle } from '@/components/ui';
 import { useCreateChallengeMutation, useFriendsToday, useTemplates } from '@/data';
-import { CalendarIcon } from '@/features/create/icons';
 import {
   DURATION_OPTIONS,
   TASK_OPTIONS,
@@ -17,9 +17,9 @@ import {
   toCreateInput,
   type CreateForm,
 } from '@/features/create/logic';
-import { AddFriendButton, DurationCell, RoundStep, SettingRow, TaskOption } from '@/features/create/parts';
+import { DurationCell, SettingRow, TaskOption } from '@/features/create/parts';
 import { formatDayLabel } from '@/features/today/logic';
-import { borderWidth, componentTypography, layout, typography, useTheme } from '@/theme';
+import { componentTypography, layout, typography, useTheme } from '@/theme';
 import { createColors, createMetrics as m, createTypography as t } from '@/theme/create';
 
 const INITIAL: CreateForm = {
@@ -146,16 +146,20 @@ export default function CreateScreen() {
           </View>
           {form.duration === 'custom' && (
             <View style={styles.custom}>
-              <RoundStep
-                kind="minus"
+              <IconButton
+                icon={MinusIcon}
+                iconSize={m.stepIconSize}
+                iconStrokeWidth={m.stepIconStrokeWidth}
                 accessibilityLabel="Bir gün azalt"
                 onPress={() => update({ customDays: Math.max(m.customMin, form.customDays - 1) })}
               />
               <Text accessibilityLiveRegion="polite" style={[t.panelValue, styles.panelValueText, { color: colors.text }]}>
                 {`${form.customDays} gün`}
               </Text>
-              <RoundStep
-                kind="plus"
+              <IconButton
+                icon={AddIcon}
+                iconSize={m.stepIconSize}
+                iconStrokeWidth={m.stepIconStrokeWidth}
                 accessibilityLabel="Bir gün artır"
                 onPress={() => update({ customDays: Math.min(m.customMax, form.customDays + 1) })}
               />
@@ -206,7 +210,7 @@ export default function CreateScreen() {
             ))}
           </View>
 
-          <View style={[styles.card, { backgroundColor: c.cardBg, borderColor: c.cardBorder }]}>
+          <Card style={styles.card}>
             <SettingRow
               icon={<ClockIcon color={c.rowIcon} size={m.rowIconSize} strokeWidth={m.rowIconStrokeWidth} />}
               label="Hatırlatma"
@@ -218,16 +222,20 @@ export default function CreateScreen() {
               <View style={styles.panel}>
                 {form.reminder ? (
                   <View style={styles.panelSteps}>
-                    <RoundStep
-                      kind="minus"
+                    <IconButton
+                      icon={MinusIcon}
+                      iconSize={m.stepIconSize}
+                      iconStrokeWidth={m.stepIconStrokeWidth}
                       accessibilityLabel={`${m.reminderStepMinutes} dakika erken`}
                       onPress={() => form.reminder && update({ reminder: shiftTime(form.reminder, -m.reminderStepMinutes) })}
                     />
                     <Text accessibilityLiveRegion="polite" style={[t.panelValue, styles.panelValueText, { color: colors.text }]}>
                       {form.reminder}
                     </Text>
-                    <RoundStep
-                      kind="plus"
+                    <IconButton
+                      icon={AddIcon}
+                      iconSize={m.stepIconSize}
+                      iconStrokeWidth={m.stepIconStrokeWidth}
                       accessibilityLabel={`${m.reminderStepMinutes} dakika geç`}
                       onPress={() => form.reminder && update({ reminder: shiftTime(form.reminder, m.reminderStepMinutes) })}
                     />
@@ -271,7 +279,7 @@ export default function CreateScreen() {
               label="Kimler görebilir"
               value="Davetliler"
             />
-          </View>
+          </Card>
 
           <View style={styles.invite}>
             {invited.map((f) => (
@@ -281,11 +289,19 @@ export default function CreateScreen() {
                 tint={f.avatarTint}
                 url={f.avatarUrl}
                 size={m.avatarSize}
-                style={{ borderWidth: m.avatarRing, borderColor: c.inviteRing }}
+                outlineColor={c.inviteRing}
+                outlineWidth={m.avatarRing}
               />
             ))}
             {friendList.length > 0 && (
-              <AddFriendButton expanded={panel === 'friends'} onPress={() => togglePanel('friends')} />
+              <Pressable
+                onPress={() => togglePanel('friends')}
+                accessibilityRole="button"
+                accessibilityLabel="Arkadaş ekle"
+                accessibilityState={{ expanded: panel === 'friends' }}
+                hitSlop={(layout.minTouchTarget - m.avatarSize) / 2}>
+                <AddAvatar size={m.avatarSize} />
+              </Pressable>
             )}
             <Text style={[typography.caption, styles.inviteText, { color: colors.textBody }]}>
               {friendList.length > 0 || invited.length > 0
@@ -357,7 +373,7 @@ const styles = StyleSheet.create({
     gap: m.panelGap,
   },
   panelValueText: {
-    minWidth: m.stepSize * 2,
+    minWidth: m.panelValueMinWidth,
     textAlign: 'center',
   },
   options: {
@@ -373,10 +389,10 @@ const styles = StyleSheet.create({
   numberField: {
     flex: 1,
   },
+  // Ortak kart (yüzey, 1 px kenar); köşe tasarımda 18
   card: {
     marginTop: m.cardMarginTop,
     borderRadius: m.cardRadius,
-    borderWidth: borderWidth.thin,
     overflow: 'hidden',
   },
   panel: {

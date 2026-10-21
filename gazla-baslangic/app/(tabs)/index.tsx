@@ -1,10 +1,11 @@
 import { useIsFocused, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FriendBubble, InviteBubble } from '@/components/FriendRow';
 import { TaskCard } from '@/components/TaskCard';
+import { LoadingState } from '@/components/ui';
 import EmptyToday from '@/features/today/EmptyToday';
 import HeroCard from '@/features/today/HeroCard';
 import SectionHeader from '@/features/today/SectionHeader';
@@ -33,7 +34,7 @@ import { layout, todayColors, todayMetrics as m, useTheme } from '@/theme';
 // Bugün — design/Today.dc.html (açık) ve design/TodayDark.dc.html (koyu).
 // Veri: my_today, my_streak, friends_today (src/data). Görev yoksa EmptyToday.dc.html.
 export default function TodayScreen() {
-  const { scheme, colors } = useTheme();
+  const { scheme } = useTheme();
   const router = useRouter();
   const now = useNow();
   const { profile } = useAuth();
@@ -106,8 +107,8 @@ export default function TodayScreen() {
 
   if (today.isPending || streak.isPending) {
     return (
-      <SafeAreaView edges={['top']} style={[styles.screen, styles.center]}>
-        <ActivityIndicator color={colors.action} />
+      <SafeAreaView edges={['top']} style={styles.screen}>
+        <LoadingState />
       </SafeAreaView>
     );
   }
@@ -195,10 +196,6 @@ export default function TodayScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-  },
-  center: {
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   content: {
     paddingTop: layout.screenTopGap,

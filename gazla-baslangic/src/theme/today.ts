@@ -1,7 +1,8 @@
 /**
  * Bugün ekranına özel token'lar — kaynak: design/Today.dc.html (açık) ve design/TodayDark.dc.html (koyu).
  * Genel rollerle aynı olan renkler `lightColors`/`darkColors`tan gelir; yalnızca bu ekranda geçenler burada.
- * Görev kartı, arkadaş şeridi öğesi, seri çipi ve damlalar ortak bileşen oldu: token'ları `cards.ts`te.
+ * Görev kartı, arkadaş şeridi öğesi, seri çipi ve damlalar ortak bileşen oldu: token'ları `cards.ts`te;
+ * aktivite zili ve rozeti ortak `IconButton` + `CountBadge` (`components.ts`).
  */
 import type { TextStyle } from 'react-native';
 
@@ -36,14 +37,8 @@ export const todayColors: Record<'light' | 'dark', TodayColors> = {
 };
 
 export const todayMetrics = {
-  // Üst satır
+  // Üst satır (zil: ortak IconButton, rozet: ortak CountBadge; burada yalnızca rozetin konumu)
   headerGap: 2,
-  bellSize: 44,
-  bellIconSize: 22,
-  bellIconStrokeWidth: 2.2,
-  badgeSize: 22,
-  badgePaddingX: 5,
-  badgeBorderWidth: 2,
   badgeTop: -4,
   badgeRight: -5,
 
@@ -83,6 +78,4 @@ export const todayTypography = {
   heroTitle: { fontFamily: fonts.heading, fontSize: 25, lineHeight: 25 * 1.05 },
   /** Kahraman kartı açıklaması · Nunito 700 · 14 · 1.35 */
   heroSub: { fontFamily: fonts.bold, fontSize: 14, lineHeight: 14 * 1.35 },
-  /** Avatar harfi · Nunito 800 · 16 (54 px şerit avatarı; Activity ve Poke da kullanıyor) */
-  avatarInitial: { fontFamily: fonts.extraBold, fontSize: 16 },
 } as const satisfies Record<string, TextStyle>;

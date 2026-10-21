@@ -1,7 +1,8 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { BellIcon } from '@/components/icons';
-import { borderWidth, todayMetrics as m, todayTypography, typography, useTheme } from '@/theme';
+import { CountBadge, IconButton } from '@/components/ui';
+import { todayMetrics as m, todayTypography, typography, useTheme } from '@/theme';
 
 type Props = {
   dayLabel: string;
@@ -23,22 +24,16 @@ export default function TodayHeader({ dayLabel, title, unread, onPressBell }: Pr
         </Text>
       </View>
 
-      <Pressable
+      <IconButton
+        icon={BellIcon}
         onPress={onPressBell}
-        accessibilityRole="button"
-        accessibilityLabel={unread > 0 ? `Aktivite, ${unread} yeni` : 'Aktivite'}
-        style={[styles.bell, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        <BellIcon color={colors.text} size={m.bellIconSize} strokeWidth={m.bellIconStrokeWidth} />
+        accessibilityLabel={unread > 0 ? `Aktivite, ${unread} yeni` : 'Aktivite'}>
         {unread > 0 && (
-          <View
-            style={[
-              styles.badge,
-              { backgroundColor: colors.accent, borderColor: colors.background },
-            ]}>
-            <Text style={[typography.micro, { color: colors.onAccent }]}>{unread}</Text>
+          <View style={styles.badge}>
+            <CountBadge count={unread} />
           </View>
         )}
-      </Pressable>
+      </IconButton>
     </View>
   );
 }
@@ -53,24 +48,10 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     gap: m.headerGap,
   },
-  bell: {
-    width: m.bellSize,
-    height: m.bellSize,
-    borderRadius: m.bellSize / 2,
-    borderWidth: borderWidth.thin,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  // Okunmamış rozeti zilin sağ üst köşesinde
   badge: {
     position: 'absolute',
     top: m.badgeTop,
     right: m.badgeRight,
-    minWidth: m.badgeSize,
-    height: m.badgeSize,
-    paddingHorizontal: m.badgePaddingX,
-    borderRadius: m.badgeSize / 2,
-    borderWidth: m.badgeBorderWidth,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });
