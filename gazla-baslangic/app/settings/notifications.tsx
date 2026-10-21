@@ -8,6 +8,7 @@ import { useMySettings, useUpdateSettingsMutation, type SettingsUpdate } from '@
 import { DEFAULT_REMINDER, errorText, formatTime, reminderTimes } from '@/features/settings/logic';
 import { NOTIFICATION_COPY, NOTIFICATION_RULES, type RuleTone } from '@/features/settings/notificationCopy';
 import { LinkRow, SettingsGroup, ToggleRow } from '@/features/settings/rows';
+import { usePushPrompt } from '@/features/settings/usePushPrompt';
 import { borderWidth, layout, useTheme, type ChallengeTint } from '@/theme';
 import { settingsColors, settingsMetrics as m, settingsTypography as t } from '@/theme/settings';
 
@@ -30,6 +31,8 @@ export default function NotificationsScreen() {
   const [timeOpen, setTimeOpen] = useState(false);
 
   const save = (u: SettingsUpdate) => update.mutate(u, { onError: (e) => toast.show({ message: errorText(e) }) });
+  // Bildirim açan anahtarlar izni de ister (onboarding'i atlayan hesaplar)
+  const promptPush = usePushPrompt(toast);
   const top = { paddingTop: insets.top + layout.screenTopGap };
 
 
@@ -64,14 +67,20 @@ export default function NotificationsScreen() {
             detail="Arkadaşların gaz verince ya da laf sokunca haber verir."
             value={s.pokePushEnabled}
             disabled={update.isPending}
-            onChange={(pokePushEnabled) => save({ pokePushEnabled })}
+            onChange={(pokePushEnabled) => {
+              save({ pokePushEnabled });
+              if (pokePushEnabled) promptPush();
+            }}
           />
           <ToggleRow
             title="Günlük hatırlatma"
             detail="Diken seçtiğin saatte bugünkü görevlerini hatırlatır."
             value={reminderOn}
             disabled={update.isPending}
-            onChange={(on) => save({ dailyReminderTime: on ? DEFAULT_REMINDER : null })}
+            onChange={(on) => {
+              save({ dailyReminderTime: on ? DEFAULT_REMINDER : null });
+              if (on) promptPush();
+            }}
             last={!reminderOn}
           />
           {reminderOn && (

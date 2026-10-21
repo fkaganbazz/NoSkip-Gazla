@@ -3,8 +3,9 @@ import { useRouter, type Href } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { resetConsentForTesting } from '@/ads';
 import { SectionLabel } from '@/components/ui';
-import { api, mockDev, useIsOnline, usePendingCheckins, useSignOutMutation } from '@/data';
+import { adConsentShown, api, mockDev, useIsOnline, usePendingCheckins, useSignOutMutation } from '@/data';
 import { borderWidth, layout, radius, spacing, typography, useTheme } from '@/theme';
 
 type Row = { title: string; detail: string; href?: Href; onPress?: () => void };
@@ -41,6 +42,14 @@ export default function DevIndex() {
 
   const DATA: Row[] = [
     { title: 'Oturumu kapat', detail: 'Onboarding baştan başlar', onPress: () => signOut.mutate() },
+    {
+      title: 'Reklam iznini sıfırla',
+      detail: 'UMP izin bilgisini ve "ön ekran gösterildi" bayrağını siler (native)',
+      onPress: () => {
+        resetConsentForTesting();
+        adConsentShown.clear();
+      },
+    },
     ...(api.kind === 'mock'
       ? [
           {

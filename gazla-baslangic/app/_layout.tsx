@@ -8,9 +8,11 @@ import { useEffect } from 'react';
 import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { useAdsBootstrap } from '@/ads';
 import { DataProvider, useAuth } from '@/data';
 import { OnboardingProvider, useOnboarding } from '@/features/onboarding/OnboardingProvider';
 import { restoreThemePreference } from '@/features/settings/themePreference';
+import { useNotificationsBootstrap } from '@/notifications';
 import { fontAssets, useTheme } from '@/theme';
 
 // Fontlar ve oturum bilgisi gelene kadar açılış ekranı açık kalsın.
@@ -60,6 +62,10 @@ function RootNavigator() {
   const authReady = status !== 'loading';
   // Uygulama: oturum ve profil hazır, onboarding'in son adımları da bitti
   const appOpen = status === 'ready' && !onboarding.inProgress;
+
+  // Reklam izni/SDK (AdMob + UMP + ATT) ve bildirim dinleyicileri (dokununca ilgili ekran)
+  useAdsBootstrap();
+  useNotificationsBootstrap({ canNavigate: fontsReady && authReady && appOpen });
 
   // Ayarlar'da seçilen görünüm (Açık / Koyu / Sistem) cihazda saklanır
   useEffect(() => {

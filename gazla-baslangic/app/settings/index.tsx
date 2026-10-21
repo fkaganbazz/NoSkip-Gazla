@@ -40,6 +40,7 @@ import { useOptimisticPatch } from '@/features/settings/optimistic';
 import ProfileCard from '@/features/settings/ProfileCard';
 import ProfileEditSheet from '@/features/settings/ProfileEditSheet';
 import { LinkRow, SettingsGroup, ToggleRow } from '@/features/settings/rows';
+import { usePushPrompt } from '@/features/settings/usePushPrompt';
 import { THEME_OPTIONS, useThemePreference } from '@/features/settings/themePreference';
 import { layout, useTheme } from '@/theme';
 import { settingsMetrics as m, settingsTypography as t } from '@/theme/settings';
@@ -70,6 +71,7 @@ export default function SettingsScreen() {
   const [themePref, setThemePref] = useThemePreference();
   const toast = useToast();
   const flash = (message: string) => toast.show({ message });
+  const promptPush = usePushPrompt(toast);
   const [sheet, setSheet] = useState<OpenSheet>(null);
 
   // İyimser: anahtar ve seçim anında değişir; sunucu reddederse eski değere döner ve tost çıkar
@@ -140,7 +142,10 @@ export default function SettingsScreen() {
           <ToggleRow
             title="Dürtme bildirimleri"
             value={s.pokePushEnabled}
-            onChange={(pokePushEnabled) => settingsPatch.apply({ pokePushEnabled })}
+            onChange={(pokePushEnabled) => {
+              settingsPatch.apply({ pokePushEnabled });
+              if (pokePushEnabled) promptPush();
+            }}
           />
           <LinkRow
             title="Günlük hatırlatma"

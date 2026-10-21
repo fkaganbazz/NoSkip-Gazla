@@ -23,11 +23,8 @@ export type ExploreColors = {
   // Popüler listesi
   rowDivider: string;
   // Reklam yer tutucusu
-  adBorder: string;
-  adBg: string;
   adTagBg: string;
   adTagText: string;
-  adText: string;
 };
 
 export const exploreColors: Record<Scheme, ExploreColors> = {
@@ -40,11 +37,8 @@ export const exploreColors: Record<Scheme, ExploreColors> = {
     featuredButtonBg: palette.sand,
     featuredButtonText: palette.nightPurple,
     rowDivider: '#F4EDE5',
-    adBorder: '#CFC3B6',
-    adBg: '#FBF5EE',
     adTagBg: palette.strongLine,
     adTagText: palette.ink700,
-    adText: palette.ink500,
   },
   dark: {
     featuredBg: palette.nightPurple,
@@ -55,11 +49,8 @@ export const exploreColors: Record<Scheme, ExploreColors> = {
     featuredButtonBg: palette.sand,
     featuredButtonText: palette.nightPurple,
     rowDivider: darkColors.border, // koyu: çizgi
-    adBorder: darkColors.border,
-    adBg: darkColors.surface,
     adTagBg: darkColors.surfaceMuted,
     adTagText: darkColors.textBody,
-    adText: darkColors.textSecondary,
   },
 };
 
@@ -98,10 +89,6 @@ export const exploreMetrics = {
   popularPreviewCount: 3,
 
   adMarginTop: 14,
-  adHeight: 58,
-  adRadius: 14,
-  adBorderWidth: 2,
-  adGap: 10,
   adTagPaddingY: 2,
   adTagPaddingX: 7,
   adTagRadius: 6,
