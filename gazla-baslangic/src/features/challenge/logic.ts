@@ -1,16 +1,9 @@
 /**
- * Challenge detayının metin ve görünüm kuralları. Gün numarası ve seri sunucudan gelir
- * (my_today, challenge_board); burada yalnızca takvim hücrelerinin tarihleri ve metinler kurulur.
+ * Challenge detayının metin ve görünüm kuralları. Gün numarası, durum (başlamadı / sürüyor / bitti) ve
+ * seri sunucudan gelir (challenge_detail, challenge_board); burada yalnızca takvim hücrelerinin tarihleri
+ * ve metinler kurulur.
  */
-import type {
-  BoardMember,
-  Challenge,
-  ChallengeCalendar,
-  ChallengeCategory,
-  ChallengeMembership,
-  LocalDate,
-  TodayTask,
-} from '@/data';
+import type { BoardMember, Challenge, ChallengeCalendar, ChallengeCategory, LocalDate } from '@/data';
 
 export const CATEGORY_LABELS: Record<ChallengeCategory, string> = {
   detox: 'Dijital detoks',
@@ -68,65 +61,56 @@ export type DayCell = {
 };
 
 /**
- * Takvim: her gün için kendi işaretlemem / kurtarmam. Bugün tamamsa yeşil (sarı halkalı), değilse
- * numaralı (sarı halkalı). Kaçırılan geçmiş günler için tasarımda ayrı görünüm yok; numaralı gösterilir.
+ * Takvim: her gün için kendi işaretlemem / kurtarmam. Bugün (sunucunun gün numarası `todayIndex`; başlamamış
+ * ya da bitmiş challenge'da null) tamamsa yeşil (sarı halkalı), değilse numaralı (sarı halkalı). Kaçırılan
+ * geçmiş günler için tasarımda ayrı görünüm yok; numaralı gösterilir.
  */
-export function buildDays(challenge: Challenge, calendar: ChallengeCalendar | undefined, today: LocalDate): DayCell[] {
+export function buildDays(challenge: Challenge, calendar: ChallengeCalendar | undefined, todayIndex: number | null): DayCell[] {
   const done = new Set(calendar?.checkins.map((c) => c.localDate));
   const saved = new Set(calendar?.rescues.map((r) => r.rescuedDate));
   return Array.from({ length: challenge.durationDays }, (_, i) => {
+    const n = i + 1;
     const date = addDays(challenge.startDate, i);
-    const isToday = date === today;
-    const state: DayCell['state'] = isToday
-      ? done.has(date) || saved.has(date)
-        ? 'today'
-        : 'todayOpen'
-      : done.has(date)
-        ? 'done'
-        : saved.has(date)
-          ? 'saved'
-          : 'future';
-    return { n: i + 1, date, state };
+    const covered = done.has(date) || saved.has(date);
+    const state: DayCell['state'] =
+      n === todayIndex ? (covered ? 'today' : 'todayOpen') : done.has(date) ? 'done' : saved.has(date) ? 'saved' : 'future';
+    return { n, date, state };
   });
 }
 
 export type ChallengePhase =
   | { kind: 'running'; dayIndex: number; daysLeft: number }
   | { kind: 'upcoming'; startDate: LocalDate }
-  | { kind: 'finished' };
+  | { kind: 'finished'; dayIndex: number };
 
-/**
- * Challenge'ın durumu. Gün numarası my_today'den gelir; bugün görevi yoksa challenge ya bitmiştir
- * (üyelikte finishedAt ya da bitiş günü geçmiş) ya da henüz başlamamıştır.
- */
-export function challengePhase(
-  challenge: Challenge,
-  membership: ChallengeMembership | null | undefined,
-  task: TodayTask | undefined,
-  today: LocalDate,
-): ChallengePhase {
-  if (membership?.finishedAt || challenge.endDate < today) return { kind: 'finished' };
-  if (task) {
-    const dayIndex = Math.min(task.dayIndex, task.durationDays);
-    if (task.dayIndex > task.durationDays) return { kind: 'finished' };
-    return { kind: 'running', dayIndex, daysLeft: task.durationDays - dayIndex };
-  }
-  if (challenge.startDate > today) return { kind: 'upcoming', startDate: challenge.startDate };
-  // Ayrılmış üye: my_today satırı yok. Sunucu challenge için gün numarası döndürmediğinden
-  // yalnızca gösterim amacıyla tarihten okunur (Backend boşluğu: challenges.day_index).
-  const dayIndex = Math.min(daysBetween(challenge.startDate, today) + 1, challenge.durationDays);
+/** Challenge'ın durumu ve gün numarası: sunucudan (`challenge.status`, `challenge.dayIndex`), istemcide hesaplanmaz */
+export function challengePhase(challenge: Challenge): ChallengePhase {
+  if (challenge.status === 'finished') return { kind: 'finished', dayIndex: challenge.dayIndex };
+  if (challenge.status === 'upcoming') return { kind: 'upcoming', startDate: challenge.startDate };
+  const dayIndex = Math.max(1, Math.min(challenge.dayIndex, challenge.durationDays));
   return { kind: 'running', dayIndex, daysLeft: challenge.durationDays - dayIndex };
 }
 
-function daysBetween(from: LocalDate, to: LocalDate) {
-  const [y1, m1, d1] = from.split('-').map(Number);
-  const [y2, m2, d2] = to.split('-').map(Number);
-  return Math.round((Date.UTC(y2, m2 - 1, d2) - Date.UTC(y1, m1 - 1, d1)) / 86_400_000);
+/** 'HH:MM:SS' gelirse 'HH:MM' */
+export const hhmm = (time: string) => time.slice(0, 5);
+
+/**
+ * Kişisel hatırlatma saati seçenekleri (Detail "…" → Hatırlatma saatini değiştir): 30 dakikalık adımlar,
+ * sessiz saatler (23:30–08:00) dışında. Sessiz saat kuralı sunucuda; burada yalnızca o aralıkta saat önerilmez.
+ * Listede olmayan mevcut saat (ör. başka cihazdan 07:15) kaybolmasın diye sırasına eklenir.
+ */
+export function reminderTimes(current: string | null): string[] {
+  const times = Array.from({ length: 31 }, (_, i) => {
+    const minutes = 8 * 60 + i * 30;
+    return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+  });
+  const now = current ? hhmm(current) : null;
+  return now && !times.includes(now) ? [...times, now].sort() : times;
 }
 
-/** Grup satırının alt bilgisi ve sağdaki sayının görünümü */
-export function boardRowInfo(member: BoardMember) {
-  if (!member.doneToday) {
+/** Grup satırının alt bilgisi ve sağdaki sayının görünümü; "bugün bekliyor" yalnızca süren challenge'da */
+export function boardRowInfo(member: BoardMember, running = true) {
+  if (running && !member.doneToday) {
     return { sub: `${member.streak} gün · bugün bekliyor`, tone: 'waiting' as const };
   }
   // Seri, tamamlanan gün sayısından kısaysa arada kopmuş demektir

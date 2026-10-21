@@ -1,4 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -11,6 +12,7 @@ import {
   useChallengeBoard,
   useChallengeCalendar,
   useGarden,
+  useMarkFinishSeenMutation,
   useMyMembership,
 } from '@/data';
 import Confetti from '@/features/moments/Confetti';
@@ -22,7 +24,8 @@ const DESIGN_TOP = 56;
 
 // Challenge bitti — design/Finished.dc.html. Koyu tasarımı yok; en yakın koyu rollere bağlandı
 // (src/theme/moments.ts). Sonuçlar sunucunun yazdığı üyelik satırından (final_*), yoksa
-// challenge_board ve takvimden okunur.
+// challenge_board ve takvimden okunur. Açılınca "görüldü" işaretlenir (Bugün açılışında bir daha gelmez);
+// challenge sunucuya göre bitmemişse "bitirdin" demez, detaya geçer.
 export default function FinishedScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -37,11 +40,36 @@ export default function FinishedScreen() {
   const membership = useMyMembership(id);
   const calendar = useChallengeCalendar(id);
   const garden = useGarden();
+  const markSeen = useMarkFinishSeenMutation();
+
+  const status = challenge.data?.status;
+  const unseen = !!membership.data && !membership.data.finishSeenAt;
+  const fetching = challenge.isFetching || membership.isFetching;
+  const handled = useRef(false);
+  const rechecked = useRef(false);
+  const [openedAt] = useState(Date.now);
+  useEffect(() => {
+    if (handled.current || !id || !status || membership.isPending || fetching) return;
+    if (status !== 'finished' && !rechecked.current && challenge.dataUpdatedAt < openedAt) {
+      // Önbellekteki durum eski olabilir (ör. gün yeni döndü): karar vermeden önce sunucudan bir kez daha oku
+      rechecked.current = true;
+      challenge.refetch();
+      membership.refetch();
+      return;
+    }
+    handled.current = true;
+    if (status !== 'finished') {
+      router.replace({ pathname: '/challenge/[id]', params: { id } });
+    } else if (unseen) {
+      markSeen.mutate(id);
+    }
+  }, [id, status, unseen, membership, challenge, fetching, openedAt, markSeen, router]);
 
   const close = () => (router.canGoBack() ? router.back() : router.replace('/'));
   const top = insets.top + layout.screenTopGap;
 
-  if (challenge.isPending || board.isPending || membership.isPending) {
+  // Bitmemiş challenge: detaya geçerken yükleniyor görünür
+  if (challenge.isPending || board.isPending || membership.isPending || (status && status !== 'finished')) {
     return (
       <View style={[styles.screen, { paddingTop: top, backgroundColor: c.bg }]}>
         <View style={styles.closeRow}>

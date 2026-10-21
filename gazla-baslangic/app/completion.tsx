@@ -1,12 +1,12 @@
 import { useRouter } from 'expo-router';
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AvatarStack } from '@/components/Avatar';
 import Diken from '@/components/Diken';
 import { Button, IconButton } from '@/components/ui';
-import { useFriendsToday, useRecentDays, useStreak } from '@/data';
+import { adConsentShown, useFriendsToday, useRecentDays, useStreak } from '@/data';
 import { accusative, joinNames } from '@/features/challenge/logic';
 import Confetti from '@/features/moments/Confetti';
 import { alsoParticle, weekCells } from '@/features/moments/logic';
@@ -20,7 +20,8 @@ const DESIGN_TOP = 56;
 
 // Bugün tamam — design/Completion.dc.html. Günün tüm görevleri bitince açılır.
 // Veri: my_streak (seri), my_recent_days (son 7 gün), friends_today (bitiren / bekleyen arkadaşlar).
-// Koyu tasarımı yok; yeşil kutlama zemini iki modda aynı.
+// Koyu tasarımı yok; yeşil kutlama zemini iki modda aynı. İlk tamamlanan günden sonra kapatınca bir kez
+// reklam izni ön ekranı açılır (EKRANLAR 6.2; cihazdaki adConsentShown bayrağı).
 export default function CompletionScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -34,6 +35,19 @@ export default function CompletionScreen() {
   const pending = (friends.data ?? []).filter((f) => f.doneToday === false);
 
   const close = () => (router.canGoBack() ? router.back() : router.replace('/'));
+
+  // Kapatınca (Süper / X): reklam izni ön ekranı daha önce gösterilmediyse onun yerine geç
+  const finishing = useRef(false);
+  const finish = async () => {
+    if (finishing.current) return;
+    finishing.current = true;
+    if (!(await adConsentShown.get())) {
+      await adConsentShown.set();
+      router.replace('/ad-consent');
+      return;
+    }
+    close();
+  };
 
   const top = insets.top + layout.screenTopGap;
   // Arka plan süsleri tasarım çerçevesine göre konumlu; ekran genişliğine ortalanır
@@ -76,7 +90,7 @@ export default function CompletionScreen() {
         </View>
 
         <View style={styles.closeRow}>
-          <IconButton icon="close" tone="onBrand" accessibilityLabel="Kapat" onPress={close} />
+          <IconButton icon="close" tone="onBrand" accessibilityLabel="Kapat" onPress={finish} />
         </View>
 
         <View style={styles.diken}>
@@ -111,7 +125,7 @@ export default function CompletionScreen() {
         )}
 
         <View style={styles.footer}>
-          <Button title="Süper" variant="onGreen" onPress={close} />
+          <Button title="Süper" variant="onGreen" onPress={finish} />
           {pokeText && (
             <Button
               title={pokeText}

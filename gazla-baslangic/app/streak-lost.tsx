@@ -10,6 +10,7 @@ import { Button, ErrorState, IconButton, LoadingState, Toast } from '@/component
 import {
   useAuth,
   useChallengeBoard,
+  useDeclineRescueMutation,
   usePendingRescues,
   useRescueWithFreeRightMutation,
   type PendingRescue,
@@ -25,6 +26,7 @@ type Saved = { item: PendingRescue; via: 'ad' | 'free' };
 // Seri koptu — design/StreakLost.dc.html. Bekleyen kurtarma (my_pending_rescues) için 24 saatlik süre:
 // rewarded reklam ya da ayda 1 ücretsiz hak. Reklam yüklenemezse ücretsiz hak önerilir (CLAUDE.md).
 // Koyu tasarımı yok; en yakın koyu rollere bağlandı (src/theme/moments.ts).
+// "Baştan başla" kurtarmadan vazgeçer (decline_rescue); başka bekleyen kurtarma varsa ona geçer, yoksa kapanır.
 export default function StreakLostScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -35,10 +37,13 @@ export default function StreakLostScreen() {
 
   const rescues = usePendingRescues();
   const rescue = useRescueWithFreeRightMutation();
+  const decline = useDeclineRescueMutation();
   const [saved, setSaved] = useState<Saved | null>(null);
+  // Vazgeçilen kurtarma: liste yenilenip ekran kapanana kadar aynı kart görünür (boş hali yanıp sönmesin)
+  const [declined, setDeclined] = useState<PendingRescue | null>(null);
   const [adFailed, setAdFailed] = useState(false);
 
-  const current = saved?.item ?? rescues.data?.[0];
+  const current = saved?.item ?? declined ?? rescues.data?.[0];
   const board = useChallengeBoard(current?.challengeId);
 
   const close = () => (router.canGoBack() ? router.back() : router.replace('/'));
@@ -110,6 +115,31 @@ export default function StreakLostScreen() {
     );
   };
 
+  const onRestart = () => {
+    const item = current;
+    setDeclined(item);
+    decline.mutate(
+      { challengeId: item.challengeId, missedDate: item.missedDate },
+      {
+        onSuccess: () => {
+          const next = (rescues.data ?? []).filter(
+            (r) => !(r.challengeId === item.challengeId && r.missedDate === item.missedDate),
+          );
+          if (next.length === 0) {
+            close();
+            return;
+          }
+          // Liste yenilendi: sıradaki kurtarma gösterilir
+          setDeclined(null);
+          setAdFailed(false);
+          rescue.reset();
+          decline.reset();
+        },
+        onError: () => setDeclined(null),
+      },
+    );
+  };
+
   const onContinue = () => {
     // Başka bekleyen kurtarma varsa onu göster
     const next = (rescues.data ?? []).filter((r) => r.challengeId !== saved?.item.challengeId);
@@ -174,14 +204,16 @@ export default function StreakLostScreen() {
         <View style={styles.actions}>
           {lost ? (
             <>
-              {(adFailed || rescue.error) && (
+              {(adFailed || rescue.error || decline.error) && (
                 <Toast
                   message={
-                    rescue.error
-                      ? rescue.error.message
-                      : current.freeRescueAvailable
-                        ? 'Reklam şu an yüklenemedi. Ücretsiz hakkını kullanabilirsin.'
-                        : 'Reklam şu an yüklenemedi. Biraz sonra tekrar dene.'
+                    decline.error
+                      ? decline.error.message
+                      : rescue.error
+                        ? rescue.error.message
+                        : current.freeRescueAvailable
+                          ? 'Reklam şu an yüklenemedi. Ücretsiz hakkını kullanabilirsin.'
+                          : 'Reklam şu an yüklenemedi. Biraz sonra tekrar dene.'
                   }
                 />
               )}
@@ -205,11 +237,18 @@ export default function StreakLostScreen() {
                 }
                 variant="secondary"
                 highlighted={adFailed}
-                disabled={!current.freeRescueAvailable}
+                disabled={!current.freeRescueAvailable || decline.isPending}
                 loading={rescue.isPending}
                 onPress={onFree}
               />
-              <Button title="Baştan başla" variant="text" size="md" onPress={close} />
+              <Button
+                title="Baştan başla"
+                variant="text"
+                size="md"
+                loading={decline.isPending}
+                disabled={rescue.isPending}
+                onPress={onRestart}
+              />
             </>
           ) : (
             <Button title="Devam" onPress={onContinue} style={styles.tallButton} />

@@ -10,12 +10,14 @@ import { accusative, boardRowInfo } from './logic';
 type Props = {
   members: BoardMember[];
   meId: string | undefined;
+  /** Challenge sürüyor: bekleyen gösterilir ve dürtülebilir (başlamamış / bitmişte "bugün bekliyor" yok) */
+  running: boolean;
   /** Bugün bekleyen arkadaşı dürt */
   onPoke: (userId: string) => void;
 };
 
 // Grup listesi: seriye göre sıra, bugün bekleyene "Dürt" (Detail.dc.html).
-export default function BoardCard({ members, meId, onPoke }: Props) {
+export default function BoardCard({ members, meId, running, onPoke }: Props) {
   const { colors } = useTheme();
   return (
     <Card style={styles.card}>
@@ -31,6 +33,7 @@ export default function BoardCard({ members, meId, onPoke }: Props) {
           member={member}
           isMe={member.id === meId}
           last={i === members.length - 1}
+          running={running}
           onPoke={onPoke}
         />
       ))}
@@ -42,16 +45,18 @@ function Row({
   member,
   isMe,
   last,
+  running,
   onPoke,
 }: {
   member: BoardMember;
   isMe: boolean;
   last: boolean;
+  running: boolean;
   onPoke: (userId: string) => void;
 }) {
   const { colors, scheme } = useTheme();
   const c = challengeColors[scheme];
-  const info = boardRowInfo(member);
+  const info = boardRowInfo(member, running);
   const name = isMe ? 'Sen' : member.displayName;
   const canPoke = !isMe && info.tone === 'waiting';
 
