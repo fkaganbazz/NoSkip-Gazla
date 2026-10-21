@@ -1,20 +1,22 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Diken from '@/components/Diken';
 import SpeechBubble from '@/components/SpeechBubble';
 import { Button, ErrorState, LoadingState } from '@/components/ui';
-import { useAuth, useInvitePreview, useJoinByInviteMutation } from '@/data';
+import { isOnline, NetworkError, savePendingInvite, useAuth, useInvitePreview, useJoinByInviteMutation } from '@/data';
 import GazlaLogo from '@/features/invite-landing/GazlaLogo';
 import { InviteChallengeCard, InviterMessage } from '@/features/invite-landing/InviteCard';
+import { useOnboarding } from '@/features/onboarding/OnboardingProvider';
 import { challengeMeta, deviceLocalDate, isEnded } from '@/features/invite-landing/logic';
 import { layout, typography, useTheme } from '@/theme';
 import { inviteColors, inviteMetrics as m, inviteTypography } from '@/theme/explore';
 
-// Davet karşılama — design/InviteLanding.dc.html (gazla://invite/KOD). Oturumsuz da açılır:
-// önizleme herkese açık, katılmak için oturum gerekir.
+// Davet karşılama — design/InviteLanding.dc.html (gazla://invite/KOD; https://<alan>/d/KOD → app/d/[code]).
+// Oturumsuz da açılır: önizleme herkese açık. "Katıl ve başla": oturum yoksa kod cihazda saklanır ve
+// giriş adımı açılır (katılımı onboarding bitince tamamlar); oturum varsa katılır → Bugün.
 export default function InviteLandingScreen() {
   const { code } = useLocalSearchParams<{ code: string }>();
   const router = useRouter();
@@ -22,24 +24,41 @@ export default function InviteLandingScreen() {
   const { colors, scheme } = useTheme();
   const c = inviteColors[scheme];
   const { status } = useAuth();
-  const signedIn = status === 'ready';
+  const onboarding = useOnboarding();
+  // Uygulama açık (oturum + profil hazır, onboarding bitti; app/_layout.tsx ile aynı koşul). Değilse
+  // (oturum yok ya da onboarding yarım) katılım onboarding sonunda bekleyen kodla tamamlanır.
+  const signedIn = status === 'ready' && !onboarding.inProgress;
 
   const preview = useInvitePreview(code);
   const join = useJoinByInviteMutation();
+  // Çevrimdışıyken katılma isteği beklemeye alınır (sonsuz yükleniyor); bunun yerine mesaj
+  const [offline, setOffline] = useState(false);
   const today = useMemo(() => deviceLocalDate(), []);
 
-  // Oturum varsa alttaki sekmelere döner; yoksa '/' onboarding'i açar
-  const goHome = () => (signedIn ? router.dismissTo('/(tabs)') : router.replace('/'));
+  // Bugün: '/(tabs)' sekmelerin ilk ekranına (Bugün) döner
+  const goToday = () => router.dismissTo('/(tabs)');
+  // Oturum varsa Bugün; yoksa '/' onboarding'i (karşılama) açar
+  const goHome = () => (signedIn ? goToday() : router.replace('/'));
 
-  const onPrimary = () => {
+  const onPrimary = async () => {
+    if (join.isPending) return;
     if (!signedIn) {
-      // TODO(backend): kod hatırlanmıyor; giriş/onboarding bitince bu davete otomatik katılım yok.
-      goHome();
+      // Giriş adımı (oturum varsa onboarding düzeni kaldığı adıma taşır); onboarding bitince kod
+      // alınıp katılım tamamlanır
+      await savePendingInvite(code);
+      router.replace('/sign-in');
       return;
     }
-    join.mutate(code, {
-      onSuccess: (challengeId) => router.replace({ pathname: '/challenge/[id]', params: { id: challengeId } }),
-    });
+    if (preview.data?.alreadyMember) {
+      goToday();
+      return;
+    }
+    if (!isOnline()) {
+      setOffline(true);
+      return;
+    }
+    setOffline(false);
+    join.mutate(code, { onSuccess: goToday });
   };
 
   const frame = [
@@ -89,8 +108,6 @@ export default function InviteLandingScreen() {
     );
   }
 
-  const primaryTitle = !signedIn ? 'Katılmak için giriş yap' : data.alreadyMember ? "Challenge'a git" : 'Katıl ve başla';
-
   return (
     <ScrollView style={{ backgroundColor: c.background }} contentContainerStyle={frame}>
       <GazlaLogo />
@@ -112,12 +129,12 @@ export default function InviteLandingScreen() {
       </View>
 
       <View style={styles.actions}>
-        {join.isError && (
+        {(offline || join.isError) && (
           <Text accessibilityLiveRegion="polite" style={[typography.meta, styles.center, { color: colors.dangerText }]}>
-            {join.error.message}
+            {offline ? new NetworkError().message : join.error?.message}
           </Text>
         )}
-        <Button title={primaryTitle} onPress={onPrimary} loading={join.isPending} />
+        <Button title="Katıl ve başla" onPress={onPrimary} loading={join.isPending} />
         <Button title="Şimdilik değil" variant="text" onPress={goHome} />
       </View>
     </ScrollView>
@@ -139,7 +156,6 @@ const styles = StyleSheet.create({
     marginTop: m.dikenRowMarginTop,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     gap: m.dikenRowGap,
   },
   dikenBubble: {

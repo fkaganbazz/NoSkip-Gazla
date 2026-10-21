@@ -7,7 +7,7 @@ import type { GardenItem } from '@/data';
 import { useTheme } from '@/theme';
 import { gardenColors, gardenMetrics as m, gardenTypography } from '@/theme/garden';
 
-import { plantLabel, plantLook, toShelves } from './logic';
+import { plantLabel, plantLooks, toShelves } from './logic';
 
 type Props = {
   items: GardenItem[];
@@ -16,10 +16,12 @@ type Props = {
 };
 
 // Raflar: her tamamlanan challenge bir Diken (aşaması stage), son yerde "Sıradaki" (Garden.dc.html).
+// `items` raf sırasıyla (gardenOrder).
 export default function GardenShelves({ items, onOpen, onNext }: Props) {
   const { colors, scheme } = useTheme();
   const c = gardenColors[scheme];
   const shelves = toShelves(items, m.perShelf);
+  const looks = plantLooks(items);
 
   return (
     <View style={[styles.panel, { backgroundColor: c.shelfPanelBg }]}>
@@ -42,7 +44,7 @@ export default function GardenShelves({ items, onOpen, onNext }: Props) {
                   </View>
                 );
               }
-              const look = plantLook(s * m.perShelf + i);
+              const look = looks[s * m.perShelf + i];
               return (
                 <Pressable
                   key={slot.challengeId}

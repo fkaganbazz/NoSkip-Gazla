@@ -1,22 +1,28 @@
 import { useRouter } from 'expo-router';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text } from 'react-native';
+import { useMemo } from 'react';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ErrorState, LoadingState } from '@/components/ui';
-import { useAuth, useGarden, useStreak } from '@/data';
+import { useAuth, useBadges, useGarden, useStreak } from '@/data';
+import Badges from '@/features/garden/Badges';
 import GardenHeader from '@/features/garden/GardenHeader';
 import GardenShelves from '@/features/garden/GardenShelves';
+import { gardenOrder } from '@/features/garden/logic';
 import StatRow from '@/features/garden/StatRow';
 import { layout, spacing, typography, useTheme } from '@/theme';
+import { gardenMetrics as m } from '@/theme/garden';
 
-// Bahçem — design/Garden.dc.html. Veri: my_garden (raflar), my_streak (seri sayıları), profil.
-// Rozetler bölümü veri katmanında karşılığı olmadığı için şimdilik yok (bkz. TODO).
+// Bahçem — design/Garden.dc.html. Veri: my_garden (raflar), my_streak (seri sayıları), profil,
+// my_badges (rozetler; ayrı yüklenir, hatası raflara dokunmaz).
 export default function GardenScreen() {
   const { colors } = useTheme();
   const router = useRouter();
   const { profile } = useAuth();
   const garden = useGarden();
   const streak = useStreak();
+  const badges = useBadges();
+  const items = useMemo(() => gardenOrder(garden.data ?? []), [garden.data]);
 
   if (garden.isPending || streak.isPending) {
     return (
@@ -41,8 +47,6 @@ export default function GardenScreen() {
     );
   }
 
-  const items = garden.data;
-
   return (
     <SafeAreaView edges={['top']} style={styles.screen}>
       <ScrollView
@@ -53,6 +57,7 @@ export default function GardenScreen() {
             onRefresh={() => {
               garden.refetch();
               streak.refetch();
+              badges.refetch();
             }}
           />
         }>
@@ -75,7 +80,17 @@ export default function GardenScreen() {
           </Text>
         )}
 
-        {/* TODO(backend): Rozetler (Garden.dc.html "Rozetler 3 / 12") — rozet tablosu/RPC yok. */}
+        {badges.data ? (
+          <Badges badges={badges.data} />
+        ) : (
+          <View style={styles.badgesState}>
+            {badges.isError ? (
+              <ErrorState message="Rozetler yüklenemedi." onRetry={() => badges.refetch()} />
+            ) : (
+              <LoadingState />
+            )}
+          </View>
+        )}
 
         {__DEV__ && (
           <Pressable onPress={() => router.push('/dev')} accessibilityRole="link" hitSlop={12} style={styles.devLink}>
@@ -99,6 +114,9 @@ const styles = StyleSheet.create({
   emptyText: {
     marginTop: spacing.sm,
     textAlign: 'center',
+  },
+  badgesState: {
+    marginTop: m.badgesHeaderMarginTop,
   },
   devLink: {
     alignSelf: 'center',

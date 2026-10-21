@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AvatarStack } from '@/components/Avatar';
 import { Button, Chip, ErrorState, LoadingState, Segmented } from '@/components/ui';
-import { useCreateChallengeMutation, useTemplates, useTemplateStats } from '@/data';
+import { isOnline, NetworkError, useCreateChallengeMutation, useTemplates, useTemplateStats } from '@/data';
 import PreviewFeatures from '@/features/explore/PreviewFeatures';
 import PreviewHero from '@/features/explore/PreviewHero';
 import {
@@ -22,7 +22,8 @@ import { previewMetrics as m, previewTypography } from '@/theme/explore';
 const DURATION_SEGMENTS = DURATION_OPTIONS.map((d) => ({ value: String(d), label: `${d} gün` }));
 
 // Challenge önizleme — design/ChallengePreview.dc.html. Veri: challenge_templates + template_stats.
-// "Arkadaşlarla" → /create (params: templateId, durationDays); "Tek başıma başla" → create_challenge.
+// İki buton da seçilen süreyle create_challenge çağırır. "Arkadaşlarla": oluşunca challenge detayı açılır,
+// üstünde davet modalı (/invite-friends); kapatınca detayda kalınır. "Tek başıma başla": → Bugün.
 export default function TemplatePreviewScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -36,6 +37,10 @@ export default function TemplatePreviewScreen() {
 
   // Seçilmediyse şablonun varsayılan süresi
   const [picked, setPicked] = useState<DurationOption | null>(null);
+  // Hangi butonla oluşturuluyor (yükleniyor göstergesi o butonda)
+  const [mode, setMode] = useState<'friends' | 'solo' | null>(null);
+  // Çevrimdışıyken istek beklemeye alınır (sonsuz yükleniyor); bunun yerine mesaj
+  const [offline, setOffline] = useState(false);
 
   const goBack = () => (router.canGoBack() ? router.back() : router.replace('/explore'));
 
@@ -53,6 +58,7 @@ export default function TemplatePreviewScreen() {
         <ErrorState
           message={templates.isError ? templates.error.message : 'Bu challenge bulunamadı.'}
           onRetry={templates.isError ? () => templates.refetch() : goBack}
+          actionLabel={templates.isError ? undefined : 'Geri dön'}
         />
       </View>
     );
@@ -66,15 +72,30 @@ export default function TemplatePreviewScreen() {
     Share.share({ message: [template.title, template.description].filter(Boolean).join('\n\n') }).catch(() => {});
   };
 
-  const withFriends = () =>
-    router.push({ pathname: '/create', params: { templateId: template.id, durationDays: String(duration) } });
-
-  const startSolo = () =>
+  const start = (next: 'friends' | 'solo') => {
+    if (create.isPending) return;
+    if (!isOnline()) {
+      setOffline(true);
+      return;
+    }
+    setOffline(false);
+    setMode(next);
     create.mutate(
       { templateId: template.id, durationDays: duration },
-      // Tasarımda Bugün'e döner
-      { onSuccess: () => router.dismissTo('/(tabs)') },
+      {
+        onSuccess: (challenge) => {
+          if (next === 'solo') {
+            // Tasarımda Bugün'e döner ('/(tabs)' sekmelerin ilk ekranı)
+            router.dismissTo('/(tabs)');
+            return;
+          }
+          // Önizlemenin yerine yeni challenge'ın detayı; davet modalı onun üstünde açılır
+          router.replace({ pathname: '/challenge/[id]', params: { id: challenge.id } });
+          router.push({ pathname: '/invite-friends', params: { challengeId: challenge.id } });
+        },
+      },
     );
+  };
 
   return (
     <View style={styles.screen}>
@@ -128,14 +149,25 @@ export default function TemplatePreviewScreen() {
           styles.footer,
           { backgroundColor: colors.background, paddingBottom: Math.max(insets.bottom, m.footerBottom) },
         ]}>
-        {create.isError && (
+        {(offline || create.isError) && (
           <Text accessibilityLiveRegion="polite" style={[typography.meta, styles.error, { color: colors.dangerText }]}>
-            {create.error.message}
+            {offline ? new NetworkError().message : create.error?.message}
           </Text>
         )}
         <View style={styles.buttons}>
-          <Button title="Arkadaşlarla" variant="secondary" onPress={withFriends} style={styles.button} />
-          <Button title="Tek başıma başla" onPress={startSolo} loading={create.isPending} style={styles.button} />
+          <Button
+            title="Arkadaşlarla"
+            variant="secondary"
+            onPress={() => start('friends')}
+            loading={create.isPending && mode === 'friends'}
+            style={styles.button}
+          />
+          <Button
+            title="Tek başıma başla"
+            onPress={() => start('solo')}
+            loading={create.isPending && mode === 'solo'}
+            style={styles.button}
+          />
         </View>
       </View>
     </View>

@@ -2,9 +2,22 @@
  * Bahçem ekranına özel ikonlar (viewBox 24×24) — kaynak: design/Garden.dc.html.
  * İmza ortak ikonlarla aynı: color, size, strokeWidth.
  */
-import Svg, { G, Path } from 'react-native-svg';
+import type { ComponentType } from 'react';
+import Svg, { Circle, G, Path } from 'react-native-svg';
 
-import type { IconProps } from '@/components/icons';
+import {
+  CalendarIcon,
+  CameraIcon,
+  ClockIcon,
+  FriendsIcon,
+  HandIcon,
+  MessageIcon,
+  SproutIcon,
+  StarIcon,
+  StreakIcon,
+  type IconProps,
+} from '@/components/icons';
+import type { BadgeIconKey } from '@/data';
 
 /** Ayarlar — dişli */
 export function GearIcon({ color, size, strokeWidth }: IconProps) {
@@ -17,3 +30,58 @@ export function GearIcon({ color, size, strokeWidth }: IconProps) {
     </Svg>
   );
 }
+
+/** Rozet "Erkenci" — güneş (Garden.dc.html) */
+export function SunIcon({ color, size, strokeWidth }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <G fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
+        <Circle cx={12} cy={12} r={4} />
+        <Path d="M12 2.5 V5 M12 19 V21.5 M2.5 12 H5 M19 12 H21.5 M5.3 5.3 L7 7 M17 17 L18.7 18.7 M5.3 18.7 L7 17 M17 7 L18.7 5.3" />
+      </G>
+    </Svg>
+  );
+}
+
+/** Rozet "Şampiyon" — kupa. Tasarımda karşılığı yok; Garden.dc.html çizgi dilinde (tasarım onayı bekliyor). */
+export function TrophyIcon({ color, size, strokeWidth }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <G fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
+        <Path d="M8 4 H16 V10 C16 12.2 14.2 14 12 14 C9.8 14 8 12.2 8 10 Z" />
+        <Path d="M8 6 H5 C5 8.5 6.3 10 8.2 10.3 M16 6 H19 C19 8.5 17.7 10 15.8 10.3" />
+        <Path d="M12 14 V19.5 M8 19.5 H16" />
+      </G>
+    </Svg>
+  );
+}
+
+/** Rozet "Gece kuşu" — hilal. Tasarımda karşılığı yok; Garden.dc.html çizgi dilinde (tasarım onayı bekliyor). */
+export function MoonIcon({ color, size, strokeWidth }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <G fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
+        <Path d="M19.5 14.5 A8 8 0 1 1 9.5 4.5 A6.5 6.5 0 0 0 19.5 14.5 Z" />
+      </G>
+    </Svg>
+  );
+}
+
+/**
+ * Rozet anahtarı → ikon (BadgeIconKey). star, speech (= MessageIcon, aynı path), sun Garden.dc.html'den;
+ * diğerleri uygulamadaki ortak çizgi ikonlar; trophy ve moon tasarımda yok.
+ */
+export const badgeIcons: Record<BadgeIconKey, ComponentType<IconProps>> = {
+  star: StarIcon,
+  speech: MessageIcon,
+  sun: SunIcon,
+  streak: StreakIcon,
+  calendar: CalendarIcon,
+  sprout: SproutIcon,
+  trophy: TrophyIcon,
+  hand: HandIcon,
+  clock: ClockIcon,
+  moon: MoonIcon,
+  friends: FriendsIcon,
+  camera: CameraIcon,
+};

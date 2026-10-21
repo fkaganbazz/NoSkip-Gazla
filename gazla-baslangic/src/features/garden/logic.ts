@@ -1,6 +1,6 @@
 /** Bahçem metin ve yerleşim kuralları — design/Garden.dc.html */
-import type { DikenGear, DikenMood } from '@/components/Diken';
-import type { GardenItem } from '@/data';
+import type { DikenGear, DikenMood, DikenStage } from '@/components/Diken';
+import type { Badge, GardenItem } from '@/data';
 
 const BACK_VOWELS = 'aıou';
 const VOWELS = 'aeıioöuü';
@@ -17,18 +17,66 @@ export function possessive(name: string) {
 /** Raf etiketi: "7 gün kahvesiz", "30 gün okuma" */
 export const plantLabel = (item: GardenItem) => `${item.durationDays} gün ${item.shortTitle ?? item.title}`;
 
+/** Raf sırası: en eski bitirilen solda, en yenisi "Sıradaki"nin yanında (my_garden yeniden eskiye döner) */
+export const gardenOrder = (items: GardenItem[]) => [...items].sort((a, b) => a.finishedAt.localeCompare(b.finishedAt));
+
 /**
- * Bitkinin ifadesi ve aksesuarı. my_garden yalnızca aşamayı (stage) döner; tasarımdaki çeşitlilik
- * için ifade/aksesuar sırayla verilir (Garden.dc.html'deki sıra).
+ * "En uzun seri olan" bitki (EKRANLAR 5.1 → çiçek + gözlük): my_garden challenge başına seri dönmediği
+ * için en uzun sorumlu olunan süre (requiredDays), eşitlikte en az kurtarma, sonra en yeni. Yoksa -1.
  */
-const LOOKS: { mood: DikenMood; gear: DikenGear }[] = [
-  { mood: 'mutlu', gear: 'yok' },
-  { mood: 'cosku', gear: 'bant' },
-  { mood: 'gurur', gear: 'yok' },
-  { mood: 'selam', gear: 'yok' },
-  { mood: 'gurur', gear: 'gozluk' },
-];
-export const plantLook = (index: number) => LOOKS[index % LOOKS.length];
+export function longestIndex(items: GardenItem[]) {
+  let best = -1;
+  items.forEach((item, i) => {
+    const b = items[best];
+    if (
+      !b ||
+      item.requiredDays > b.requiredDays ||
+      (item.requiredDays === b.requiredDays &&
+        (item.finalRescues < b.finalRescues ||
+          (item.finalRescues === b.finalRescues && item.finishedAt > b.finishedAt)))
+    ) {
+      best = i;
+    }
+  });
+  return best;
+}
+
+/** Aşamaya göre ifade; aynı aşama tekrar ettikçe sıradaki (Garden.dc.html: genç mutlu → selam) */
+const STAGE_MOODS: Record<DikenStage, DikenMood[]> = {
+  filiz: ['mutlu', 'selam'],
+  genc: ['mutlu', 'selam'],
+  tam: ['cosku'],
+  cicek: ['gurur'],
+};
+
+export type PlantLook = { mood: DikenMood; gear: DikenGear };
+
+/**
+ * Bitkilerin ifadesi ve aksesuarı. Aşama sunucudan (`stage`: süreye göre 7→genç, 10→tam, 30→çiçek);
+ * 10 günlük (tam) bandanalı, en uzun seri olan gözlüklü (EKRANLAR 5.1).
+ */
+export function plantLooks(items: GardenItem[]): PlantLook[] {
+  const longest = longestIndex(items);
+  const seen: Partial<Record<DikenStage, number>> = {};
+  return items.map((item, i) => {
+    const n = seen[item.stage] ?? 0;
+    seen[item.stage] = n + 1;
+    const moods = STAGE_MOODS[item.stage];
+    const gear: DikenGear = i === longest ? 'gozluk' : item.stage === 'tam' ? 'bant' : 'yok';
+    return { mood: moods[n % moods.length], gear };
+  });
+}
+
+/** Rozetler: kazanılanlar önce, sonra kilitliler; her grup katalog sırasıyla */
+export const badgeOrder = (badges: Badge[]) =>
+  [...badges].sort((a, b) => Number(!a.earnedAt) - Number(!b.earnedAt) || a.sortOrder - b.sortOrder);
+
+/** Satırlara böl (son satır eksik kalabilir) */
+export function chunk<T>(items: T[], size: number): T[][] {
+  const rows: T[][] = [];
+  for (let i = 0; i < items.length; i += size) rows.push(items.slice(i, i + size));
+  return rows;
+}
 
 /** Rafları 3'erli böler; son rafta boş yer varsa "Sıradaki" kutusu için yer kalır */
 export function toShelves<T>(items: T[], perShelf: number): (T | 'next')[][] {

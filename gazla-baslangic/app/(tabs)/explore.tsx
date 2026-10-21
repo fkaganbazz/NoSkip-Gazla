@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import SearchField from '@/components/SearchField';
 import { Button, ErrorState, LoadingState } from '@/components/ui';
-import { useTemplates, useTemplateStats, type ChallengeCategory, type Template } from '@/data';
+import { usePopularTemplates, type ChallengeCategory, type Template } from '@/data';
 import AdBannerSlot from '@/features/explore/AdBannerSlot';
 import CategoryChips from '@/features/explore/CategoryChips';
 import FeaturedCard from '@/features/explore/FeaturedCard';
@@ -23,11 +23,12 @@ function pickFeatured(templates: Template[]) {
     .sort((a, b) => (b.featuredWeek ?? '').localeCompare(a.featuredWeek ?? ''))[0];
 }
 
-// Keşfet — design/Explore.dc.html. Veri: challenge_templates (+ öne çıkan için template_stats).
+// Keşfet — design/Explore.dc.html. Veri: challenge_templates, popülerlik sırasıyla (usePopularTemplates).
 export default function ExploreScreen() {
   const { colors } = useTheme();
   const router = useRouter();
-  const templates = useTemplates();
+  // Sıra sunucudan: 1 en popüler (şu an yapan sayısı); arama sonuçları da bu sırada
+  const templates = usePopularTemplates();
 
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<ChallengeCategory | null>(null);
@@ -35,7 +36,6 @@ export default function ExploreScreen() {
 
   const all = useMemo(() => templates.data ?? [], [templates.data]);
   const featured = useMemo(() => pickFeatured(all), [all]);
-  const stats = useTemplateStats(featured?.id);
 
   const q = normalize(query);
   const filtering = q.length > 0 || category !== null;
@@ -48,7 +48,7 @@ export default function ExploreScreen() {
       ),
     [all, category, q],
   );
-  // Sıra sunucudan (katalog sırası); öne çıkan, Popüler listesinde tekrar edilmez
+  // Öne çıkan, Popüler listesinde tekrar edilmez
   const popular = useMemo(() => all.filter((t) => t.id !== featured?.id), [all, featured]);
   const showAll = filtering || expanded;
   const list = filtering ? results : expanded ? popular : popular.slice(0, m.popularPreviewCount);
@@ -83,10 +83,7 @@ export default function ExploreScreen() {
         refreshControl={
           <RefreshControl
             refreshing={templates.isRefetching}
-            onRefresh={() => {
-              templates.refetch();
-              stats.refetch();
-            }}
+            onRefresh={() => templates.refetch()}
           />
         }>
         <Text accessibilityRole="header" style={[typography.title1, { color: colors.text }]}>
@@ -99,7 +96,7 @@ export default function ExploreScreen() {
         {!filtering && featured && (
           <FeaturedCard
             title={featured.title}
-            activeCount={stats.data?.activeCount ?? null}
+            activeCount={featured.activeCount}
             onPress={() => openTemplate(featured.id)}
           />
         )}
