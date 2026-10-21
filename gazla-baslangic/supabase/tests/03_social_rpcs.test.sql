@@ -135,8 +135,8 @@ select tests.authenticate_as('teen');
 select throws_ok(
   format($$select public.complete_profile('teen.x', 'Teen', %s, 'Europe/Istanbul')$$,
          extract(year from now())::int - 12),
-  '23514', 'En az 13 yaşında olmalısın',
-  'complete_profile: a birth year that makes the user younger than 13 is rejected');
+  '23514', 'Şu an hesabını oluşturamıyoruz.',
+  'complete_profile: a birth year that makes the user younger than 13 is rejected with a neutral message (no age limit)');
 select is((select count(*)::int from public.profiles where id = auth.uid()), 0,
   'complete_profile: a rejected call leaves no half-created profile behind');
 select lives_ok(

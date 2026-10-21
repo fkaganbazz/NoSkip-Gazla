@@ -11,24 +11,31 @@ import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import { AppState, Platform } from 'react-native';
 
+import { pokeText } from '../../content/pokes';
 import { ApiError, type GazlaApi, type OAuthProvider } from '../api';
 import type {
   ActivityItem,
   AvatarTintKey,
+  Badge,
   BoardMember,
   Challenge,
   ChallengeIconKey,
   ChallengeMembership,
   ChallengeTintKey,
   Checkin,
+  FinishedChallenge,
+  FriendRequest,
   FriendToday,
   GardenItem,
   InvitePreview,
+  JoinableChallenge,
   Locale,
   NumberSettings,
+  NumberStats,
   PendingRescue,
   PersonLite,
   PokeMessage,
+  PokeStatus,
   Profile,
   RecentDay,
   Session,
@@ -43,6 +50,11 @@ type Row = Record<string, any>;
 
 const PROFILE_COLUMNS = 'id, username, display_name, avatar_path, avatar_tint, harsh_mode';
 const PROOF_URL_TTL_SECONDS = 60 * 60;
+const ACTIVITY_COLUMNS = `id, kind, challenge_id, friendship_id, payload, created_at, read_at,
+  actor:profiles!notifications_actor_id_fkey(${PROFILE_COLUMNS}),
+  challenge:challenges!notifications_challenge_fk(title),
+  poke:pokes(message_key, tone)`;
+const ACTIVITY_PAGE_SIZE = 30;
 
 export function createSupabaseApi(url: string, anonKey: string): GazlaApi {
   const supabase: SupabaseClient = createClient(url, anonKey, {
@@ -133,6 +145,7 @@ export function createSupabaseApi(url: string, anonKey: string): GazlaApi {
         }
       : null;
 
+  /** challenge_detail satırı (challenges + status, day_index, member_count) */
   const toChallenge = (r: Row): Challenge => ({
     id: r.id,
     templateId: r.template_id,
@@ -143,12 +156,34 @@ export function createSupabaseApi(url: string, anonKey: string): GazlaApi {
     durationDays: r.duration_days,
     startDate: r.start_date,
     endDate: r.end_date,
-    reminderTime: r.reminder_time ? String(r.reminder_time).slice(0, 5) : null,
+    reminderTime: hhmm(r.reminder_time),
     inviteMessage: r.invite_message,
     category: r.category,
     icon: r.icon as ChallengeIconKey,
     tint: r.tint as ChallengeTintKey,
     number: toNumber(r),
+    visibility: r.visibility ?? 'invited',
+    status: r.status,
+    dayIndex: r.day_index,
+    memberCount: r.member_count,
+  });
+
+  const toActivity = (r: Row, messages: PokeMessage[]): ActivityItem => ({
+    id: r.id,
+    kind: r.kind,
+    actor: r.actor ? toLite(r.actor) : null,
+    challengeId: r.challenge_id,
+    challengeTitle: r.challenge?.title ?? (r.payload?.title as string | undefined) ?? null,
+    // Metin sabit listeden (src/content/pokes.ts); kaldırılmış mesaj için sunucudaki metin
+    pokeText: r.poke
+      ? (pokeText(r.poke.message_key, r.poke.tone) ??
+        messages.find((m) => m.key === r.poke.message_key && m.tone === r.poke.tone)?.text ??
+        null)
+      : null,
+    friendshipId: r.friendship_id,
+    payload: r.payload ?? {},
+    createdAt: r.created_at,
+    readAt: r.read_at,
   });
 
   const toSession = (s: { user: { id: string; email?: string | null } } | null): Session | null =>
@@ -268,6 +303,7 @@ export function createSupabaseApi(url: string, anonKey: string): GazlaApi {
       if (update.pokePushEnabled !== undefined) patch.poke_push_enabled = update.pokePushEnabled;
       if (update.dailyReminderTime !== undefined) patch.daily_reminder_time = update.dailyReminderTime;
       if (update.discoverability !== undefined) patch.discoverability = update.discoverability;
+      if (update.dayEndGraceHours !== undefined) patch.day_end_grace_hours = update.dayEndGraceHours;
       const { data, error } = await supabase.from('user_settings').update(patch).eq('user_id', id).select('*').single();
       if (error) fail(error);
       localeCache = null;
@@ -348,17 +384,46 @@ export function createSupabaseApi(url: string, anonKey: string): GazlaApi {
     async rescueWithFreeRight(challengeId, missedDate) {
       await rpc('rescue_streak', { p_challenge: challengeId, p_missed_date: missedDate });
     },
+    async declineRescue(challengeId, missedDate) {
+      await rpc('decline_rescue', { p_challenge: challengeId, p_missed_date: missedDate });
+    },
+    async getUnseenFinished() {
+      const rows = await rpc<Row[]>('my_unseen_finished');
+      return rows.map((r): FinishedChallenge => ({
+        challengeId: r.challenge_id,
+        title: r.title,
+        shortTitle: r.short_title,
+        icon: r.icon,
+        tint: r.tint,
+        taskType: r.task_type,
+        durationDays: r.duration_days,
+        requiredDays: r.required_days,
+        daysDone: r.days_done,
+        rescues: r.rescues,
+        rank: r.rank,
+        completed: r.completed,
+        stage: r.stage,
+        finishedAt: r.finished_at,
+      }));
+    },
+    async markFinishSeen(challengeId) {
+      await rpc('mark_finish_seen', { p_challenge: challengeId });
+    },
 
     // Challenge ---------------------------------------------------------------------------------
     async getTemplates() {
       const lang = await locale();
-      const { data, error } = await supabase
-        .from('challenge_templates')
-        .select('*')
-        .eq('is_active', true)
-        .order('onboarding_order', { ascending: true, nullsFirst: false });
+      const [{ data, error }, popularity] = await Promise.all([
+        supabase
+          .from('challenge_templates')
+          .select('*')
+          .eq('is_active', true)
+          .order('onboarding_order', { ascending: true, nullsFirst: false }),
+        rpc<Row[]>('template_popularity'),
+      ]);
       if (error) fail(error);
       const pick = (r: Row, field: string) => (lang === 'en' ? (r[`${field}_en`] ?? r[`${field}_tr`]) : r[`${field}_tr`]);
+      const rank = new Map(popularity.map((p) => [p.template_id as string, p]));
       return (data ?? []).map((r): Template => ({
         id: r.id,
         slug: r.slug,
@@ -374,6 +439,8 @@ export function createSupabaseApi(url: string, anonKey: string): GazlaApi {
         number: toNumber(r),
         onboardingOrder: r.onboarding_order,
         featuredWeek: r.featured_week,
+        activeCount: rank.get(r.id)?.active_count ?? 0,
+        popularity: rank.get(r.id)?.popularity ?? (data ?? []).length,
       }));
     },
     async getTemplateStats(templateId) {
@@ -389,20 +456,30 @@ export function createSupabaseApi(url: string, anonKey: string): GazlaApi {
       } satisfies TemplateStats;
     },
     async getChallenge(challengeId) {
-      const { data, error } = await supabase.from('challenges').select('*').eq('id', challengeId).single();
-      if (error) fail(error);
-      return toChallenge(data!);
+      const r = await rpc<Row | null>('challenge_detail', { p_challenge: challengeId });
+      if (!r) throw new ApiError('Challenge bulunamadı', 'P0002');
+      return toChallenge(r);
     },
     async getMyMembership(challengeId) {
-      const id = await uid();
-      const { data, error } = await supabase
-        .from('challenge_members')
-        .select('*')
-        .eq('challenge_id', challengeId)
-        .eq('user_id', id)
-        .maybeSingle();
-      if (error) fail(error);
-      return data ? toMembership(data) : null;
+      const r = await rpc<Row | null>('my_membership', { p_challenge: challengeId });
+      return r ? toMembership(r) : null;
+    },
+    async setMyReminder(challengeId, time) {
+      return toMembership(await rpc<Row>('set_my_reminder', { p_challenge: challengeId, p_time: time }));
+    },
+    async getNumberStats(challengeId, localDate) {
+      const j = await rpc<Row>('number_stats', { p_challenge: challengeId, p_local_date: localDate ?? null });
+      const num = (v: unknown) => (v == null ? null : Number(v));
+      return {
+        localDate: j.local_date,
+        dayIndex: j.day_index,
+        target: num(j.target),
+        unit: j.unit,
+        myValue: num(j.my_value),
+        yesterday: num(j.yesterday_value),
+        best: num(j.best_value),
+        groupBest: j.group_best ? { value: Number(j.group_best.value), person: toLite(j.group_best) } : null,
+      } satisfies NumberStats;
     },
     async getChallengeBoard(challengeId) {
       const rows = await rpc<Row[]>('challenge_board', { p_challenge: challengeId });
@@ -430,6 +507,7 @@ export function createSupabaseApi(url: string, anonKey: string): GazlaApi {
     },
     async createChallenge(input) {
       const r = await rpc<Row>('create_challenge', {
+        p_visibility: input.visibility ?? 'invited',
         p_template: input.templateId ?? null,
         p_title: input.title ?? null,
         p_task_type: input.taskType ?? null,
@@ -444,7 +522,8 @@ export function createSupabaseApi(url: string, anonKey: string): GazlaApi {
         p_number_max: input.number?.max ?? null,
         p_invitees: input.inviteeIds ?? [],
       });
-      return toChallenge(r);
+      // Durum, gün numarası ve üye sayısı sunucudan (challenge_detail)
+      return api.getChallenge(r.id);
     },
     inviteToChallenge: (challengeId, userIds) => rpc<number>('invite_to_challenge', { p_challenge: challengeId, p_users: userIds }),
     async respondToInvite(challengeId, accept) {
@@ -458,6 +537,7 @@ export function createSupabaseApi(url: string, anonKey: string): GazlaApi {
       const j = await rpc<Row | null>('get_invite_preview', { p_code: code });
       if (!j) return null;
       return {
+        challengeId: j.challenge_id ?? null,
         inviter: { displayName: j.inviter.display_name, avatarUrl: avatarUrl(j.inviter.avatar_path), avatarTint: j.inviter.avatar_tint },
         challenge: {
           title: j.challenge.title,
@@ -478,6 +558,11 @@ export function createSupabaseApi(url: string, anonKey: string): GazlaApi {
       const r = await rpc<Row>('join_challenge_by_invite', { p_code: code });
       return r.challenge_id as string;
     },
+    async joinFriendChallenge(challengeId) {
+      await rpc('join_friend_challenge', { p_challenge: challengeId });
+      // Etkin hatırlatma saati grubun saatiyle birlikte my_membership'ten
+      return (await api.getMyMembership(challengeId))!;
+    },
     async getGarden() {
       const rows = await rpc<Row[]>('my_garden');
       return rows.map((r): GardenItem => ({
@@ -492,6 +577,18 @@ export function createSupabaseApi(url: string, anonKey: string): GazlaApi {
         finalRank: r.final_rank,
       }));
     },
+    async getBadges() {
+      const rows = await rpc<Row[]>('my_badges');
+      return rows.map((r): Badge => ({
+        key: r.key,
+        sortOrder: r.sort_order,
+        title: r.title,
+        description: r.description,
+        icon: r.icon,
+        tint: r.tint,
+        earnedAt: r.earned_at,
+      }));
+    },
 
     // Arkadaşlar ve sosyal ----------------------------------------------------------------------
     async getFriendsToday() {
@@ -504,33 +601,28 @@ export function createSupabaseApi(url: string, anonKey: string): GazlaApi {
         activeChallenges: r.active_challenges,
         sharedChallengeId: r.shared_challenge_id,
         sharedChallengeTitle: r.shared_challenge_title,
+        challengeShortTitle: r.shared_challenge_short_title,
       }));
     },
     async getFriendRequests() {
-      const id = await uid();
-      const { data, error } = await supabase
-        .from('friendships')
-        .select(
-          `id, created_at, requester_id, addressee_id,
-           requester:profiles!friendships_requester_id_fkey(${PROFILE_COLUMNS}),
-           addressee:profiles!friendships_addressee_id_fkey(${PROFILE_COLUMNS})`,
-        )
-        .eq('status', 'pending')
-        .order('created_at', { ascending: false });
-      if (error) fail(error);
-      return (data ?? []).map((r: Row) => {
-        const incoming = r.addressee_id === id;
-        return {
-          id: r.id,
-          person: toLite(incoming ? r.requester : r.addressee),
-          direction: incoming ? ('incoming' as const) : ('outgoing' as const),
-          createdAt: r.created_at,
-        };
-      });
+      const rows = await rpc<Row[]>('friend_requests');
+      return rows.map((r): FriendRequest => ({
+        id: r.id,
+        // r.id arkadaşlık satırının id'si; kişi user_id
+        person: toLite({ ...r, id: r.user_id }),
+        direction: r.direction,
+        createdAt: r.created_at,
+        mutualCount: r.mutual_count,
+      }));
     },
     async searchProfiles(query) {
       const rows = await rpc<Row[]>('search_profiles', { p_query: query, p_limit: 20 });
-      return rows.map((r) => ({ ...toLite(r), isFriend: r.is_friend, requestPending: r.request_pending }));
+      return rows.map((r) => ({
+        ...toLite(r),
+        isFriend: r.is_friend,
+        requestPending: r.request_pending,
+        mutualCount: r.mutual_count,
+      }));
     },
     async sendFriendRequest(userId) {
       await rpc('send_friend_request', { p_user: userId });
@@ -563,6 +655,19 @@ export function createSupabaseApi(url: string, anonKey: string): GazlaApi {
           dayIndex: c.day_index,
           daysDone: c.days_done,
         })),
+        joinableChallenges: (j.joinable_challenges ?? []).map((c: Row): JoinableChallenge => ({
+          challengeId: c.challenge_id,
+          title: c.title,
+          shortTitle: c.short_title,
+          icon: c.icon,
+          tint: c.tint,
+          taskType: c.task_type,
+          durationDays: c.duration_days,
+          startDate: c.start_date,
+          endDate: c.end_date,
+          dayIndex: c.day_index,
+          memberCount: c.member_count,
+        })),
       };
     },
     async getPokeMessages() {
@@ -578,6 +683,15 @@ export function createSupabaseApi(url: string, anonKey: string): GazlaApi {
         isActive: r.is_active,
       }));
       return pokeMessagesCache;
+    },
+    async getPokeStatus(userId) {
+      const [r] = await rpc<Row[]>('poke_status', { p_recipient: userId });
+      return {
+        harshMode: r.harsh_mode,
+        sentToday: r.sent_today,
+        dailyLimit: r.daily_limit,
+        remaining: r.remaining,
+      } satisfies PokeStatus;
     },
     async sendPoke(input) {
       const r = await rpc<Row>('send_poke', {
@@ -605,27 +719,41 @@ export function createSupabaseApi(url: string, anonKey: string): GazlaApi {
       const messages = await api.getPokeMessages();
       const { data, error } = await supabase
         .from('notifications')
-        .select(
-          `id, kind, challenge_id, friendship_id, payload, created_at, read_at,
-           actor:profiles!notifications_actor_id_fkey(${PROFILE_COLUMNS}),
-           challenge:challenges!notifications_challenge_fk(title),
-           poke:pokes(message_key, tone)`,
-        )
+        .select(ACTIVITY_COLUMNS)
         .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
         .limit(100);
       if (error) fail(error);
-      return (data ?? []).map((r: Row): ActivityItem => ({
-        id: r.id,
-        kind: r.kind,
-        actor: r.actor ? toLite(r.actor) : null,
-        challengeId: r.challenge_id,
-        challengeTitle: r.challenge?.title ?? (r.payload?.title as string | undefined) ?? null,
-        pokeText: r.poke ? (messages.find((m) => m.key === r.poke.message_key && m.tone === r.poke.tone)?.text ?? null) : null,
-        friendshipId: r.friendship_id,
-        payload: r.payload ?? {},
-        createdAt: r.created_at,
-        readAt: r.read_at,
-      }));
+      return (data ?? []).map((r: Row) => toActivity(r, messages));
+    },
+    async getActivityPage(params = {}) {
+      const limit = Math.min(Math.max(params.limit ?? ACTIVITY_PAGE_SIZE, 1), 100);
+      const messages = await api.getPokeMessages();
+      let query = supabase
+        .from('notifications')
+        .select(ACTIVITY_COLUMNS)
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .limit(limit + 1);
+      if (params.before) {
+        // İmleç: "zaman|id" — aynı anda oluşan satırlar da atlanmadan sıralı gelir
+        const [at, id] = params.before.split('|');
+        query = query.or(`created_at.lt."${at}",and(created_at.eq."${at}",id.lt.${id})`);
+      }
+      const { data, error } = await query;
+      if (error) fail(error);
+      const rows = (data ?? []) as Row[];
+      const items = rows.slice(0, limit).map((r) => toActivity(r, messages));
+      const last = items[items.length - 1];
+      return { items, nextCursor: rows.length > limit && last ? `${last.createdAt}|${last.id}` : null };
+    },
+    async getUnreadCount() {
+      const { count, error } = await supabase
+        .from('notifications')
+        .select('id', { count: 'exact', head: true })
+        .is('read_at', null);
+      if (error) fail(error);
+      return count ?? 0;
     },
     async markActivityRead(ids) {
       await rpc('mark_notifications_read', { p_ids: ids ?? null });
@@ -666,13 +794,17 @@ export function createSupabaseApi(url: string, anonKey: string): GazlaApi {
   return api;
 }
 
+/** Postgres time ('HH:MM:SS') → 'HH:MM' */
+const hhmm = (v: unknown) => (v ? String(v).slice(0, 5) : null);
+
 const toSettings = (r: Row): UserSettings => ({
   birthYear: r.birth_year,
   timezone: r.timezone,
   locale: r.locale,
   pokePushEnabled: r.poke_push_enabled,
-  dailyReminderTime: r.daily_reminder_time ? String(r.daily_reminder_time).slice(0, 5) : null,
+  dailyReminderTime: hhmm(r.daily_reminder_time),
   discoverability: r.discoverability,
+  dayEndGraceHours: r.day_end_grace_hours ?? 2,
 });
 
 const toCheckin = (r: Row, photoUrl: string | null): Checkin => ({
@@ -686,6 +818,7 @@ const toCheckin = (r: Row, photoUrl: string | null): Checkin => ({
   createdAt: r.created_at,
 });
 
+/** my_membership / set_my_reminder satırı (kişisel alanlarla) */
 const toMembership = (r: Row): ChallengeMembership => ({
   challengeId: r.challenge_id,
   userId: r.user_id,
@@ -699,4 +832,7 @@ const toMembership = (r: Row): ChallengeMembership => ({
   finalRequiredDays: r.final_required_days,
   finalRescues: r.final_rescues,
   finalRank: r.final_rank,
+  reminderTime: hhmm(r.reminder_time),
+  personalReminderTime: hhmm(r.personal_reminder_time),
+  finishSeenAt: r.finish_seen_at ?? null,
 });

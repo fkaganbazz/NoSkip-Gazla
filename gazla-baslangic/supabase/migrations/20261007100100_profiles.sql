@@ -1,4 +1,4 @@
--- Gazla veri modeli · 2/10 — profiller, kullanıcı ayarları ve yerel gün hesapları.
+-- Gazla veri modeli · 2/11 — profiller, kullanıcı ayarları ve yerel gün hesapları.
 --
 -- profiles: başkalarının görebileceği alanlar (arkadaşlar, ortak challenge üyeleri).
 -- user_settings: yalnızca sahibinin okuyabildiği alanlar (doğum yılı, saat dilimi, bildirim tercihleri).
@@ -90,13 +90,16 @@ create table public.user_settings (
   -- Günlük hatırlatma saati (yerel); null = kapalı
   daily_reminder_time time default '21:00',
   discoverability public.discoverability not null default 'everyone',
+  -- Gün bitişi toleransı (Ayarlar: 0 / 1 / 2 saat): gün, ertesi gece yarısından bu kadar sonra kapanır
+  day_end_grace_hours smallint not null default 2,
   terms_accepted_at timestamptz not null default now(),
   -- Saat dilimi değişince bu günden önceki günler işaretlenemez (eski dilimde kapanmış günler
   -- yeni dilimde yeniden açılmasın: kurtarma yerine bedava geriye dönük işaretleme olurdu)
   checkin_floor date,
   updated_at timestamptz not null default now(),
   constraint user_settings_locale check (locale in ('tr', 'en')),
-  constraint user_settings_birth_year check (birth_year between 1900 and 2100)
+  constraint user_settings_birth_year check (birth_year between 1900 and 2100),
+  constraint user_settings_grace check (day_end_grace_hours between 0 and 2)
 );
 
 comment on table public.user_settings is 'Yalnızca sahibinin okuyabildiği ayarlar; zamanlanmış işler service role ile okur.';
@@ -105,13 +108,18 @@ create function app.user_settings_guard() returns trigger
 language plpgsql security definer set search_path = '' as $$
 begin
   perform app.assert_valid_timezone(new.timezone);
+  -- Yaş sınırı ekranda ve hata metninde söylenmez (docs/EKRANLAR.md 1.4: nötr mesaj)
   if new.birth_year > extract(year from now())::int - app.min_age() then
-    raise exception 'En az % yaşında olmalısın', app.min_age() using errcode = '23514';
+    raise exception 'Şu an hesabını oluşturamıyoruz.' using errcode = '23514';
   end if;
-  if tg_op = 'UPDATE' and new.timezone is distinct from old.timezone then
-    -- Eski dilimde hâlâ açık olan en erken gün (bkz. app.open_dates)
+  if tg_op = 'UPDATE' and (new.timezone is distinct from old.timezone
+                           or new.day_end_grace_hours is distinct from old.day_end_grace_hours) then
+    -- Eski ayarlarla (dilim + tolerans) hâlâ açık olan en erken gün (bkz. app.open_dates): eski
+    -- kuralla kapanmış bir gün yeni kuralla yeniden açılmaz (tolerans 0 → 2 yapılarak dün
+    -- geriye dönük işaretlenemez)
     new.checkin_floor := greatest(
-      old.checkin_floor, ((now() - app.grace_period()) at time zone old.timezone)::date
+      old.checkin_floor,
+      ((now() - make_interval(hours => old.day_end_grace_hours)) at time zone old.timezone)::date
     );
   end if;
   return new;
@@ -119,7 +127,7 @@ end
 $$;
 
 create trigger user_settings_guard
-  before insert or update of timezone, birth_year on public.user_settings
+  before insert or update of timezone, birth_year, day_end_grace_hours on public.user_settings
   for each row execute function app.user_settings_guard();
 
 create trigger user_settings_touch_updated_at
@@ -134,6 +142,16 @@ language sql stable security definer set search_path = '' as $$
   select coalesce(
     (select s.timezone from public.user_settings s where s.user_id = p_user),
     app.default_timezone()
+  )
+$$;
+
+-- Kullanıcının gün bitişi toleransı (Ayarlar 0/1/2 saat); ayar satırı yoksa varsayılan 2 saat.
+-- app.grace_period() yerine her kural bunu kullanır (gün kapanışı, açık günler, Bugün'ün dünü).
+create function app.user_grace_period(p_user uuid) returns interval
+language sql stable security definer set search_path = '' as $$
+  select coalesce(
+    (select make_interval(hours => s.day_end_grace_hours) from public.user_settings s where s.user_id = p_user),
+    app.grace_period()
   )
 $$;
 
@@ -161,21 +179,22 @@ language sql stable set search_path = '' as $$
   from e
 $$;
 
--- Bir günün kapandığı an: ertesi günün yerel gece yarısından 2 saat (geçen süre) sonra.
--- Geçen süreyle tanımlı olduğu için yaz saati gecelerinde de tam 2 saattir.
+-- Bir günün kapandığı an: ertesi günün yerel gece yarısından kullanıcının toleransı kadar (geçen
+-- süre; varsayılan 2 saat) sonra. Geçen süreyle tanımlı olduğu için yaz saati gecelerinde de tam
+-- tolerans kadardır. Tolerans 0 ise gün yerel gece yarısında kapanır.
 create function app.day_closes_at(p_user uuid, p_day date) returns timestamptz
 language sql stable set search_path = '' as $$
-  select app.local_day_start(app.user_timezone(p_user), p_day + 1) + app.grace_period()
+  select app.local_day_start(app.user_timezone(p_user), p_day + 1) + app.user_grace_period(p_user)
 $$;
 
 -- Hâlâ işaretlenebilen günler (yeniden eskiye): bugün ve kapanmamışsa dün.
 -- day_closes_at ile aynı kural: gün d açık ⇔ p_at < day_closes_at(d) ⇔ (p_at − tolerans)'ın yerel günü ≤ d.
 create function app.open_dates(p_user uuid, p_at timestamptz) returns date[]
 language sql stable set search_path = '' as $$
-  with z as (select app.user_timezone(p_user) as tz)
+  with z as (select app.user_timezone(p_user) as tz, app.user_grace_period(p_user) as grace)
   select array(
     select g::date
-    from z, generate_series(((p_at - app.grace_period()) at time zone z.tz)::date,
+    from z, generate_series(((p_at - z.grace) at time zone z.tz)::date,
                             (p_at at time zone z.tz)::date, interval '1 day') as g
     order by g desc
   )
@@ -228,7 +247,8 @@ create policy "user_settings: update own" on public.user_settings
   with check (user_id = (select auth.uid()));
 
 revoke insert, update on public.user_settings from anon, authenticated;
-grant update (timezone, locale, poke_push_enabled, daily_reminder_time, discoverability)
+grant update (timezone, locale, poke_push_enabled, daily_reminder_time, discoverability,
+              day_end_grace_hours)
   on public.user_settings to authenticated;
 
 revoke all on public.profiles, public.user_settings from anon;

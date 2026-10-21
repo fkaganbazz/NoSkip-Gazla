@@ -1,4 +1,4 @@
--- Gazla veri modeli · 3/10 — arkadaşlık, engelleme, şikayet, dürtme, bildirim, push token.
+-- Gazla veri modeli · 3/11 — arkadaşlık, engelleme, şikayet, dürtme, bildirim, push token.
 
 -- Arkadaşlık -------------------------------------------------------------------------------
 -- Reddetme ("İsteği sil") ve arkadaşlıktan çıkarma satırı siler; ayrı "reddedildi" durumu yok.
@@ -67,6 +67,23 @@ language sql stable security definer set search_path = '' as $$
       and least(f.requester_id, f.addressee_id) = least(p_a, p_b)
       and greatest(f.requester_id, f.addressee_id) = greatest(p_a, p_b)
   )
+$$;
+
+-- Ortak arkadaş sayısı (Friends isteği ve arama "3 ortak"): ikisinin de kabul edilmiş arkadaşı
+-- olan kişiler. Engel arkadaşlığı sildiği için engelli ilişkiler sayılmaz.
+create function app.mutual_friend_count(p_a uuid, p_b uuid) returns integer
+language sql stable security definer set search_path = '' as $$
+  with fa as (
+    select case when f.requester_id = p_a then f.addressee_id else f.requester_id end as id
+    from public.friendships f
+    where f.status = 'accepted' and p_a in (f.requester_id, f.addressee_id)
+  ),
+  fb as (
+    select case when f.requester_id = p_b then f.addressee_id else f.requester_id end as id
+    from public.friendships f
+    where f.status = 'accepted' and p_b in (f.requester_id, f.addressee_id)
+  )
+  select count(*)::int from fa join fb on fb.id = fa.id where fa.id not in (p_a, p_b)
 $$;
 
 -- Bekleyen ya da kabul edilmiş herhangi bir arkadaşlık satırı

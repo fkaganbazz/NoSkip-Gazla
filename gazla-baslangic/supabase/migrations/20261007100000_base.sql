@@ -1,4 +1,4 @@
--- Gazla veri modeli · 1/10 — uzantılar, enum'lar, özel yardımcı şema ve zaman kuralları.
+-- Gazla veri modeli · 1/11 — uzantılar, enum'lar, özel yardımcı şema ve zaman kuralları.
 --
 -- `app` şeması API'ye açık değildir (PostgREST yalnızca public'i sunar). RLS politikalarının
 -- kullandığı SECURITY DEFINER yardımcılar burada durur; böylece istemci onları doğrudan çağırıp
@@ -39,10 +39,14 @@ create type public.notification_kind as enum (
 );
 create type public.discoverability as enum ('everyone', 'nobody');
 create type public.diken_stage as enum ('filiz', 'genc', 'tam', 'cicek');
+-- Create: "Kimler görebilir": yalnızca davetliler ya da oluşturanın arkadaşları da (görüp katılabilir)
+create type public.challenge_visibility as enum ('invited', 'friends');
 
 -- Sabitler (ürün kuralları tek yerde) ------------------------------------------------------
 
--- Gece yarısından sonra önceki günü işaretleme toleransı (CLAUDE.md: 2 saat)
+-- Gece yarısından sonra önceki günü işaretleme toleransının varsayılanı (CLAUDE.md: 2 saat).
+-- Kullanıcı Ayarlar'da 0/1/2 saat seçer (user_settings.day_end_grace_hours); kurallar
+-- app.user_grace_period(kullanıcı) ile okur, bu değer yalnızca ayar satırı yoksa kullanılır.
 create function app.grace_period() returns interval
 language sql immutable parallel safe as $$ select interval '2 hours' $$;
 

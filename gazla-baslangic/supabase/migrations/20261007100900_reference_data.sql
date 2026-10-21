@@ -1,4 +1,4 @@
--- Gazla veri modeli · 10/10 — uygulamanın dayandığı referans veri (prod'da da gerekli).
+-- Gazla veri modeli · 10/11 — uygulamanın dayandığı referans veri (prod'da da gerekli).
 --
 -- Dürtme mesajları: design/Poke.dc.html. Katalog: PickChallenge, Explore, ChallengePreview,
 -- InviteLanding, NumberEntry, Today ve Garden ekranlarındaki örnekler.

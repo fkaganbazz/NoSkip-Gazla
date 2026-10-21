@@ -1,4 +1,4 @@
--- Gazla veri modeli · 5/10 — günlük işaretlemeler ve seri kurtarmaları.
+-- Gazla veri modeli · 5/11 — günlük işaretlemeler ve seri kurtarmaları.
 --
 -- Yazma yalnızca RPC'lerle (checkin, undo_checkin, rescue_streak): yerel gün, tolerans, görev türü
 -- ve üyelik kuralları tek yerde doğrulanır. İstemci bu tablolara doğrudan yazamaz.
@@ -7,7 +7,7 @@ create table public.checkins (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.profiles (id) on delete cascade,
   challenge_id uuid not null references public.challenges (id) on delete cascade,
-  -- Kullanıcının yerel takvim günü (saat dilimine göre, 2 saat toleransla)
+  -- Kullanıcının yerel takvim günü (saat dilimine göre, gün bitişi toleransıyla; varsayılan 2 saat)
   local_date date not null,
   -- Sayı görevlerinde girilen değer (hedefin altında da gün tamam sayılır)
   value numeric,
@@ -66,6 +66,19 @@ create table public.streak_rescues (
 create unique index streak_rescues_free_per_month
   on public.streak_rescues (user_id, quota_month) where method = 'free';
 create index streak_rescues_challenge_idx on public.streak_rescues (challenge_id, rescued_date);
+
+-- Kurtarmadan vazgeçilen günler (StreakLost "Baştan başla"): bekleyen kurtarma kapanır, o gün
+-- artık kurtarılamaz ve seri sıfırdan devam eder. Kişisel; app şemasında (API'ye kapalı), yalnızca
+-- decline_rescue yazar.
+create table app.rescue_declines (
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  challenge_id uuid not null references public.challenges (id) on delete cascade,
+  missed_date date not null,
+  created_at timestamptz not null default now(),
+  primary key (user_id, challenge_id, missed_date)
+);
+alter table app.rescue_declines enable row level security;
+revoke all on app.rescue_declines from public, anon, authenticated;
 
 alter table public.reports
   add constraint reports_checkin_fk foreign key (checkin_id)

@@ -8,6 +8,9 @@
  */
 import type {
   ActivityItem,
+  ActivityPage,
+  ActivityPageParams,
+  Badge,
   BlockedUser,
   BoardMember,
   Challenge,
@@ -17,15 +20,18 @@ import type {
   CheckinInput,
   CompleteProfileInput,
   CreateChallengeInput,
+  FinishedChallenge,
   FriendProfile,
   FriendRequest,
   FriendToday,
   GardenItem,
   InvitePreview,
   LocalDate,
+  NumberStats,
   PendingRescue,
   Poke,
   PokeMessage,
+  PokeStatus,
   Profile,
   ProfileUpdate,
   RecentDay,
@@ -99,16 +105,26 @@ export interface GazlaApi {
   undoCheckin(challengeId: string, localDate?: LocalDate): Promise<void>;
   /** rescue_streak (ücretsiz hak) */
   rescueWithFreeRight(challengeId: string, missedDate: LocalDate): Promise<void>;
+  /** decline_rescue — StreakLost "Baştan başla": bekleyen kurtarma kapanır, seri sıfırdan devam */
+  declineRescue(challengeId: string, missedDate: LocalDate): Promise<void>;
+  /** my_unseen_finished — Bugün açılışında bir kez gösterilecek bitmiş challenge'lar */
+  getUnseenFinished(): Promise<FinishedChallenge[]>;
+  /** mark_finish_seen — "Challenge bitti" gösterildi (cihaz değişse de tekrar gösterilmez) */
+  markFinishSeen(challengeId: string): Promise<void>;
 
   // Challenge -----------------------------------------------------------------------------------
-  /** challenge_templates (etkin olanlar) */
+  /** challenge_templates (etkin olanlar, onboarding sırası) + template_popularity */
   getTemplates(): Promise<Template[]>;
   /** template_stats */
   getTemplateStats(templateId: string): Promise<TemplateStats>;
-  /** challenges (üye olunanlar) */
+  /** challenge_detail (üye olunanlar; "Arkadaşlarım" görünürlükte arkadaşın challenge'ı) + durum, gün no */
   getChallenge(challengeId: string): Promise<Challenge>;
-  /** challenge_members (kendi satırı) */
+  /** my_membership (kendi satırı; kişisel hatırlatma saati dahil) */
   getMyMembership(challengeId: string): Promise<ChallengeMembership | null>;
+  /** set_my_reminder — kişisel hatırlatma saati 'HH:MM'; null = grubun saati */
+  setMyReminder(challengeId: string, time: string | null): Promise<ChallengeMembership>;
+  /** number_stats — NumberEntry "Dün / En iyin / Grupta en iyi" */
+  getNumberStats(challengeId: string, localDate?: LocalDate): Promise<NumberStats>;
   /** challenge_board */
   getChallengeBoard(challengeId: string): Promise<BoardMember[]>;
   /** checkins + streak_rescues (kendi satırları) */
@@ -127,13 +143,17 @@ export interface GazlaApi {
   getInvitePreview(code: string): Promise<InvitePreview | null>;
   /** join_challenge_by_invite → challenge id */
   joinByInvite(code: string): Promise<string>;
+  /** join_friend_challenge — arkadaşın "Arkadaşlarım" challenge'ına davetsiz katıl */
+  joinFriendChallenge(challengeId: string): Promise<ChallengeMembership>;
   /** my_garden */
   getGarden(): Promise<GardenItem[]>;
+  /** my_badges — tüm rozetler, kazanılanlarda earnedAt */
+  getBadges(): Promise<Badge[]>;
 
   // Arkadaşlar ve sosyal ------------------------------------------------------------------------
   /** friends_today */
   getFriendsToday(): Promise<FriendToday[]>;
-  /** friendships (bekleyen) + profiles */
+  /** friend_requests (bekleyen, ortak arkadaş sayısıyla) */
   getFriendRequests(): Promise<FriendRequest[]>;
   /** search_profiles */
   searchProfiles(query: string): Promise<SearchResult[]>;
@@ -145,14 +165,20 @@ export interface GazlaApi {
   removeFriendship(userId: string): Promise<void>;
   /** friend_profile */
   getFriendProfile(userId: string): Promise<FriendProfile | null>;
-  /** poke_messages */
+  /** poke_messages (ekranlar `usePokeMessages` ile src/content/pokes.ts listesini kullanır) */
   getPokeMessages(): Promise<PokeMessage[]>;
+  /** poke_status — alıcıya bugün gönderilen ve kalan dürtme hakkı */
+  getPokeStatus(userId: string): Promise<PokeStatus>;
   /** send_poke */
   sendPoke(input: SendPokeInput): Promise<Poke>;
   /** pokes delete (30 sn içinde geri al) */
   undoPoke(pokeId: string): Promise<void>;
-  /** notifications (+ aktör profili, dürtme metni) */
+  /** notifications (+ aktör profili, dürtme metni) — en yeni 100 */
   getActivity(): Promise<ActivityItem[]>;
+  /** notifications, sayfalı (varsayılan 30'ar, en yeniden eskiye) */
+  getActivityPage(params?: ActivityPageParams): Promise<ActivityPage>;
+  /** notifications (okunmamış sayısı; Bugün zil rozeti) */
+  getUnreadCount(): Promise<number>;
   /** mark_notifications_read */
   markActivityRead(ids?: string[]): Promise<void>;
   /** blocks */

@@ -20,7 +20,7 @@
 --   zafer  invited to the full group c3; finished ece's ended challenge c4 with her
 --   kid    signed up (auth user) but has no profile yet
 begin;
-select plan(271);
+select plan(297);
 
 -- =========================================================================================
 -- Fixture (as postgres: table owner, BYPASSRLS)
@@ -173,10 +173,10 @@ where challenge_id = :'c1' and local_date = :'day1' and user_id in (:'o', :'m', 
 select set_eq(
   $$select c.relname::text from pg_class c join pg_namespace n on n.oid = c.relnamespace
     where n.nspname = 'public' and c.relkind in ('r', 'p', 'v', 'm', 'f')$$,
-  array['blocks', 'challenge_invites', 'challenge_members', 'challenge_templates', 'challenges',
+  array['badges', 'blocks', 'challenge_invites', 'challenge_members', 'challenge_templates', 'challenges',
         'checkins', 'friendships', 'notifications', 'poke_messages', 'pokes', 'profiles',
-        'push_tokens', 'reports', 'streak_rescues', 'user_settings'],
-  'public has exactly the 15 known tables and no views (a new relation needs RLS tests here)');
+        'push_tokens', 'reports', 'streak_rescues', 'user_badges', 'user_settings'],
+  'public has exactly the 17 known tables and no views (a new relation needs RLS tests here)');
 select tests.rls_enabled('public');
 select tests.rls_enabled('public', 'profiles');
 select tests.rls_enabled('public', 'user_settings');
@@ -193,6 +193,8 @@ select tests.rls_enabled('public', 'challenge_invites');
 select tests.rls_enabled('public', 'challenge_members');
 select tests.rls_enabled('public', 'checkins');
 select tests.rls_enabled('public', 'streak_rescues');
+select tests.rls_enabled('public', 'badges');
+select tests.rls_enabled('public', 'user_badges');
 select tests.rls_enabled('storage', 'objects');
 select results_eq($$select id::text, public from storage.buckets where id in ('avatars', 'proofs') order by id$$,
   $$values ('avatars', true), ('proofs', false)$$, 'proofs bucket is private, avatars bucket is public');
@@ -242,8 +244,15 @@ select is(
   array(select a.attname::text from pg_attribute a
         where a.attrelid = 'public.user_settings'::regclass and a.attnum > 0 and not a.attisdropped
           and has_column_privilege('authenticated', a.attrelid, a.attnum, 'UPDATE') order by 1),
-  array['daily_reminder_time', 'discoverability', 'locale', 'poke_push_enabled', 'timezone'],
-  'user_settings: birth_year, terms_accepted_at, user_id are not updatable');
+  array['daily_reminder_time', 'day_end_grace_hours', 'discoverability', 'locale', 'poke_push_enabled', 'timezone'],
+  'user_settings: birth_year, terms_accepted_at, user_id, checkin_floor are not updatable');
+
+select is(
+  array(select a.attname::text from pg_attribute a
+        where a.attrelid = 'public.challenge_members'::regclass and a.attnum > 0 and not a.attisdropped
+          and not has_column_privilege('authenticated', a.attrelid, a.attnum, 'SELECT') order by 1),
+  array['finish_seen_at', 'reminder_time'],
+  'challenge_members: the personal reminder time and "finish seen" are not readable by the group (my_membership only)');
 
 select is(
   array(select a.attname::text from pg_attribute a
@@ -259,22 +268,27 @@ select is(
 select set_eq(
   $$select n.nspname || '.' || p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public' and has_function_privilege('anon', p.oid, 'EXECUTE')$$,
-  array['public.diken_stage_for', 'public.get_invite_preview', 'public.template_stats'],
-  'anon may execute only diken_stage_for, get_invite_preview and template_stats in public');
+  array['public.diken_stage_for', 'public.get_invite_preview', 'public.template_stats',
+        'public.template_popularity'],
+  'anon may execute only diken_stage_for, get_invite_preview, template_stats and template_popularity in public');
 
 select set_eq(
   $$select n.nspname || '.' || p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public' and has_function_privilege('authenticated', p.oid, 'EXECUTE')$$,
   array['public.diken_stage_for', 'public.get_invite_preview', 'public.template_stats',
+        'public.template_popularity',
         'public.is_username_available', 'public.complete_profile', 'public.search_profiles',
         'public.send_friend_request', 'public.accept_friend_request', 'public.send_poke',
         'public.submit_report', 'public.mark_notifications_read', 'public.register_push_token',
         'public.create_challenge', 'public.invite_to_challenge', 'public.respond_to_invite',
         'public.leave_challenge', 'public.create_invite', 'public.revoke_invite',
-        'public.join_challenge_by_invite', 'public.checkin', 'public.undo_checkin',
-        'public.rescue_streak', 'public.my_today', 'public.my_streak', 'public.my_pending_rescues',
-        'public.challenge_board', 'public.friends_today', 'public.my_garden',
-        'public.my_recent_days', 'public.friend_profile'],
+        'public.join_challenge_by_invite', 'public.join_friend_challenge', 'public.set_my_reminder',
+        'public.mark_finish_seen', 'public.checkin', 'public.undo_checkin',
+        'public.rescue_streak', 'public.decline_rescue', 'public.my_today', 'public.my_streak',
+        'public.my_pending_rescues', 'public.my_unseen_finished', 'public.challenge_detail',
+        'public.my_membership', 'public.challenge_board', 'public.number_stats',
+        'public.friends_today', 'public.friend_requests', 'public.poke_status', 'public.my_garden',
+        'public.my_recent_days', 'public.friend_profile', 'public.my_badges'],
   'authenticated may execute exactly the user RPCs in public');
 
 select is(
@@ -317,15 +331,16 @@ select is(
   'no function taking an explicit time (p_at) is executable by anon or authenticated');
 
 -- SECURITY DEFINER allow-lists. Trigger functions cannot be called directly and are skipped.
--- authenticated additionally needs the five read helpers that RLS policies call.
+-- authenticated additionally needs the read helpers that RLS policies call.
 select is(
   array(select n.nspname || '.' || p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
         where n.nspname in ('public', 'app') and p.prosecdef and p.prorettype <> 'trigger'::regtype
           and has_function_privilege('anon', p.oid, 'EXECUTE')
-          and n.nspname || '.' || p.proname <> all (array['public.get_invite_preview', 'public.template_stats'])
+          and n.nspname || '.' || p.proname <> all (array['public.get_invite_preview', 'public.template_stats',
+                                                          'public.template_popularity'])
         order by 1),
   '{}'::text[],
-  'anon can execute no SECURITY DEFINER function besides get_invite_preview and template_stats');
+  'anon can execute no SECURITY DEFINER function besides get_invite_preview, template_stats and template_popularity');
 
 select is(
   array(select n.nspname || '.' || p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
@@ -336,18 +351,23 @@ select is(
             -- notifications, checkins, storage.objects)
             'app.is_blocked', 'app.is_member', 'app.is_active_member', 'app.can_see_profile',
             'app.can_see_member_activity', 'app.my_challenge_ids', 'app.my_related_user_ids',
-            'app.can_see_proof', 'app.proof_locked',
+            'app.my_friend_ids', 'app.can_see_proof', 'app.proof_locked',
             -- user RPCs
-            'public.get_invite_preview', 'public.template_stats', 'public.is_username_available',
+            'public.get_invite_preview', 'public.template_stats', 'public.template_popularity',
+            'public.is_username_available',
             'public.complete_profile', 'public.search_profiles', 'public.send_friend_request',
             'public.accept_friend_request', 'public.send_poke', 'public.submit_report',
             'public.mark_notifications_read', 'public.register_push_token', 'public.create_challenge',
             'public.invite_to_challenge', 'public.respond_to_invite', 'public.leave_challenge',
             'public.create_invite', 'public.revoke_invite', 'public.join_challenge_by_invite',
-            'public.checkin', 'public.undo_checkin', 'public.rescue_streak', 'public.my_today',
-            'public.my_streak', 'public.my_pending_rescues', 'public.challenge_board',
-            'public.friends_today', 'public.my_garden', 'public.my_recent_days',
-            'public.friend_profile'])
+            'public.join_friend_challenge', 'public.set_my_reminder', 'public.mark_finish_seen',
+            'public.checkin', 'public.undo_checkin', 'public.rescue_streak', 'public.decline_rescue',
+            'public.my_today', 'public.my_streak', 'public.my_pending_rescues',
+            'public.my_unseen_finished', 'public.challenge_detail', 'public.my_membership',
+            'public.challenge_board', 'public.number_stats',
+            'public.friends_today', 'public.friend_requests', 'public.poke_status',
+            'public.my_garden', 'public.my_recent_days',
+            'public.friend_profile', 'public.my_badges'])
         order by 1),
   '{}'::text[],
   'authenticated can execute no SECURITY DEFINER function outside the RPC + RLS-helper allow-list');
@@ -404,7 +424,7 @@ select tests.authenticate_as('kid');
 select throws_ok($$select public.my_streak()$$,
   'P0001', 'Önce profilini tamamla', 'RPCs reject a signed-up user without a profile');
 select throws_ok($$select public.complete_profile('kid.user', 'Kid', 2020)$$,
-  '23514', 'En az 13 yaşında olmalısın', 'complete_profile enforces the minimum age');
+  '23514', 'Şu an hesabını oluşturamıyoruz.', 'complete_profile enforces the minimum age without naming it');
 select throws_ok(format($$insert into public.profiles (id, username, display_name) values (%L, 'kid.user', 'Kid')$$, :'kid'),
   '42501', null, 'a profile cannot be created directly, bypassing birth year / age check (only via complete_profile)');
 select throws_ok(format($$insert into public.profiles (id, username, display_name) values (%L, 'fake.user', 'Fake')$$, :'z'),
@@ -935,6 +955,70 @@ select throws_ok($$select public.join_challenge_by_invite('OlcayCode1')$$,
 
 -- TRUNCATE ignores RLS: an ordinary user must not be able to wipe a table
 select throws_ok($$truncate public.challenge_members$$, '42501', null, 'authenticated cannot TRUNCATE challenge_members');
+
+-- =========================================================================================
+-- 12. "Friends" visibility (Create "Kimler görebilir"), personal membership fields, badges
+-- =========================================================================================
+
+reset role;
+-- c5: olcay's challenge that her friends (mert, kaan) may see and join without an invitation
+select id as c5 from app.do_create_challenge(
+  :'o', null, 'Arkadaş challenge', 'check', 7, null, null, null, null, null, 0, null, null,
+  '{}', now(), 'friends') \gset
+update public.challenge_members set reminder_time = '07:15' where challenge_id = :'c1' and user_id = :'o';
+insert into public.user_badges (user_id, badge_key) values (:'o', 'laf_ustasi'), (:'m', 'erkenci');
+
+select tests.authenticate_as('kaan');
+select results_eq($$select id from public.challenges$$, array[:'c5'::uuid],
+  'a friend of the creator reads her "friends" challenge without being a member (not her invite-only c1)');
+select is_empty(format($$select 1 from public.challenge_members where challenge_id = %L$$, :'c5'),
+  'a friend who is not a member still cannot read the group of a "friends" challenge');
+select is(public.challenge_detail(:'c5') ->> 'visibility', 'friends',
+  'challenge_detail: a friend of the creator gets the "friends" challenge');
+select is(public.challenge_detail(:'c1'), null, 'challenge_detail: nothing for a friend''s invite-only challenge');
+
+select tests.authenticate_as('selin');
+select is_empty(format($$select 1 from public.challenges where id = %L$$, :'c5'),
+  'a stranger cannot read a "friends" challenge');
+select is(public.challenge_detail(:'c5'), null, 'challenge_detail: nothing for a stranger');
+
+select tests.authenticate_as('bora');
+select is_empty(format($$select 1 from public.challenges where id = %L$$, :'c5'),
+  'a co-member who is not the creator''s friend (here: blocked by her) cannot read her "friends" challenge');
+
+select tests.authenticate_as('mert');
+select throws_ok(format($$select reminder_time from public.challenge_members where challenge_id = %L$$, :'c1'),
+  '42501', null, 'a co-member cannot read another member''s personal reminder time');
+select throws_ok(format($$select finish_seen_at from public.challenge_members where challenge_id = %L$$, :'c1'),
+  '42501', null, 'a co-member cannot read when another member saw the "finished" screen');
+select is(public.my_membership(:'c1') ->> 'personal_reminder_time', null,
+  'my_membership: no personal reminder time for mert');
+
+select tests.authenticate_as('olcay');
+select is(public.my_membership(:'c1') ->> 'personal_reminder_time', '07:15:00',
+  'my_membership: the member reads her own personal reminder time');
+select throws_ok($$select * from public.challenge_members$$, '42501', null,
+  'select * on challenge_members is refused (personal columns); the own row comes from my_membership');
+
+select results_eq($$select count(*)::int from public.badges$$, array[12], 'authenticated reads the 12 badges');
+select results_eq($$select badge_key from public.user_badges$$, array['laf_ustasi'],
+  'a user reads only her own earned badges');
+select throws_ok($$insert into public.user_badges (user_id, badge_key) values (auth.uid(), 'yuz_gun')$$,
+  '42501', null, 'badges cannot be self-awarded');
+select throws_ok($$update public.user_badges set earned_at = now() - interval '1 year'$$,
+  '42501', null, 'earned badges cannot be edited');
+select throws_ok($$delete from public.user_badges$$, '42501', null, 'earned badges cannot be deleted by the client');
+select throws_ok($$update public.badges set title_tr = 'x'$$, '42501', null, 'users cannot edit the badge catalog');
+select results_eq($$select count(*)::int, count(earned_at)::int from public.my_badges()$$, $$values (12, 1)$$,
+  'my_badges: all 12 badges, earned_at only for the earned one');
+
+select tests.clear_authentication();
+select throws_ok($$select 1 from public.badges$$, '42501', 'permission denied for table badges', 'anon cannot read badges');
+select throws_ok($$select 1 from public.user_badges$$, '42501', 'permission denied for table user_badges',
+  'anon cannot read user_badges');
+select throws_ok($$select public.my_badges()$$, '42501', null, 'anon cannot call my_badges');
+select results_eq($$select count(*)::int from public.template_popularity()$$, array[8],
+  'anon can call template_popularity (aggregate counts of the 8 active templates)');
 
 select * from finish();
 rollback;

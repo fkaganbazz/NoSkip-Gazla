@@ -1,4 +1,4 @@
--- Gazla veri modeli · 7/10 — yazma RPC'leri (istemcinin çağırdığı işlemler).
+-- Gazla veri modeli · 7/11 — yazma RPC'leri (istemcinin çağırdığı işlemler).
 --
 -- Her public fonksiyon çağıranı auth.uid() ile sabitler; zamanı now() ile alır (istemci zamanı
 -- değiştiremez). Zamanı parametre alan app.* sürümleri testler ve zamanlanmış işler içindir ve
@@ -89,17 +89,18 @@ end
 $$;
 
 -- Kullanıcı adıyla arama: yalnızca "Beni herkes bulabilir" diyenler (ya da zaten ilişkili olanlar),
--- iki yönde de engel yoksa; yalnızca herkese açık alanlar.
+-- iki yönde de engel yoksa; yalnızca herkese açık alanlar ve ortak arkadaş sayısı ("3 ortak").
 create function public.search_profiles(p_query text, p_limit integer default 20)
 returns table (
   id uuid, username text, display_name text, avatar_path text, avatar_tint text,
-  is_friend boolean, request_pending boolean
+  is_friend boolean, request_pending boolean, mutual_count integer
 )
 language sql stable security definer set search_path = '' as $$
   with q as (select lower(btrim(ltrim(btrim(p_query), '@'))) as term, auth.uid() as viewer)
   select p.id, p.username::text, p.display_name, p.avatar_path, p.avatar_tint,
          app.are_friends(q.viewer, p.id),
-         app.has_friendship_row(q.viewer, p.id) and not app.are_friends(q.viewer, p.id)
+         app.has_friendship_row(q.viewer, p.id) and not app.are_friends(q.viewer, p.id),
+         app.mutual_friend_count(q.viewer, p.id)
   from q
   join public.profiles p on p.username::text like replace(replace(q.term, '_', '\_'), '%', '\%') || '%'
   left join public.user_settings s on s.user_id = p.id
@@ -429,6 +430,58 @@ begin
 end
 $$;
 
+-- Challenge'ın kullanıcıya göre durumu (gün numarası gibi sunucudan; istemci tarihten hesaplamaz):
+-- 'upcoming' başlamadı; 'active' sürüyor (son gün tolerans içinde hâlâ işaretlenebiliyorsa da);
+-- 'finished' kullanıcının işaretleyebileceği günü kalmadı ya da sonucu kaydedildi.
+create function app.challenge_status(p_user uuid, p_challenge uuid, p_at timestamptz) returns text
+language sql stable security definer set search_path = '' as $$
+  select case
+    when exists (select 1 from public.challenge_members m
+                 where m.challenge_id = c.id and m.user_id = p_user and m.finished_at is not null)
+      then 'finished'
+    when c.start_date > app.local_date(p_user, p_at) then 'upcoming'
+    when c.end_date < coalesce((select min(d) from unnest(app.checkin_dates(p_user, p_at)) as d),
+                               app.first_checkin_date(p_user, p_at))
+      then 'finished'
+    else 'active'
+  end
+  from public.challenges c where c.id = p_challenge
+$$;
+
+-- Kullanıcının yerel gününe göre gün numarası: 0 = başlamadı, en çok süre (bitti)
+create function app.challenge_day_index(p_user uuid, p_challenge uuid, p_at timestamptz) returns integer
+language sql stable security definer set search_path = '' as $$
+  select greatest(least(app.local_date(p_user, p_at) - c.start_date + 1, c.duration_days::int), 0)
+  from public.challenges c where c.id = p_challenge
+$$;
+
+-- Üyenin etkin hatırlatma saati: kişisel saat (challenge_members.reminder_time), yoksa grubun saati.
+-- Hatırlatma gönderen zamanlanmış iş bunu kullanır (supabase/README.md).
+create function app.member_reminder_time(p_user uuid, p_challenge uuid) returns time
+language sql stable security definer set search_path = '' as $$
+  select coalesce(m.reminder_time, c.reminder_time)
+  from public.challenge_members m
+  join public.challenges c on c.id = m.challenge_id
+  where m.challenge_id = p_challenge and m.user_id = p_user
+$$;
+
+-- Kendi üyelik satırı (my_membership, set_my_reminder): grup listesinde okunmayan kişisel alanlar
+-- (hatırlatma saati, "bitti ekranı görüldü") dahil
+create function app.membership_json(p_user uuid, p_challenge uuid) returns jsonb
+language sql stable security definer set search_path = '' as $$
+  select jsonb_build_object(
+    'challenge_id', m.challenge_id, 'user_id', m.user_id, 'role', m.role, 'status', m.status,
+    'invited_by', m.invited_by, 'joined_on', m.joined_on, 'left_on', m.left_on,
+    'finished_at', m.finished_at, 'final_days_done', m.final_days_done,
+    'final_required_days', m.final_required_days, 'final_rescues', m.final_rescues,
+    'final_rank', m.final_rank, 'finish_seen_at', m.finish_seen_at,
+    'personal_reminder_time', m.reminder_time,
+    'reminder_time', app.member_reminder_time(m.user_id, m.challenge_id)
+  )
+  from public.challenge_members m
+  where m.challenge_id = p_challenge and m.user_id = p_user
+$$;
+
 -- Aynı anda sürdürülen (bitmemiş, aktif) challenge sınırı
 create function app.assert_can_take_challenge(p_user uuid, p_at timestamptz) returns void
 language plpgsql stable security definer set search_path = '' as $$
@@ -520,7 +573,9 @@ create function app.do_create_challenge(
   p_number_step numeric,
   p_number_max numeric,
   p_invitees uuid[],
-  p_at timestamptz
+  p_at timestamptz,
+  -- Sonda ve varsayılanlı: zamanı sabitleyen çağrılar (testler) sırayla vermeye devam edebilsin
+  p_visibility public.challenge_visibility default 'invited'
 ) returns public.challenges
 language plpgsql security definer set search_path = '' as $$
 declare
@@ -549,14 +604,15 @@ begin
     insert into public.challenges (
       template_id, created_by, title, short_title, task_type, duration_days, start_date,
       reminder_time, invite_message, category, icon, tint,
-      number_unit, number_base_target, number_daily_increment, number_step, number_max
+      number_unit, number_base_target, number_daily_increment, number_step, number_max, visibility
     ) values (
       v_t.id, p_user,
       case when v_locale = 'en' then coalesce(v_t.title_en, v_t.title_tr) else v_t.title_tr end,
       case when v_locale = 'en' then coalesce(v_t.short_title_en, v_t.short_title_tr) else v_t.short_title_tr end,
       v_t.task_type, coalesce(p_duration_days, v_t.default_duration_days), v_start,
       p_reminder_time, nullif(btrim(p_invite_message), ''), v_t.category, v_t.icon, v_t.tint,
-      v_t.number_unit, v_t.number_base_target, v_t.number_daily_increment, v_t.number_step, v_t.number_max
+      v_t.number_unit, v_t.number_base_target, v_t.number_daily_increment, v_t.number_step, v_t.number_max,
+      coalesce(p_visibility, 'invited')
     ) returning * into v_row;
   else
     if p_title is null or p_task_type is null or p_duration_days is null then
@@ -564,11 +620,12 @@ begin
     end if;
     insert into public.challenges (
       created_by, title, task_type, duration_days, start_date, reminder_time, invite_message,
-      number_unit, number_base_target, number_daily_increment, number_step, number_max
+      number_unit, number_base_target, number_daily_increment, number_step, number_max, visibility
     ) values (
       p_user, btrim(p_title), p_task_type, p_duration_days, v_start, p_reminder_time,
       nullif(btrim(p_invite_message), ''),
-      p_number_unit, p_number_base_target, coalesce(p_number_daily_increment, 0), p_number_step, p_number_max
+      p_number_unit, p_number_base_target, coalesce(p_number_daily_increment, 0), p_number_step, p_number_max,
+      coalesce(p_visibility, 'invited')
     ) returning * into v_row;
   end if;
 
@@ -595,13 +652,15 @@ create function public.create_challenge(
   p_number_daily_increment numeric default 0,
   p_number_step numeric default null,
   p_number_max numeric default null,
-  p_invitees uuid[] default '{}'
+  p_invitees uuid[] default '{}',
+  -- Create "Kimler görebilir": 'invited' (Davetliler) ya da 'friends' (Arkadaşlarım)
+  p_visibility public.challenge_visibility default 'invited'
 ) returns public.challenges
 language sql security definer set search_path = '' as $$
   select * from app.do_create_challenge(
     app.require_user(), p_template, p_title, p_task_type, p_duration_days, p_start_date,
     p_reminder_time, p_invite_message, p_number_unit, p_number_base_target,
-    p_number_daily_increment, p_number_step, p_number_max, p_invitees, now()
+    p_number_daily_increment, p_number_step, p_number_max, p_invitees, now(), p_visibility
   )
 $$;
 
@@ -801,6 +860,87 @@ language sql security definer set search_path = '' as $$
   select * from app.do_join_by_invite(app.require_user(), p_code, now())
 $$;
 
+-- "Arkadaşlarım" görünürlüğündeki challenge'a davetsiz katılma (FriendProfile: katılabileceğin
+-- challenge'lar). Oluşturanın arkadaşı olmalı ve oluşturan hâlâ aktif üye; link yolunun kuralları
+-- geçerli: bitmemiş olmalı, ayrılan geri dönemez, grup en çok 20, kullanıcı en çok 20 süren challenge.
+-- Engel arkadaşlığı sildiği için engellenen/engelleyen katılamaz.
+create function app.do_join_friend_challenge(p_user uuid, p_challenge uuid, p_at timestamptz)
+returns public.challenge_members
+language plpgsql security definer set search_path = '' as $$
+declare
+  v_c public.challenges;
+  v_row public.challenge_members;
+begin
+  -- Kilit sırası her yerde aynı: önce challenge, sonra üye satırı
+  perform 1 from public.challenges c where c.id = p_challenge for no key update;
+  select * into v_c from public.challenges c where c.id = p_challenge;
+  if not found or v_c.visibility <> 'friends' or v_c.created_by is null
+     or not app.are_friends(p_user, v_c.created_by)
+     or not app.is_active_member(v_c.created_by, p_challenge) then
+    raise exception 'Challenge bulunamadı' using errcode = 'P0002';
+  end if;
+  perform app.assert_challenge_open(p_user, p_challenge, p_at);
+
+  select * into v_row from public.challenge_members m
+  where m.challenge_id = p_challenge and m.user_id = p_user
+  for update;
+  if found and v_row.status = 'active' then
+    return v_row;
+  end if;
+  if found and v_row.status = 'left' then
+    raise exception 'Ayrıldığın challenge''a tekrar katılamazsın' using errcode = 'P0001';
+  end if;
+
+  if app.active_member_count(p_challenge) >= app.max_members() then
+    raise exception 'Grup dolu' using errcode = 'P0001';
+  end if;
+  perform app.assert_can_take_challenge(p_user, p_at);
+
+  -- Yeni üye ya da bekleyen/reddedilmiş davetli (davet edeni korunur)
+  insert into public.challenge_members (challenge_id, user_id, status, invited_by, joined_at, joined_on)
+  values (p_challenge, p_user, 'active', v_c.created_by, p_at, app.first_checkin_date(p_user, p_at))
+  on conflict (challenge_id, user_id) do update
+    set status = 'active', invited_by = coalesce(public.challenge_members.invited_by, excluded.invited_by),
+        joined_at = excluded.joined_at, joined_on = excluded.joined_on
+  returning * into v_row;
+  return v_row;
+end
+$$;
+
+create function public.join_friend_challenge(p_challenge uuid) returns public.challenge_members
+language sql security definer set search_path = '' as $$
+  select * from app.do_join_friend_challenge(app.require_user(), p_challenge, now())
+$$;
+
+-- Kişisel hatırlatma saati (Detail "…" → "Hatırlatma saatini değiştir"); null = grubun saatine dön.
+-- Yalnızca aktif üye; dönüş my_membership ile aynı.
+create function public.set_my_reminder(p_challenge uuid, p_time time) returns jsonb
+language plpgsql security definer set search_path = '' as $$
+declare
+  v_uid uuid := app.require_user();
+begin
+  update public.challenge_members m set reminder_time = p_time
+  where m.challenge_id = p_challenge and m.user_id = v_uid and m.status = 'active';
+  if not found then
+    raise exception 'Bu challenge''da değilsin' using errcode = '42501';
+  end if;
+  return app.membership_json(v_uid, p_challenge);
+end
+$$;
+
+-- "Challenge bitti" ekranı gösterildi: Bugün açılışında bir kez çıkar, cihaz değişse de tekrar
+-- çıkmaz. Sonucu kaydedilmemiş üyelikte false döner.
+create function public.mark_finish_seen(p_challenge uuid) returns boolean
+language plpgsql security definer set search_path = '' as $$
+declare
+  v_uid uuid := app.require_user();
+begin
+  update public.challenge_members m set finish_seen_at = coalesce(m.finish_seen_at, now())
+  where m.challenge_id = p_challenge and m.user_id = v_uid and m.finished_at is not null;
+  return found;
+end
+$$;
+
 -- İşaretleme --------------------------------------------------------------------------------
 
 create function app.do_checkin(
@@ -910,6 +1050,31 @@ $$;
 create function public.rescue_streak(p_challenge uuid, p_missed_date date) returns public.streak_rescues
 language sql security definer set search_path = '' as $$
   select * from app.apply_rescue(app.require_user(), p_challenge, p_missed_date, 'free', null, now())
+$$;
+
+-- StreakLost "Baştan başla": bekleyen kurtarmadan vazgeç. Gün kurtarılmadan kapanır (seri sıfırdan
+-- devam eder), my_pending_rescues onu artık döndürmez, sonradan da kurtarılamaz; Diken solgun
+-- olmaktan çıkar ve challenge bitişi bu kurtarmayı beklemez.
+create function app.do_decline_rescue(p_user uuid, p_challenge uuid, p_missed_date date, p_at timestamptz)
+returns boolean
+language plpgsql security definer set search_path = '' as $$
+begin
+  if not exists (
+    select 1 from app.pending_rescues(p_user, p_at) pr
+    where pr.challenge_id = p_challenge and pr.missed_date = p_missed_date
+  ) then
+    raise exception 'Bekleyen bir kurtarma yok' using errcode = 'P0002';
+  end if;
+  insert into app.rescue_declines (user_id, challenge_id, missed_date, created_at)
+  values (p_user, p_challenge, p_missed_date, p_at)
+  on conflict do nothing;
+  return true;
+end
+$$;
+
+create function public.decline_rescue(p_challenge uuid, p_missed_date date) returns boolean
+language sql security definer set search_path = '' as $$
+  select app.do_decline_rescue(app.require_user(), p_challenge, p_missed_date, now())
 $$;
 
 -- AdMob sunucu doğrulamasından (SSV) sonra Edge Function çağırır; yalnızca service role.

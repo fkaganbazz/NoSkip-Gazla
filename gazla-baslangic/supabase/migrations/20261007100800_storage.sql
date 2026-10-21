@@ -1,4 +1,4 @@
--- Gazla veri modeli · 9/10 — Storage: kanıt fotoğrafları (özel) ve profil fotoğrafları.
+-- Gazla veri modeli · 9/11 — Storage: kanıt fotoğrafları (özel) ve profil fotoğrafları.
 --
 -- proofs: {user_id}/{challenge_id}/{dosya}. Sahibi yazar ve okur; aktif grup üyeleri (aralarında
 -- engel yoksa) yalnızca bir işaretlemeye bağlı fotoğrafı okur (gönderilmemiş, değiştirilmiş ya da

@@ -1,4 +1,4 @@
--- Gazla veri modeli · 4/10 — challenge kataloğu, challenge'lar, üyelik ve davet linkleri.
+-- Gazla veri modeli · 4/11 — challenge kataloğu, challenge'lar, üyelik ve davet linkleri.
 
 -- Katalog (ekip tarafından düzenlenir; oturum açmadan da okunur: onboarding PickChallenge) ------
 
@@ -66,9 +66,13 @@ create table public.challenges (
   duration_days smallint not null,
   start_date date not null,
   end_date date generated always as (start_date + duration_days - 1) stored,
-  -- Grubun günlük hatırlatma saati (her üyenin yerel saatinde)
+  -- Grubun günlük hatırlatma saati (her üyenin yerel saatinde); üye kendi saatini seçebilir
+  -- (challenge_members.reminder_time)
   reminder_time time,
   invite_message text,
+  -- Kimler görebilir: 'invited' yalnızca davetliler ve üyeler; 'friends' oluşturanın arkadaşları da
+  -- görür ve davetsiz katılabilir (join_friend_challenge)
+  visibility public.challenge_visibility not null default 'invited',
   category public.challenge_category,
   icon text not null default 'check',
   tint text not null default 'green',
@@ -148,6 +152,12 @@ create table public.challenge_members (
   final_required_days smallint,
   final_rescues smallint,
   final_rank smallint,
+  -- Kişisel hatırlatma saati (Detail "…" → "Hatırlatma saatini değiştir"); null = grubun saati.
+  -- Bildirim tercihi: yalnızca sahibine görünür (sütun yetkisi; my_membership ile okunur)
+  reminder_time time,
+  -- "Challenge bitti" ekranının kullanıcıya gösterildiği an (Bugün açılışında bir kez; cihaz
+  -- değişse de tekrar gösterilmez). Yalnızca sahibine görünür.
+  finish_seen_at timestamptz,
   created_at timestamptz not null default now(),
   primary key (challenge_id, user_id),
   constraint challenge_members_joined
@@ -220,6 +230,15 @@ language sql stable security definer set search_path = '' as $$
         not app.is_blocked(p_viewer, p_target)
         and (app.has_friendship_row(p_viewer, p_target) or app.are_co_members(p_viewer, p_target))
       )
+$$;
+
+-- Çağıranın kabul edilmiş arkadaşları ('friends' görünürlüklü challenge'ların RLS ön süzgeci).
+-- Engel arkadaşlığı sildiği için engelli kişi bu listede olmaz.
+create function app.my_friend_ids() returns uuid[]
+language sql stable security definer set search_path = '' as $$
+  select coalesce(array_agg(case when f.requester_id = auth.uid() then f.addressee_id else f.requester_id end), '{}')
+  from public.friendships f
+  where f.status = 'accepted' and auth.uid() in (f.requester_id, f.addressee_id)
 $$;
 
 -- RLS ön süzgeçleri: çağıranın ilgili olduğu challenge ve kişilerin listesi. Politikalarda
@@ -364,6 +383,17 @@ create policy "challenges: members read" on public.challenges
   for select to authenticated
   using (id = any ((select app.my_challenge_ids('{invited,active,left}'))::uuid[]));
 
+-- Görünürlüğü "Arkadaşlarım" olan challenge'ı oluşturanın arkadaşları da okur (FriendProfile'dan
+-- görüp katılabilsin), oluşturan hâlâ aktif üyeyse. Grup listesi, işaretlemeler ve kanıtlar yine
+-- yalnızca üyelere açık.
+create policy "challenges: friends of creator read" on public.challenges
+  for select to authenticated
+  using (
+    visibility = 'friends'
+    and created_by = any ((select app.my_friend_ids())::uuid[])
+    and app.is_active_member(created_by, id)
+  );
+
 -- Sahip yalnızca ad, kısa ad, hatırlatma ve davet mesajını değiştirebilir (sütun yetkisiyle)
 create policy "challenges: owner update" on public.challenges
   for update to authenticated
@@ -409,3 +439,9 @@ revoke update on public.challenges from authenticated;
 grant update (title, short_title, reminder_time, invite_message) on public.challenges to authenticated;
 revoke insert, update, delete on public.challenge_invites from authenticated;
 revoke insert, update, delete on public.challenge_members from authenticated;
+-- Kişisel hatırlatma saati ve "bitti ekranı görüldü" bilgisi grup listesinde okunmaz (yalnızca
+-- sahibi, my_membership RPC'siyle)
+revoke select on public.challenge_members from authenticated;
+grant select (challenge_id, user_id, role, status, invited_by, joined_at, joined_on, left_on,
+              finished_at, final_days_done, final_required_days, final_rescues, final_rank, created_at)
+  on public.challenge_members to authenticated;

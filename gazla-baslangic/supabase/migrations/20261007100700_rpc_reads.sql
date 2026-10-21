@@ -1,4 +1,4 @@
--- Gazla veri modeli · 8/10 — ekranların okuduğu RPC'ler ve yetki temizliği.
+-- Gazla veri modeli · 8/11 — ekranların okuduğu RPC'ler ve yetki temizliği.
 --
 -- Hesaplanan değerler (seri, gün numarası, hedef, sıra) burada üretilir; istemci tablolardan
 -- kendisi hesaplamaz. Zaman parametreli app.* sürümleri testler ve zamanlanmış işler içindir.
@@ -13,7 +13,8 @@ returns table (
   member_count integer
 )
 language sql stable security definer set search_path = '' as $$
-  -- İşaretlenebilen her gün için bir satır: bugün, 2 saatlik toleransta dün de (local_date ile).
+  -- İşaretlenebilen her gün için bir satır: bugün, toleransta (kullanıcının 0/1/2 saati) dün de
+  -- (local_date ile).
   -- Saat dilimi tabanının altındaki gün listelenmez (işaretlenemez).
   with t as (select d as today from unnest(app.checkin_dates(p_user, p_at)) as d)
   select c.id, c.title, c.short_title, c.task_type, c.icon, c.tint, t.today,
@@ -97,6 +98,117 @@ language sql stable security definer set search_path = '' as $$
   order by pr.streak_before desc
 $$;
 
+-- Detail / Finished / arkadaşın challenge'ı ---------------------------------------------------
+
+-- Challenge satırı + kullanıcıya göre durum ve gün numarası (istemci tarihten hesaplamaz) ve aktif
+-- üye sayısı. Görünürlük challenges RLS'iyle aynı: davetli, aktif ya da ayrılmış üye; "Arkadaşlarım"
+-- görünürlükte oluşturanın arkadaşı (oluşturan hâlâ aktif üyeyse). Göremeyene null.
+create function public.challenge_detail(p_challenge uuid) returns jsonb
+language sql stable security definer set search_path = '' as $$
+  with v as (select app.require_user() as uid)
+  select to_jsonb(c) || jsonb_build_object(
+           'status', app.challenge_status(v.uid, c.id, now()),
+           'day_index', app.challenge_day_index(v.uid, c.id, now()),
+           'member_count', app.active_member_count(c.id))
+  from v
+  join public.challenges c on c.id = p_challenge
+  where exists (select 1 from public.challenge_members m
+                where m.challenge_id = c.id and m.user_id = v.uid
+                  and m.status in ('invited', 'active', 'left'))
+     or (c.visibility = 'friends' and c.created_by is not null
+         and app.are_friends(v.uid, c.created_by) and app.is_active_member(c.created_by, c.id))
+$$;
+
+-- Kendi üyelik satırı, kişisel alanlarıyla (grup listesinde okunmayan hatırlatma saati ve "bitti
+-- ekranı görüldü"); üyelik yoksa null. reminder_time etkin saat (kişisel, yoksa grubun).
+create function public.my_membership(p_challenge uuid) returns jsonb
+language sql stable security definer set search_path = '' as $$
+  select app.membership_json(app.require_user(), p_challenge)
+$$;
+
+-- NumberEntry "Dün / En iyin / Grupta en iyi": kullanıcının o günkü, dünkü ve diğer günlerdeki en iyi
+-- değeri; grubun o günkü en iyi değeri ve sahibi (aktif üyeler, aralarında engel olmayanlar; eşitlikte
+-- önce giren). Gün varsayılan bugün; toleranstaki dün için p_local_date. Yalnızca aktif üye.
+create function app.number_stats(p_user uuid, p_challenge uuid, p_local_date date, p_at timestamptz)
+returns jsonb
+language plpgsql stable security definer set search_path = '' as $$
+declare
+  v_c public.challenges;
+  v_day date := coalesce(p_local_date, app.local_date(p_user, p_at));
+  v_best jsonb;
+begin
+  if not app.is_active_member(p_user, p_challenge) then
+    raise exception 'Bu challenge''da değilsin' using errcode = '42501';
+  end if;
+  select * into v_c from public.challenges c where c.id = p_challenge;
+  if v_c.task_type <> 'number' then
+    raise exception 'Bu görev sayı ile işaretlenmiyor' using errcode = '22023';
+  end if;
+
+  select jsonb_build_object('value', k.value, 'user_id', p.id, 'display_name', p.display_name,
+                            'username', p.username::text, 'avatar_path', p.avatar_path,
+                            'avatar_tint', p.avatar_tint)
+    into v_best
+  from public.checkins k
+  join public.challenge_members m
+    on m.challenge_id = k.challenge_id and m.user_id = k.user_id and m.status = 'active'
+  join public.profiles p on p.id = k.user_id
+  where k.challenge_id = p_challenge and k.local_date = v_day and k.value is not null
+    and (k.user_id = p_user or not app.is_blocked(p_user, k.user_id))
+  order by k.value desc, k.created_at, k.user_id
+  limit 1;
+
+  return jsonb_build_object(
+    'local_date', v_day,
+    'day_index', v_day - v_c.start_date + 1,
+    'target', app.number_target(p_challenge, v_day - v_c.start_date + 1),
+    'unit', v_c.number_unit,
+    'my_value', (select k.value from public.checkins k
+                 where k.user_id = p_user and k.challenge_id = p_challenge and k.local_date = v_day),
+    'yesterday_value', (select k.value from public.checkins k
+                        where k.user_id = p_user and k.challenge_id = p_challenge
+                          and k.local_date = v_day - 1),
+    -- Kaydedilen gün hariç en iyisi (girerken önceki rekorla kıyaslanır)
+    'best_value', (select max(k.value) from public.checkins k
+                   where k.user_id = p_user and k.challenge_id = p_challenge and k.local_date <> v_day),
+    'group_best', v_best
+  );
+end
+$$;
+
+create function public.number_stats(p_challenge uuid, p_local_date date default null) returns jsonb
+language sql stable security definer set search_path = '' as $$
+  select app.number_stats(app.require_user(), p_challenge, p_local_date, now())
+$$;
+
+-- Bugün açılışında bir kez gösterilecek "Challenge bitti" ekranları: sonucu kaydedilmiş ama
+-- kullanıcıya henüz gösterilmemiş üyelikler (gösterilince mark_finish_seen). Önce süresi dolanları
+-- kapatır (my_today gibi); Bugün'den önce çağrılsa da günceldir. completed: kendi tüm günlerini
+-- kapsadı (bahçeye kaktüs eklendi).
+create function public.my_unseen_finished()
+returns table (
+  challenge_id uuid, title text, short_title text, icon text, tint text, task_type public.task_type,
+  duration_days integer, required_days integer, days_done integer, rescues integer, rank integer,
+  completed boolean, stage public.diken_stage, finished_at timestamptz
+)
+language plpgsql volatile security definer set search_path = '' as $$
+declare
+  v_uid uuid := app.require_user();
+begin
+  perform app.finalize_user(v_uid, now());
+  return query
+  select c.id, c.title, c.short_title, c.icon, c.tint, c.task_type, c.duration_days::int,
+         m.final_required_days::int, m.final_days_done::int, m.final_rescues::int, m.final_rank::int,
+         m.final_days_done >= m.final_required_days,
+         public.diken_stage_for(m.final_required_days),
+         m.finished_at
+  from public.challenge_members m
+  join public.challenges c on c.id = m.challenge_id
+  where m.user_id = v_uid and m.finished_at is not null and m.finish_seen_at is null
+  order by m.finished_at desc, c.id;
+end
+$$;
+
 -- Detail ekranı: grup, seriye göre sıralı -----------------------------------------------------
 
 create function app.challenge_board(p_viewer uuid, p_challenge uuid, p_at timestamptz)
@@ -140,7 +252,7 @@ create function app.friends_today(p_viewer uuid, p_at timestamptz)
 returns table (
   user_id uuid, display_name text, username text, avatar_path text, avatar_tint text,
   harsh_mode boolean, streak integer, done_today boolean, active_challenges integer,
-  shared_challenge_id uuid, shared_challenge_title text
+  shared_challenge_id uuid, shared_challenge_title text, shared_challenge_short_title text
 )
 language sql stable security definer set search_path = '' as $$
   with friends as (
@@ -161,11 +273,11 @@ language sql stable security definer set search_path = '' as $$
          app.user_streak(p.id, p_at),
          case when s.total = 0 then null else s.done = s.total end,
          s.total,
-         sc.id, sc.title
+         sc.id, sc.title, sc.short_title
   from stats s
   join public.profiles p on p.id = s.friend_id
   left join lateral (
-    select c.id, c.title
+    select c.id, c.title, c.short_title
     from public.challenge_members a
     join public.challenge_members b on b.challenge_id = a.challenge_id
     join public.challenges c on c.id = a.challenge_id
@@ -181,10 +293,79 @@ create function public.friends_today()
 returns table (
   user_id uuid, display_name text, username text, avatar_path text, avatar_tint text,
   harsh_mode boolean, streak integer, done_today boolean, active_challenges integer,
-  shared_challenge_id uuid, shared_challenge_title text
+  shared_challenge_id uuid, shared_challenge_title text, shared_challenge_short_title text
 )
 language sql stable security definer set search_path = '' as $$
   select * from app.friends_today(app.require_user(), now())
+$$;
+
+-- Arkadaşlar "İSTEKLER": gelen ve giden bekleyen istekler, karşı tarafın profili ve ortak arkadaş
+-- sayısı ("@kerem.a · 3 ortak")
+create function public.friend_requests()
+returns table (
+  id uuid, direction text, created_at timestamptz,
+  user_id uuid, display_name text, username text, avatar_path text, avatar_tint text,
+  mutual_count integer
+)
+language sql stable security definer set search_path = '' as $$
+  with v as (select app.require_user() as uid)
+  select f.id,
+         case when f.addressee_id = v.uid then 'incoming' else 'outgoing' end,
+         f.created_at, p.id, p.display_name, p.username::text, p.avatar_path, p.avatar_tint,
+         app.mutual_friend_count(v.uid, p.id)
+  from v
+  join public.friendships f on f.status = 'pending' and v.uid in (f.requester_id, f.addressee_id)
+  join public.profiles p
+    on p.id = case when f.requester_id = v.uid then f.addressee_id else f.requester_id end
+  where not app.is_blocked(v.uid, p.id)
+  order by f.created_at desc, f.id
+$$;
+
+-- Poke: alıcıya bugün (alıcının yerel günü) kaç dürtme gönderildi ve kaç hak kaldı (günde en çok 3;
+-- geri alınanlar da sayılır), sert modu açık mı ("Laf sok" sekmesi). Dürtülemeyecek kişi (arkadaş
+-- ya da süren ortak challenge yok, engel var) için send_poke ile aynı hata.
+create function app.poke_status(p_sender uuid, p_recipient uuid, p_at timestamptz)
+returns table (harsh_mode boolean, sent_today integer, daily_limit integer, remaining integer)
+language plpgsql stable security definer set search_path = '' as $$
+declare
+  v_tz text := app.user_timezone(p_recipient);
+  v_day date := app.local_date(p_recipient, p_at);
+  v_sent integer;
+begin
+  if p_recipient = p_sender then
+    raise exception 'Kendini dürtemezsin' using errcode = 'P0001';
+  end if;
+  if app.is_blocked(p_sender, p_recipient)
+     or not (app.are_friends(p_sender, p_recipient)
+             or exists (
+               select 1
+               from public.challenge_members a
+               join public.challenge_members b on b.challenge_id = a.challenge_id
+               join public.challenges c on c.id = a.challenge_id
+               where a.user_id = p_sender and b.user_id = p_recipient
+                 and a.status = 'active' and b.status = 'active'
+                 and app.day_closes_at(p_recipient, c.end_date) > p_at
+             )) then
+    raise exception 'Bu kişiyi dürtemezsin' using errcode = 'P0001';
+  end if;
+
+  -- do_send_poke ile aynı sayım (app.poke_log, alıcının bütün yerel günü)
+  select count(*)::int into v_sent
+  from app.poke_log l
+  where l.sender_id = p_sender and l.recipient_id = p_recipient
+    and l.created_at >= app.local_day_start(v_tz, v_day)
+    and l.created_at < app.local_day_start(v_tz, v_day + 1);
+
+  return query
+  select coalesce((select p.harsh_mode from public.profiles p where p.id = p_recipient), false),
+         v_sent, app.poke_daily_limit(), greatest(app.poke_daily_limit() - v_sent, 0);
+end
+$$;
+
+create function public.poke_status(p_recipient uuid)
+returns table (harsh_mode boolean, sent_today integer, daily_limit integer, remaining integer)
+language sql stable security definer set search_path = '' as $$
+  select * from app.poke_status(app.require_user(), p_recipient, now())
 $$;
 
 -- Bahçe: sorumlu olduğu tüm günleri kapsanarak bitirilen challenge'lar. Kaktüs aşaması üyenin gün
@@ -234,6 +415,9 @@ $$;
 -- Arkadaş profili (FriendProfile): seri, tamamlanan sayısı, ortak challenge'lar. Yalnızca arkadaş
 -- ya da ortak üye için (aralarında engel yoksa); aksi halde null. Bekleyen istek profil satırını
 -- gösterir (RLS) ama etkinliği göstermez: herkes istek gönderebilir.
+-- joinable_challenges: arkadaşın oluşturduğu, "Arkadaşlarım" görünürlüğündeki, bitmemiş, yeri olan ve
+-- çağıranın üyesi olmadığı (ayrılmadığı) challenge'lar (join_friend_challenge ile katılınır).
+-- Yalnızca arkadaşa; ortak üye olmak yetmez.
 create function public.friend_profile(p_user uuid) returns jsonb
 language sql stable security definer set search_path = '' as $$
   with v as (select app.require_user() as uid)
@@ -259,7 +443,27 @@ language sql stable security definer set search_path = '' as $$
         join public.challenges c on c.id = a.challenge_id
         where a.user_id = v.uid and b.user_id = p.id and a.status = 'active' and b.status = 'active'
           and c.end_date >= app.local_date(p.id, now())
-      ), '[]'::jsonb)
+      ), '[]'::jsonb),
+      'joinable_challenges', case when app.are_friends(v.uid, p.id) then coalesce((
+        select jsonb_agg(jsonb_build_object(
+                 'challenge_id', c.id, 'title', c.title, 'short_title', c.short_title,
+                 'icon', c.icon, 'tint', c.tint, 'task_type', c.task_type,
+                 'duration_days', c.duration_days, 'start_date', c.start_date,
+                 'end_date', c.end_date,
+                 -- Çağıranın gününe göre; 0: henüz başlamadı
+                 'day_index', app.challenge_day_index(v.uid, c.id, now()),
+                 'member_count', app.active_member_count(c.id)
+               ) order by c.start_date, c.created_at, c.id)
+        from public.challenges c
+        where c.created_by = p.id and c.visibility = 'friends'
+          and app.is_active_member(p.id, c.id)
+          and c.end_date >= app.first_checkin_date(v.uid, now())
+          and app.active_member_count(c.id) < app.max_members()
+          and not exists (
+            select 1 from public.challenge_members m
+            where m.challenge_id = c.id and m.user_id = v.uid and m.status in ('active', 'left')
+          )
+      ), '[]'::jsonb) else '[]'::jsonb end
     ) end
   from v
   join public.profiles p on p.id = p_user
@@ -268,15 +472,22 @@ $$;
 
 -- Keşfet / ChallengePreview: kaç kişi şu an yapıyor, hangi arkadaşlar ------------------------------
 
+-- Şablondan başlatılmış ve şu an süren challenge'lardaki aktif üyeler (template_stats ve Keşfet
+-- popülerlik sırası aynı tanımı kullanır). Sunucu gününe göre ±1 gün (saat dilimleri).
+create function app.template_running() returns table (template_id uuid, user_id uuid)
+language sql stable security definer set search_path = '' as $$
+  select distinct c.template_id, m.user_id
+  from public.challenges c
+  join public.challenge_members m on m.challenge_id = c.id and m.status = 'active'
+  where c.template_id is not null
+    and current_date between c.start_date - 1 and c.end_date + 1
+$$;
+
 create function public.template_stats(p_template uuid) returns jsonb
 language sql stable security definer set search_path = '' as $$
   with viewer as (select auth.uid() as uid),
   running as (
-    select distinct m.user_id
-    from public.challenges c
-    join public.challenge_members m on m.challenge_id = c.id and m.status = 'active'
-    where c.template_id = p_template
-      and current_date between c.start_date - 1 and c.end_date + 1
+    select r.user_id from app.template_running() r where r.template_id = p_template
   ),
   friends as (
     select p.display_name, p.avatar_path, p.avatar_tint
@@ -293,11 +504,31 @@ language sql stable security definer set search_path = '' as $$
   )
 $$;
 
+-- Keşfet "Popüler": etkin şablonlar şu an yapan kişi sayısına göre (eşitlikte onboarding sırası,
+-- sonra slug). popularity 1'den başlar. Sayılar toplu ve kişisizdir; oturumsuz da okunur.
+create function public.template_popularity()
+returns table (template_id uuid, active_count integer, popularity integer)
+language sql stable security definer set search_path = '' as $$
+  with counts as (
+    select r.template_id, count(*)::int as n from app.template_running() r group by r.template_id
+  )
+  select t.id, coalesce(c.n, 0),
+         (row_number() over (order by coalesce(c.n, 0) desc, t.onboarding_order nulls last, t.slug))::int
+  from public.challenge_templates t
+  left join counts c on c.template_id = t.id
+  where t.is_active
+  order by 3
+$$;
+
 -- InviteLanding (oturum açmadan): yalnızca davet kartında görünen alanlar ------------------------
 
 create function public.get_invite_preview(p_code text) returns jsonb
 language sql stable security definer set search_path = '' as $$
   select case when i.code is null then null else jsonb_build_object(
+    -- Katılınca / zaten üyeyse açılacak challenge: yalnızca oturum açmış kullanıcıya (kod zaten
+    -- katılma yetkisi verir; id'yle üye olmadan hiçbir şey okunamaz). Oturumsuz önizleme kimlik
+    -- sızdırmaz (null).
+    'challenge_id', case when auth.uid() is not null then c.id end,
     'inviter', jsonb_build_object(
       'display_name', ip.display_name, 'avatar_path', ip.avatar_path, 'avatar_tint', ip.avatar_tint
     ),
@@ -420,6 +651,7 @@ grant execute on function
   app.can_see_member_activity(uuid, uuid, uuid),
   app.my_challenge_ids(public.member_status[]),
   app.my_related_user_ids(),
+  app.my_friend_ids(),
   app.poke_undo_window()
 to authenticated;
 
@@ -429,6 +661,7 @@ revoke execute on all functions in schema public from public, anon, authenticate
 grant execute on function public.diken_stage_for(integer) to anon, authenticated;
 grant execute on function public.get_invite_preview(text) to anon, authenticated;
 grant execute on function public.template_stats(uuid) to anon, authenticated;
+grant execute on function public.template_popularity() to anon, authenticated;
 
 grant execute on function
   public.is_username_available(text),
@@ -441,21 +674,31 @@ grant execute on function
   public.mark_notifications_read(uuid[]),
   public.register_push_token(text, text),
   public.create_challenge(uuid, text, public.task_type, integer, date, time, text, text, numeric,
-                          numeric, numeric, numeric, uuid[]),
+                          numeric, numeric, numeric, uuid[], public.challenge_visibility),
   public.invite_to_challenge(uuid, uuid[]),
   public.respond_to_invite(uuid, boolean),
   public.leave_challenge(uuid),
   public.create_invite(uuid),
   public.revoke_invite(uuid, text),
   public.join_challenge_by_invite(text),
+  public.join_friend_challenge(uuid),
+  public.set_my_reminder(uuid, time),
+  public.mark_finish_seen(uuid),
   public.checkin(uuid, numeric, text, text, date),
   public.undo_checkin(uuid, date),
   public.rescue_streak(uuid, date),
+  public.decline_rescue(uuid, date),
   public.my_today(),
   public.my_streak(),
   public.my_pending_rescues(),
+  public.my_unseen_finished(),
+  public.challenge_detail(uuid),
+  public.my_membership(uuid),
   public.challenge_board(uuid),
+  public.number_stats(uuid, date),
   public.friends_today(),
+  public.friend_requests(),
+  public.poke_status(uuid),
   public.my_garden(),
   public.my_recent_days(integer),
   public.friend_profile(uuid)

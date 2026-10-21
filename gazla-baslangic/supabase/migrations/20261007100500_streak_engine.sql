@@ -1,8 +1,9 @@
--- Gazla veri modeli · 6/10 — seri motoru (CLAUDE.md: "Seri hesabı sunucuda, SQL fonksiyonu").
+-- Gazla veri modeli · 6/11 — seri motoru (CLAUDE.md: "Seri hesabı sunucuda, SQL fonksiyonu").
 --
 -- Tanımlar
 -- * Kapsanan gün: o challenge için işaretleme ya da kurtarma olan gün.
--- * Açık gün: hâlâ işaretlenebilen gün (bugün; gece yarısından sonraki 2 saatte dün de).
+-- * Açık gün: hâlâ işaretlenebilen gün (bugün; gece yarısından sonraki tolerans süresinde dün de;
+--   tolerans kullanıcının seçimi: 0/1/2 saat, varsayılan 2 — app.user_grace_period).
 --   Açık ve kapsanmamış gün seriyi bozmaz, sayılmaz da; ama sonraki bir gün kapsanmışsa bozar
 --   (boş bir dünün üstünden atlanmaz).
 -- * Challenge serisi: üyenin o challenge'da, en son kırılmadan (kapanmış ve kapsanmamış gün)
@@ -180,6 +181,7 @@ $$;
 -- seri > 0. Üyenin challenge'daki ilk günü kaçtıysa challenge serisi yoktur; o gün genel seriyi
 -- bozduğu için genel seri > 0 ise kurtarılabilir. Kurtarılmış günün ertesi kurtarılamaz (kurtarma
 -- zinciriyle işaretlemeden seri sürmez); böylece her challenge için en fazla bir gün açıktır.
+-- Kurtarmadan vazgeçilen gün ("Baştan başla", decline_rescue) artık bekleyen sayılmaz.
 create function app.pending_rescues(p_user uuid, p_at timestamptz)
 returns table (challenge_id uuid, missed_date date, streak_before integer, expires_at timestamptz)
 language sql stable security definer set search_path = '' as $$
@@ -203,6 +205,9 @@ language sql stable security definer set search_path = '' as $$
       and not exists (select 1 from public.streak_rescues r
                       where r.user_id = p_user and r.challenge_id = m.challenge_id
                         and r.rescued_date = t.d - 1)
+      and not exists (select 1 from app.rescue_declines dr
+                      where dr.user_id = p_user and dr.challenge_id = m.challenge_id
+                        and dr.missed_date = t.d)
   ),
   s as materialized (select * from app.user_day_status(p_user, p_at))
   select x.challenge_id, x.d, x.run, x.expires_at

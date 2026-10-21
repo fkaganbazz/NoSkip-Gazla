@@ -1,11 +1,14 @@
 /**
  * Örnek veri — tasarım dosyalarındaki içerik (Today, Detail, Friends, Activity, Garden, Explore,
- * FriendProfile, Settings, InviteLanding). Tarihler bugüne göre hesaplanır.
+ * FriendProfile, Settings, InviteLanding, NumberEntry, Poke). Tarihler bugüne göre hesaplanır.
  * Supabase bağlanınca kullanılmaz; yalnızca `mockApi` okur.
  */
+import { POKE_MESSAGES } from '../../content/pokes';
 import type {
   ActivityItem,
   AvatarTintKey,
+  Badge,
+  BadgeKey,
   Challenge,
   GardenItem,
   PokeMessage,
@@ -68,10 +71,21 @@ export const seedSettings: UserSettings = {
   pokePushEnabled: true,
   dailyReminderTime: '21:00',
   discoverability: 'everyone',
+  dayEndGraceHours: 2,
 };
 
 /** Kabul edilmiş arkadaşlar */
 export const seedFriendIds = ['u-mert', 'u-ece', 'u-can', 'u-selin'];
+
+/** Diğer kişilerin kendi aralarındaki arkadaşlıkları (ortak arkadaş sayısı: Kerem "3 ortak") */
+export const seedOtherFriendships: [string, string][] = [
+  ['u-kerem', 'u-mert'],
+  ['u-kerem', 'u-can'],
+  ['u-kerem', 'u-selin'],
+  ['u-mert', 'u-can'],
+  ['u-ece', 'u-selin'],
+  ['u-zeynep', 'u-ece'],
+];
 
 /** Bekleyen istekler: Kerem → Deniz */
 export const seedFriendRequests = [
@@ -80,7 +94,10 @@ export const seedFriendRequests = [
 
 // Katalog (migration 900 ile aynı) ----------------------------------------------------------------
 
-const tpl = (t: Partial<Template> & Pick<Template, 'id' | 'slug' | 'title' | 'category' | 'difficulty' | 'taskType' | 'defaultDurationDays' | 'icon' | 'tint'>): Template => ({
+/** Şablonun katalog alanları; yapan sayısı ve popülerlik sırası mockApi'de hesaplanır */
+export type SeedTemplate = Omit<Template, 'activeCount' | 'popularity'>;
+
+const tpl = (t: Partial<SeedTemplate> & Pick<SeedTemplate, 'id' | 'slug' | 'title' | 'category' | 'difficulty' | 'taskType' | 'defaultDurationDays' | 'icon' | 'tint'>): SeedTemplate => ({
   shortTitle: null,
   description: null,
   number: null,
@@ -97,7 +114,7 @@ const monday = (() => {
   return localDate(d);
 })();
 
-export const seedTemplates: Template[] = [
+export const seedTemplates: SeedTemplate[] = [
   tpl({
     id: 't-kahvesiz',
     slug: 'kahvesiz',
@@ -218,12 +235,16 @@ export const seedTemplateActive: Record<string, number> = {
 
 // Challenge'lar ve üyelik ---------------------------------------------------------------------------
 
-const challenge = (c: Omit<Challenge, 'endDate'>): Challenge => ({
+/** Challenge satırı; durum, gün numarası ve üye sayısı izleyiciye göre mockApi'de hesaplanır */
+export type SeedChallenge = Omit<Challenge, 'status' | 'dayIndex' | 'memberCount'>;
+
+const challenge = (c: Omit<SeedChallenge, 'endDate' | 'visibility'> & Partial<Pick<SeedChallenge, 'visibility'>>): SeedChallenge => ({
+  visibility: 'invited',
   ...c,
   endDate: addDays(c.startDate, c.durationDays - 1),
 });
 
-export const seedChallenges: Challenge[] = [
+export const seedChallenges: SeedChallenge[] = [
   challenge({
     id: 'c-phone',
     templateId: 't-telefonsuz',
@@ -272,9 +293,11 @@ export const seedChallenges: Challenge[] = [
     tint: 'green',
     number: { unit: 'sn', baseTarget: 60, dailyIncrement: 5, step: 5, max: 600 },
   }),
-  // Deniz'in üye olmadığı, davet linkiyle katılabileceği challenge (InviteLanding)
+  // Deniz'in üye olmadığı, davet linkiyle (InviteLanding) ya da Mert'in profilinden ("Arkadaşlarım"
+  // görünürlük) katılabileceği challenge
   challenge({
     id: 'c-coffee',
+    visibility: 'friends',
     templateId: 't-kahvesiz',
     createdBy: 'u-mert',
     title: '7 gün kahvesiz',
@@ -306,16 +329,25 @@ export const seedMembers: { challengeId: string; userId: string; role: 'owner' |
   { challengeId: 'c-coffee', userId: 'u-can', role: 'member' },
 ];
 
+/** Kişisel hatırlatma saatleri (challenge_members.reminder_time): Deniz okumayı 21:30'da hatırlar */
+export const seedPersonalReminders: { challengeId: string; userId: string; time: string }[] = [
+  { challengeId: 'c-read', userId: ME_ID, time: '21:30' },
+];
+
 /**
  * Geçmiş işaretlemeler: her üye için kaçırdığı günler (gün numarası) ve bugünü bitirip bitirmediği.
  * Detail: Deniz 12, Mert 12, Ece 11 (bugün bekliyor), Can 4 (seri koptu).
+ * Sayı görevinde günlerin değerleri `values` (gün numarası → değer) ve `todayValue`; NumberEntry
+ * "Dün 65 sn · En iyin 65 sn · Grupta en iyi 90 sn" (NumberEntry.dc.html, plank 3. gün).
  */
 export const seedHistory: {
   challengeId: string;
   userId: string;
   missedDays: number[];
   rescuedDays?: number[];
+  values?: Record<number, number>;
   doneToday: boolean;
+  todayValue?: number;
 }[] = [
   { challengeId: 'c-phone', userId: ME_ID, missedDays: [], rescuedDays: [6], doneToday: true },
   { challengeId: 'c-phone', userId: 'u-mert', missedDays: [], doneToday: true },
@@ -323,8 +355,8 @@ export const seedHistory: {
   { challengeId: 'c-phone', userId: 'u-can', missedDays: [8], doneToday: true },
   { challengeId: 'c-read', userId: ME_ID, missedDays: [], doneToday: false },
   { challengeId: 'c-read', userId: 'u-selin', missedDays: [], doneToday: false },
-  { challengeId: 'c-plank', userId: ME_ID, missedDays: [], doneToday: false },
-  { challengeId: 'c-plank', userId: 'u-can', missedDays: [], doneToday: true },
+  { challengeId: 'c-plank', userId: ME_ID, missedDays: [], values: { 1: 60, 2: 65 }, doneToday: false },
+  { challengeId: 'c-plank', userId: 'u-can', missedDays: [], values: { 1: 60, 2: 70 }, doneToday: true, todayValue: 90 },
 ];
 
 /** Genel seriler (sunucu hesaplar; mock'ta sabit taban + bugün tamamsa 1) */
@@ -348,28 +380,42 @@ export const seedGarden: GardenItem[] = [
   { challengeId: 'g-plank', title: 'Plank: her gün +5 saniye', shortTitle: 'plank', durationDays: 30, requiredDays: 30, stage: 'cicek', finishedAt: minutesAgo(60 * 24 * 12), finalRescues: 0, finalRank: 1 },
 ];
 
-// Dürtme mesajları (migration 900) ------------------------------------------------------------------
+// Dürtme mesajları (src/content/pokes.ts = migration 900) -------------------------------------------
 
-export const seedPokeMessages: PokeMessage[] = [
-  ['almost_there', 'hype', 0, 'Az kaldı, bırakma!'],
-  ['streak_going_well', 'hype', 1, 'Serin çok iyi gidiyor'],
-  ['finish_together', 'hype', 2, 'Beraber bitireceğiz'],
-  ['take_five', 'hype', 3, '5 dakikanı ayır, hallet'],
-  ['proud_of_you', 'hype', 4, 'Seninle gurur duyuyorum'],
-  ['diken_waiting', 'hype', 5, 'Diken seni bekliyor'],
-  ['cactus_faster', 'roast', 0, 'Kaktüs bile senden hızlı büyüyor'],
-  ['phone_in_hand', 'roast', 1, 'Telefon elinde, challenge nerede?'],
-  ['diken_thirsty', 'roast', 2, 'Diken susuz kaldı, haberin olsun'],
-  ['today_tomorrow', 'roast', 3, 'Bugün mü, yarın mı, seneye mi?'],
-  ['streak_crying', 'roast', 4, 'Serin şu an ağlıyor'],
-  ['i_did_it', 'roast', 5, 'Ben yaptım. Sen?'],
-].map(([key, tone, sortOrder, text]) => ({
-  key: key as string,
-  tone: tone as PokeMessage['tone'],
-  sortOrder: sortOrder as number,
-  text: text as string,
+/** Sabit listeden (id = poke_messages.key); sortOrder tondaki sıra */
+export const seedPokeMessages: PokeMessage[] = POKE_MESSAGES.map((m) => ({
+  key: m.id,
+  tone: m.tone,
+  sortOrder: POKE_MESSAGES.filter((x) => x.tone === m.tone).indexOf(m),
+  text: m.text,
   isActive: true,
 }));
+
+// Rozetler (migration 1000 ile aynı katalog) ----------------------------------------------------------
+
+export const seedBadges: Omit<Badge, 'earnedAt'>[] = (
+  [
+    ['ilk_30_gun', 'İlk 30 gün', 'Genel serin 30 güne ulaştı', 'star', 'yellow'],
+    ['laf_ustasi', 'Laf ustası', '10 kez laf soktun', 'speech', 'orange'],
+    ['erkenci', 'Erkenci', "5 gün sabah 8'den önce işaretledin", 'sun', 'mint'],
+    ['yuz_gun', 'Yüz gün', 'Genel serin 100 güne ulaştı', 'streak', 'yellow'],
+    ['maratoncu', 'Maratoncu', "3 kez 30 günlük bir challenge'ı bitirdin", 'calendar', 'orange'],
+    ['bahcivan', 'Bahçıvan', 'Bahçende 10 kaktüs var', 'sprout', 'mint'],
+    ['sampiyon', 'Şampiyon', "En az 3 kişilik bir grupta challenge'ı birinci bitirdin", 'trophy', 'yellow'],
+    ['gaz_pedali', 'Gaz pedalı', 'Arkadaşlarına 25 kez gaz verdin', 'hand', 'orange'],
+    ['son_dakika', 'Son dakika', 'Serini kurtarma süresinin son saatinde kurtardın', 'clock', 'mint'],
+    ['gece_kusu', 'Gece kuşu', 'Gece yarısından sonra dünün görevini tamamladın', 'moon', 'yellow'],
+    ['sosyal_kaktus', 'Sosyal kaktüs', '10 arkadaşın oldu', 'friends', 'orange'],
+    ['objektif', 'Objektif', '30 fotoğraf kanıtı gönderdin', 'camera', 'mint'],
+  ] as const
+).map(([key, title, description, icon, tint], i) => ({ key, sortOrder: i + 1, title, description, icon, tint }));
+
+/** Garden.dc.html "Rozetler 3 / 12": İlk 30 gün, Laf ustası, Erkenci kazanılmış */
+export const seedEarnedBadges: { key: BadgeKey; earnedAt: string }[] = [
+  { key: 'ilk_30_gun', earnedAt: minutesAgo(60 * 24 * 75) },
+  { key: 'laf_ustasi', earnedAt: minutesAgo(60 * 24 * 30) },
+  { key: 'erkenci', earnedAt: minutesAgo(60 * 24 * 9) },
+];
 
 // Aktivite (Activity.dc.html) ------------------------------------------------------------------------
 

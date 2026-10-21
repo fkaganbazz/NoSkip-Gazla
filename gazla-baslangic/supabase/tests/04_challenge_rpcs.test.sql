@@ -14,7 +14,7 @@
 --
 -- Run:  supabase test db   (or the local testbed: ./test.sh supabase/tests/04_challenge_rpcs.test.sql)
 begin;
-select plan(224);
+select plan(226);
 -- This file tests behaviour, not privileges (01_rls_privileges does). Expected values are computed
 -- with app.* helpers, sometimes while signed in, so the helpers are opened inside this transaction.
 grant execute on all functions in schema app to authenticated;
@@ -490,8 +490,9 @@ select tests.clear_authentication();
 select public.get_invite_preview(:'code_o') as pv \gset
 select isnt(:'pv'::jsonb, null, 'anon gets a preview for a valid code');
 select is((select array_agg(k order by k) from jsonb_object_keys(:'pv'::jsonb) k),
-  array['already_member', 'challenge', 'inviter', 'member_count', 'members'],
+  array['already_member', 'challenge', 'challenge_id', 'inviter', 'member_count', 'members'],
   'preview: only the InviteLanding sections at the top level');
+select is(:'pv'::jsonb -> 'challenge_id', 'null'::jsonb, 'preview: anon does not get the challenge id');
 select is((select array_agg(k order by k) from jsonb_object_keys(:'pv'::jsonb -> 'inviter') k),
   array['avatar_path', 'avatar_tint', 'display_name'],
   'preview: inviter exposes only display name and avatar (no id, username, settings)');
@@ -521,6 +522,8 @@ select is(public.get_invite_preview(null), null, 'null code: null preview');
 select tests.authenticate_as('mert');
 select is((public.get_invite_preview(:'code_o') ->> 'already_member')::boolean, true,
   'preview tells an active member they already joined');
+select is((public.get_invite_preview(:'code_o') ->> 'challenge_id')::uuid, :'ch_main'::uuid,
+  'preview gives a signed-in user the challenge id (open it after joining / when already a member)');
 select tests.authenticate_as('kaan');
 select is(public.get_invite_preview(:'code_o'), null, 'preview is hidden from a user who blocked the inviter');
 
