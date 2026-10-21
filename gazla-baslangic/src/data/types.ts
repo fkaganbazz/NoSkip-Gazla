@@ -4,51 +4,48 @@
  * Supabase'ten mi geliyor bilmez.
  *
  * Tarih alanları: `LocalDate` = kullanıcının yerel günü 'YYYY-MM-DD'; `Timestamp` = ISO 8601.
+ *
+ * Postgres enum'ları `src/types/database.ts`'ten (üretilen şema tipleri, `npm run gen:types`);
+ * CHECK kısıtlı metin sütunlarının değer kümeleri (renk, ikon, dil …) burada.
  */
+import type { Enums } from '../types/database';
 
 export type LocalDate = string;
 export type Timestamp = string;
 
-// Enum'lar (migration 000) ------------------------------------------------------------------
+// Enum'lar (migration 000; değerler database.ts `Enums`) --------------------------------------------
 
-export type TaskType = 'check' | 'photo' | 'number';
-export type ChallengeCategory =
-  | 'detox'
-  | 'social_courage'
-  | 'sport'
-  | 'food_drink'
-  | 'reading'
-  | 'money'
-  | 'quirky';
-export type ChallengeDifficulty = 'easy' | 'medium' | 'hard';
-export type MemberRole = 'owner' | 'member';
-export type MemberStatus = 'invited' | 'active' | 'declined' | 'left';
-export type PokeTone = 'hype' | 'roast';
-export type RescueMethod = 'ad' | 'free';
-export type ReportTarget = 'user' | 'photo' | 'challenge';
-export type ReportReason =
-  | 'harassment'
-  | 'inappropriate_photo'
-  | 'spam_or_fake'
-  | 'dangerous_challenge'
-  | 'other';
-export type NotificationKind =
-  | 'daily_reminder'
-  | 'day_ending'
-  | 'streak_broken'
-  | 'weekly_summary'
-  | 'streak_milestone'
-  | 'poke_hype'
-  | 'poke_roast'
-  | 'friend_request'
-  | 'challenge_invite'
-  | 'friend_finished_challenge';
-export type Discoverability = 'everyone' | 'nobody';
-export type DikenStage = 'filiz' | 'genc' | 'tam' | 'cicek';
+/** 'check' | 'photo' | 'number' */
+export type TaskType = Enums<'task_type'>;
+/** 'detox' | 'social_courage' | 'sport' | 'food_drink' | 'reading' | 'money' | 'quirky' */
+export type ChallengeCategory = Enums<'challenge_category'>;
+/** 'easy' | 'medium' | 'hard' */
+export type ChallengeDifficulty = Enums<'challenge_difficulty'>;
+/** 'owner' | 'member' */
+export type MemberRole = Enums<'member_role'>;
+/** 'invited' | 'active' | 'declined' | 'left' */
+export type MemberStatus = Enums<'member_status'>;
+/** 'hype' | 'roast' */
+export type PokeTone = Enums<'poke_tone'>;
+/** 'ad' | 'free' */
+export type RescueMethod = Enums<'rescue_method'>;
+/** 'user' | 'photo' | 'challenge' */
+export type ReportTarget = Enums<'report_target'>;
+/** 'harassment' | 'inappropriate_photo' | 'spam_or_fake' | 'dangerous_challenge' | 'other' */
+export type ReportReason = Enums<'report_reason'>;
+/**
+ * 'daily_reminder' | 'day_ending' | 'streak_broken' | 'weekly_summary' | 'streak_milestone' |
+ * 'poke_hype' | 'poke_roast' | 'friend_request' | 'challenge_invite' | 'friend_finished_challenge'
+ */
+export type NotificationKind = Enums<'notification_kind'>;
+/** 'everyone' | 'nobody' */
+export type Discoverability = Enums<'discoverability'>;
+/** 'filiz' | 'genc' | 'tam' | 'cicek' */
+export type DikenStage = Enums<'diken_stage'>;
 export type AvatarTintKey = 'peach' | 'lavender' | 'mint' | 'butter' | 'sky';
 export type Locale = 'tr' | 'en';
-/** Create "Kimler görebilir": Davetliler / Arkadaşlarım (challenges.visibility) */
-export type ChallengeVisibility = 'invited' | 'friends';
+/** Create "Kimler görebilir": Davetliler / Arkadaşlarım (challenges.visibility: 'invited' | 'friends') */
+export type ChallengeVisibility = Enums<'challenge_visibility'>;
 /** Kullanıcının yerel gününe göre, sunucudan (challenge_detail) */
 export type ChallengeStatus = 'upcoming' | 'active' | 'finished';
 /** Ayarlar "Gün bitişi toleransı" (user_settings.day_end_grace_hours) */

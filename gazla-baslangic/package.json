@@ -63,6 +63,7 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "typecheck": "tsc --noEmit",
+    "gen:types": "node scripts/gen-db-types.mjs --out src/types/database.ts",
     "doctor": "expo-doctor"
   },
   "private": true
