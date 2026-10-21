@@ -2,11 +2,11 @@ import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import OnboardingHeader from '@/components/OnboardingHeader';
 import { Button, ErrorState, LoadingState } from '@/components/ui';
 import { useTemplates } from '@/data';
 import { onboardingTemplates } from '@/features/onboarding/logic';
 import { useOnboarding } from '@/features/onboarding/OnboardingProvider';
-import StepHeader from '@/features/onboarding/StepHeader';
 import StepScreen, { StepIntro } from '@/features/onboarding/StepScreen';
 import TemplateTile from '@/features/onboarding/TemplateTile';
 import { onboardingMetrics as m } from '@/theme/onboarding';
@@ -54,7 +54,7 @@ export default function PickChallengeScreen() {
           />
         </>
       }>
-      <StepHeader step={1} onBack={goBack} />
+      <OnboardingHeader step={1} onBack={goBack} />
       <StepIntro
         title="İlk challenge'ını seç"
         body="Sonra istediğin kadar ekleyebilirsin. Arkadaşların da aynı challenge'a katılabilir."

@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 
 import Diken from '@/components/Diken';
-import { flatShadowStyle } from '@/components/FlatShadow';
+import SpeechBubble from '@/components/SpeechBubble';
 import { useTheme } from '@/theme';
-import { onboardingColors, onboardingMetrics as m, onboardingTypography as t } from '@/theme/onboarding';
+import { onboardingColors, onboardingMetrics as m } from '@/theme/onboarding';
 
 /** Sanat alanı tasarımda y 100–494; içindeki öğeler bu alana göre konumlanır */
 const ART_HEIGHT = m.welcomeArtBottom - m.welcomeArtTop;
@@ -78,17 +78,10 @@ export default function WelcomeArt({ reservedTop }: Props) {
           <Circle cx={36} cy={150} r={3} fill={c.sparkleLight} opacity={0.45} />
         </Svg>
 
-        <View
-          style={[styles.bubble, { backgroundColor: c.bubbleBg }, flatShadowStyle(m.bubble.shadow, c.bubbleShadow)]}>
-          <Text style={[t.bubble, { color: c.bubbleText }]}>Ben Diken. Seni dürtmeye geldim.</Text>
-        </View>
-        <Svg
-          width={m.bubbleTail.width}
-          height={m.bubbleTail.height}
-          viewBox={`0 0 ${m.bubbleTail.width} ${m.bubbleTail.height}`}
-          style={styles.tail}>
-          <Path d="M0 0 H26 L20 18 Z" fill={c.bubbleBg} />
-        </Svg>
+        {/* Yeşil zemin koyu modda da yeşil: balon beyaz kalır */}
+        <SpeechBubble tail="bottom-right" shadow="deep" tone="light" style={styles.bubble}>
+          Ben Diken. Seni dürtmeye geldim.
+        </SpeechBubble>
 
         <View style={styles.diken}>
           <Diken mood="selam" stage="tam" size={m.welcomeDiken.size} />
@@ -122,14 +115,6 @@ const styles = StyleSheet.create({
     left: m.bubble.left,
     top: y(m.bubble.top),
     width: m.bubble.width,
-    paddingVertical: m.bubble.paddingY,
-    paddingHorizontal: m.bubble.paddingX,
-    borderRadius: m.bubble.radius,
-  },
-  tail: {
-    position: 'absolute',
-    left: m.bubbleTail.left,
-    top: y(m.bubbleTail.top),
   },
   diken: {
     position: 'absolute',

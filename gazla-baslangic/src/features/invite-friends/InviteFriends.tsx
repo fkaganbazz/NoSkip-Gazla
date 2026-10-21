@@ -1,21 +1,18 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import type { ComponentType } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { flatShadowStyle } from '@/components/FlatShadow';
-import { ChevronRightIcon, challengeIcons } from '@/components/icons';
-import { Button, ErrorState, IconButton, LoadingState, Toast } from '@/components/ui';
+import { CategoryTile } from '@/components/CategoryTile';
+import { FriendList } from '@/components/FriendRow';
+import { ChevronRightIcon, CopyIcon, MessageIcon, ShareIcon, type IconProps } from '@/components/icons';
+import OnboardingHeader from '@/components/OnboardingHeader';
+import { Button, Card, ErrorState, IconButton, LoadingState, ToastHost, useToast } from '@/components/ui';
 import { useChallenge, useChallengeBoard } from '@/data';
-import StepHeader from '@/features/onboarding/StepHeader';
 import StepScreen, { StepIntro } from '@/features/onboarding/StepScreen';
-import { borderWidth, challengeTints, componentTypography as ct, layout, radius, typography, useTheme } from '@/theme';
+import { borderWidth, componentTypography as ct, typography, useTheme } from '@/theme';
 import { onboardingColors, onboardingMetrics as m, onboardingTypography as t } from '@/theme/onboarding';
 
-import { CopyIcon, MessageIcon, ShareIcon, UserSearchIcon } from './icons';
+import { UserSearchIcon } from './icons';
 import { copyText, inviteMessage, sendAsMessage, shareText, useInviteCode } from './share';
-
-/** "Kopyalandı" tostunun ekranda kalma süresi */
-const TOAST_MS = 2000;
 
 type Props = {
   /** Onboarding adımı (3/4, altta Devam) ya da uygulama içi modal (kapat butonu) */
@@ -44,16 +41,8 @@ export default function InviteFriends({
   onClose,
   onSearchUsername,
 }: Props) {
-  const { colors } = useTheme();
-  const insets = useSafeAreaInsets();
   const onboarding = variant === 'onboarding';
-  const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
-    if (!copied) return;
-    const id = setTimeout(() => setCopied(false), TOAST_MS);
-    return () => clearTimeout(id);
-  }, [copied]);
+  const toast = useToast();
 
   return (
     <View style={styles.root}>
@@ -68,7 +57,7 @@ export default function InviteFriends({
         }>
         {onboarding ? (
           // Profil tamamlandı; geri dönülecek adım yok
-          <StepHeader step={3} />
+          <OnboardingHeader step={3} />
         ) : (
           <View style={styles.modalHeader}>
             <IconButton icon="close" accessibilityLabel="Kapat" onPress={onClose} />
@@ -80,7 +69,10 @@ export default function InviteFriends({
         />
 
         {challengeId ? (
-          <InviteBody challengeId={challengeId} onCopied={() => setCopied(true)} />
+          <InviteBody
+            challengeId={challengeId}
+            onCopied={() => toast.show({ message: 'Davet linki kopyalandı', kind: 'success' })}
+          />
         ) : challengeError ? (
           <View style={styles.state}>
             <ErrorState message={challengeError} onRetry={onRetryChallenge} />
@@ -92,21 +84,14 @@ export default function InviteFriends({
         )}
 
         {!onboarding && onSearchUsername && (
-          <View style={[styles.list, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <FriendList style={styles.list}>
             <LinkRow title="Kullanıcı adıyla ara" onPress={onSearchUsername} icon={UserSearchIcon} />
-          </View>
+          </FriendList>
         )}
       </StepScreen>
 
-      {copied && (
-        <Toast
-          message="Davet linki kopyalandı"
-          style={[
-            styles.toast,
-            { bottom: Math.max(insets.bottom, layout.screenPadding) + (onboarding ? m.toastAboveFooter : 0) },
-          ]}
-        />
-      )}
+      {/* Onboarding'de alttaki iki butonun üstünde */}
+      <ToastHost toast={toast} offset={onboarding ? m.toastAboveFooter : 0} />
     </View>
   );
 }
@@ -134,18 +119,14 @@ function InviteBody({ challengeId, onCopied }: { challengeId: string; onCopied: 
   }
 
   const ch = challenge.data;
-  const tint = challengeTints[ch.tint][scheme];
-  const Icon = challengeIcons[ch.icon];
   const members = board.data?.length ?? 1;
   const group = members <= 1 ? 'Grupta şimdilik sadece sen' : `Grupta ${members} kişi`;
   const message = invite.url ? inviteMessage(ch.title, invite.url) : null;
 
   return (
     <>
-      <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        <View style={[styles.cardIcon, { backgroundColor: tint.bg }]}>
-          <Icon color={tint.ink} size={m.inviteIconSize} strokeWidth={m.inviteIconStroke} />
-        </View>
+      <Card style={styles.card}>
+        <CategoryTile icon={ch.icon} tint={ch.tint} size={44} />
         <View style={styles.cardTexts}>
           <Text numberOfLines={2} style={[typography.cardTitle, { color: colors.text }]}>
             {ch.title}
@@ -154,7 +135,7 @@ function InviteBody({ challengeId, onCopied }: { challengeId: string; onCopied: 
             {ch.durationDays} gün · {group}
           </Text>
         </View>
-      </View>
+      </Card>
 
       <View style={styles.linkSection}>
         <Text style={[ct.inputLabel, { color: colors.text }]}>Davet linkin</Text>
@@ -195,17 +176,23 @@ function InviteBody({ challengeId, onCopied }: { challengeId: string; onCopied: 
           </Pressable>
         </View>
         <View style={styles.shareRow}>
-          <ShareButton
+          <Button
             title="Mesajla gönder"
-            icon={MessageIcon}
+            variant="secondary"
+            size="md"
+            icon={(color) => <MessageIcon color={color} size={m.shareIconSize} strokeWidth={m.shareIconStroke} />}
             disabled={!message}
             onPress={() => message && sendAsMessage(message)}
+            style={styles.share}
           />
-          <ShareButton
+          <Button
             title="Paylaş"
-            icon={ShareIcon}
+            variant="secondary"
+            size="md"
+            icon={(color) => <ShareIcon color={color} size={m.shareIconSize} strokeWidth={m.shareIconStroke} />}
             disabled={!message}
             onPress={() => message && shareText(message)}
+            style={styles.share}
           />
         </View>
       </View>
@@ -213,41 +200,16 @@ function InviteBody({ challengeId, onCopied }: { challengeId: string; onCopied: 
   );
 }
 
-type LineIcon = (props: { color: string; size: number; strokeWidth: number }) => ReactNode;
-
-/** "Mesajla gönder" / "Paylaş": kenarlı, altta 3 px gölge */
-function ShareButton({
+/** Liste satırı: ikon karosu, ad, sağ ok */
+function LinkRow({
   title,
   icon: Icon,
   onPress,
-  disabled,
 }: {
   title: string;
-  icon: LineIcon;
+  icon: ComponentType<IconProps>;
   onPress: () => void;
-  disabled: boolean;
 }) {
-  const { colors, scheme } = useTheme();
-  const c = onboardingColors[scheme];
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      accessibilityRole="button"
-      accessibilityState={{ disabled }}
-      style={({ pressed }) => [
-        styles.share,
-        { backgroundColor: c.shareBg, borderColor: c.shareBorder, opacity: disabled ? 0.5 : 1 },
-        pressed ? { transform: [{ translateY: m.shareShadow }] } : flatShadowStyle(m.shareShadow, c.shareBorder),
-      ]}>
-      <Icon color={colors.text} size={m.shareIconSize} strokeWidth={m.shareIconStroke} />
-      <Text style={[t.shareButton, { color: colors.text }]}>{title}</Text>
-    </Pressable>
-  );
-}
-
-/** Liste satırı: ikon karosu, ad, sağ ok */
-function LinkRow({ title, icon: Icon, onPress }: { title: string; icon: LineIcon; onPress: () => void }) {
   const { colors, scheme } = useTheme();
   const c = onboardingColors[scheme];
   return (
@@ -278,18 +240,9 @@ const styles = StyleSheet.create({
   card: {
     marginTop: m.inviteCardMarginTop,
     padding: m.inviteCardPadding,
-    borderRadius: radius.card,
-    borderWidth: borderWidth.thin,
     flexDirection: 'row',
     alignItems: 'center',
     gap: m.inviteCardGap,
-  },
-  cardIcon: {
-    width: m.inviteIconTile,
-    height: m.inviteIconTile,
-    borderRadius: m.inviteIconRadius,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   cardTexts: {
     flex: 1,
@@ -326,21 +279,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: m.shareGap,
   },
+  // InviteFriends.dc.html: 50 yükseklik, köşe 16 (ortak md 52 / 18); yarım genişlikte metin sığsın diye iç boşluksuz
   share: {
     flex: 1,
-    height: m.shareHeight,
+    minHeight: m.shareHeight,
     borderRadius: m.shareRadius,
-    borderWidth: borderWidth.thick,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: m.linkGap,
+    paddingHorizontal: 0,
   },
   list: {
     marginTop: m.listMarginTop,
-    borderRadius: m.listRadius,
-    borderWidth: borderWidth.thin,
-    overflow: 'hidden',
   },
   row: {
     minHeight: m.rowMinHeight,
@@ -358,10 +305,5 @@ const styles = StyleSheet.create({
   },
   rowTitle: {
     flex: 1,
-  },
-  toast: {
-    position: 'absolute',
-    left: layout.screenPadding,
-    right: layout.screenPadding,
   },
 });

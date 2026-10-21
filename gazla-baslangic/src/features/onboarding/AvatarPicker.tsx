@@ -1,10 +1,10 @@
 import * as ImagePicker from 'expo-image-picker';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { CameraIcon } from '@/components/icons';
-import { upperTr } from '@/components/ui';
+import { Avatar, IconButton } from '@/components/ui';
 import { typography, useTheme } from '@/theme';
-import { onboardingColors, onboardingMetrics as m, onboardingTypography as t } from '@/theme/onboarding';
+import { onboardingMetrics as m, onboardingTypography as t } from '@/theme/onboarding';
 
 type Props = {
   name: string;
@@ -15,9 +15,7 @@ type Props = {
 // Profil fotoğrafı satırı (Profile.dc.html): 84 px baş harfli avatar, sağ altta kamera butonu.
 // Fotoğraf isteğe bağlı; seçilen dosya profil tamamlanınca yüklenir.
 export default function AvatarPicker({ name, uri, onChange }: Props) {
-  const { colors, scheme } = useTheme();
-  const c = onboardingColors[scheme];
-  const initial = name.trim() ? upperTr(name.trim().charAt(0)) : '';
+  const { colors } = useTheme();
 
   const pick = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -32,24 +30,25 @@ export default function AvatarPicker({ name, uri, onChange }: Props) {
   return (
     <View style={styles.row}>
       <View style={styles.avatarBox}>
-        <View style={[styles.avatar, { backgroundColor: c.avatarBg }]}>
-          {uri ? (
-            <Image source={{ uri }} style={styles.photo} accessibilityLabel="Profil fotoğrafın" />
-          ) : (
-            <Text style={[t.avatarInitial, { color: c.avatarInk }]}>{initial}</Text>
-          )}
-        </View>
-        <Pressable
-          onPress={pick}
-          accessibilityRole="button"
+        {/* Fotoğraf yoksa yalnızca baş harf: ekran okuyucuya ad alanı yeterli */}
+        <Avatar
+          name={name.trim()}
+          tint="peach"
+          url={uri}
+          size={m.avatarSize}
+          accessibilityLabel="Profil fotoğrafın"
+          decorative={!uri}
+        />
+        {/* Kamera butonu: iç 36 + 3 px zemin renginde kenar (tasarımda content-box) */}
+        <IconButton
+          icon={CameraIcon}
+          tone="ink"
+          iconSize={m.cameraIconSize}
+          iconStrokeWidth={m.cameraIconStroke}
           accessibilityLabel={uri ? 'Profil fotoğrafını değiştir' : 'Profil fotoğrafı ekle'}
-          hitSlop={4}
-          style={({ pressed }) => [
-            styles.camera,
-            { backgroundColor: c.cameraBg, borderColor: colors.background, opacity: pressed ? 0.85 : 1 },
-          ]}>
-          <CameraIcon color={c.cameraIcon} size={m.cameraIconSize} strokeWidth={m.cameraIconStroke} />
-        </Pressable>
+          onPress={pick}
+          style={[styles.camera, { borderColor: colors.background }]}
+        />
       </View>
       <View style={styles.texts}>
         <Text style={[typography.cardTitle, { color: colors.text }]}>Profil fotoğrafı</Text>
@@ -70,18 +69,6 @@ const styles = StyleSheet.create({
     width: m.avatarSize,
     height: m.avatarSize,
   },
-  avatar: {
-    width: m.avatarSize,
-    height: m.avatarSize,
-    borderRadius: m.avatarSize / 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  photo: {
-    width: m.avatarSize,
-    height: m.avatarSize,
-  },
   camera: {
     position: 'absolute',
     right: m.cameraOffset,
@@ -90,8 +77,6 @@ const styles = StyleSheet.create({
     height: m.cameraSize,
     borderRadius: m.cameraSize / 2,
     borderWidth: m.cameraBorder,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   texts: {
     flex: 1,

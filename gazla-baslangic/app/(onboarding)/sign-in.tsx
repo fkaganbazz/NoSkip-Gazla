@@ -3,16 +3,15 @@ import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import Diken from '@/components/Diken';
-import { CheckIcon } from '@/components/icons';
-import { Button, TextField } from '@/components/ui';
+import { CheckIcon, MailIcon } from '@/components/icons';
+import OnboardingHeader from '@/components/OnboardingHeader';
+import { Button, Chip, TextField } from '@/components/ui';
 import { type OAuthProvider, useSignInWithEmailMutation, useSignInWithProviderMutation, useTemplates } from '@/data';
-import { MailIcon } from '@/features/onboarding/icons';
 import { errorMessage } from '@/features/onboarding/logic';
 import { useOnboarding } from '@/features/onboarding/OnboardingProvider';
 import ProviderButton from '@/features/onboarding/ProviderButton';
-import StepHeader from '@/features/onboarding/StepHeader';
 import StepScreen, { StepIntro } from '@/features/onboarding/StepScreen';
-import { radius, typography, useTheme } from '@/theme';
+import { typography, useTheme } from '@/theme';
 import { onboardingColors, onboardingMetrics as m, onboardingTypography as t } from '@/theme/onboarding';
 
 // Hesabını aç — design/SignIn.dc.html (adım 2/4, yarım). Apple, Google ya da e-posta bağlantısı.
@@ -135,19 +134,22 @@ export default function SignInScreen() {
           </Text>
         </>
       }>
-      <StepHeader step={2} half onBack={goBack} />
+      <OnboardingHeader step={2} half onBack={goBack} />
 
       <View style={styles.hero}>
         <Diken mood="mutlu" stage="tam" size={m.signInDikenSize} />
         {picked && (
-          <View style={[styles.chip, { backgroundColor: c.pickedChipBg }]}>
-            <View style={[styles.chipDot, { backgroundColor: colors.action }]}>
-              <CheckIcon color={c.pickedChipIcon} size={m.pickedChipIconSize} strokeWidth={m.pickedChipIconStroke} />
-            </View>
-            <Text style={[typography.chip, styles.chipText, { color: c.pickedChipText }]} numberOfLines={2}>
-              {picked.title} · {picked.defaultDurationDays} gün
-            </Text>
-          </View>
+          // Seçilen challenge: yeşil durum çipi, solda tikli yeşil nokta
+          <Chip
+            status
+            label={`${picked.title} · ${picked.defaultDurationDays} gün`}
+            icon={
+              <View style={[styles.chipDot, { backgroundColor: colors.action }]}>
+                <CheckIcon color={colors.onAction} size={m.pickedChipIconSize} strokeWidth={m.pickedChipIconStroke} />
+              </View>
+            }
+            style={styles.chip}
+          />
         )}
       </View>
 
@@ -166,24 +168,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: m.signInDikenGap,
   },
+  // SignIn.dc.html: padding 8 14 8 10, aralık 8 (ortak durum çipi 12 / 6). Çipin yatay boşluğu aynı anahtarla
+  // ezilir (web'de paddingLeft, ortak çipin paddingHorizontal'ını ezemiyor); soldaki fark noktanın kenar boşluğunda.
   chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
     gap: m.pickedChipGap,
-    paddingVertical: m.pickedChipPaddingY,
-    paddingLeft: m.pickedChipPaddingLeft,
-    paddingRight: m.pickedChipPaddingRight,
-    borderRadius: radius.full,
+    paddingHorizontal: m.pickedChipPaddingRight,
   },
   chipDot: {
+    marginLeft: m.pickedChipPaddingLeft - m.pickedChipPaddingRight,
     width: m.pickedChipDot,
     height: m.pickedChipDot,
     borderRadius: m.pickedChipDot / 2,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  chipText: {
-    flexShrink: 1,
   },
   center: {
     textAlign: 'center',

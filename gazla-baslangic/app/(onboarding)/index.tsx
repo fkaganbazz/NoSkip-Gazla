@@ -3,8 +3,8 @@ import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { StreakIcon } from '@/components/icons';
 import { Button } from '@/components/ui';
-import { LogoSproutIcon } from '@/features/onboarding/icons';
 import WelcomeArt from '@/features/onboarding/WelcomeArt';
 import { useTheme } from '@/theme';
 import { onboardingColors, onboardingMetrics as m, onboardingTypography as t } from '@/theme/onboarding';
@@ -24,7 +24,7 @@ export default function WelcomeScreen() {
     <View style={[styles.screen, { backgroundColor: c.welcomeBg }]}>
       <StatusBar style="light" />
       <View style={[styles.logo, { top: insets.top + m.welcomeLogoTop }]}>
-        <LogoSproutIcon color={c.welcomeLogo} size={m.welcomeLogoIconSize} strokeWidth={m.welcomeLogoIconStroke} />
+        <StreakIcon color={c.welcomeLogo} size={m.welcomeLogoIconSize} strokeWidth={m.welcomeLogoIconStroke} />
         <Text accessibilityRole="header" style={[t.welcomeLogo, { color: c.welcomeLogo }]}>
           Gazla
         </Text>

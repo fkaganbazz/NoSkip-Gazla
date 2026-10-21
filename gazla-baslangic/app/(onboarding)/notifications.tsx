@@ -1,13 +1,12 @@
 import { useRouter } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
 
 import Diken from '@/components/Diken';
-import { flatShadowStyle } from '@/components/FlatShadow';
+import { DikenFaceIcon } from '@/components/icons';
+import OnboardingHeader from '@/components/OnboardingHeader';
+import SpeechBubble from '@/components/SpeechBubble';
 import { Button } from '@/components/ui';
-import { DikenAppIcon } from '@/features/onboarding/icons';
 import { useOnboarding } from '@/features/onboarding/OnboardingProvider';
-import StepHeader from '@/features/onboarding/StepHeader';
 import StepScreen from '@/features/onboarding/StepScreen';
 import { borderWidth, typography, useTheme } from '@/theme';
 import { onboardingColors, onboardingMetrics as m, onboardingTypography as t } from '@/theme/onboarding';
@@ -45,28 +44,21 @@ export default function NotifPermissionScreen() {
           <Button title="Şimdi değil" variant="text" onPress={done} />
         </>
       }>
-      <StepHeader step={4} tone="permission" onBack={pickedTemplateId || createdChallengeId ? goBack : undefined} />
+      <OnboardingHeader
+        step={4}
+        tone="permission"
+        onBack={pickedTemplateId || createdChallengeId ? goBack : undefined}
+      />
 
-      <View
-        style={[
-          styles.card,
-          { backgroundColor: colors.surface },
-          flatShadowStyle(m.permissionCardShadow, c.permissionCardShadow),
-        ]}>
+      {/* Diken'in sözü: kuyruk aşağıda Diken'in başına bakar */}
+      <SpeechBubble size="lg" tail="bottom-left" tailOffset={m.permissionTailOffset} style={styles.card}>
         <Text accessibilityRole="header" style={[typography.screenTitle, { color: colors.text }]}>
           Seni dürtmeme izin ver.
         </Text>
         <Text style={[t.lead, styles.cardBody, { color: colors.textBody }]}>
           Söz, sadece gün bitmek üzereyken ve arkadaşların seni dürttüğünde yazarım.
         </Text>
-        <Svg
-          width={m.permissionTail.width}
-          height={m.permissionTail.height}
-          viewBox={`0 0 ${m.permissionTail.width} ${m.permissionTail.height}`}
-          style={styles.tail}>
-          <Path d="M0 0 H28 L10 20 Z" fill={colors.surface} />
-        </Svg>
-      </View>
+      </SpeechBubble>
 
       <View style={styles.diken}>
         <Diken mood="laf" stage="tam" size={m.permissionDikenSize} />
@@ -78,7 +70,7 @@ export default function NotifPermissionScreen() {
         accessibilityLabel="Örnek bildirim: Diken, Gün bitiyor, 2 görevin duruyor. Susuz kaldım burada."
         style={[styles.preview, { backgroundColor: c.previewBg, borderColor: c.previewBorder }]}>
         <View style={[styles.appIcon, { backgroundColor: c.appIconBg }]}>
-          <DikenAppIcon size={m.appIconSize} />
+          <DikenFaceIcon size={m.appIconSize} />
         </View>
         <View style={styles.previewTexts}>
           <View style={styles.previewMeta}>
@@ -98,17 +90,9 @@ export default function NotifPermissionScreen() {
 const styles = StyleSheet.create({
   card: {
     marginTop: m.permissionCardMarginTop,
-    paddingVertical: m.permissionCardPaddingY,
-    paddingHorizontal: m.permissionCardPaddingX,
-    borderRadius: m.permissionCardRadius,
   },
   cardBody: {
     marginTop: m.permissionBodyMarginTop,
-  },
-  tail: {
-    position: 'absolute',
-    left: m.permissionTail.left,
-    bottom: m.permissionTail.bottom,
   },
   diken: {
     marginTop: m.permissionDikenMarginTop,

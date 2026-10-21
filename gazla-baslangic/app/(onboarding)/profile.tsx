@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import OnboardingHeader from '@/components/OnboardingHeader';
 import { Button, TextField } from '@/components/ui';
 import { useCompleteProfileMutation, useSignOutMutation, useUpdateProfileMutation, useUsernameAvailable } from '@/data';
 import AvatarPicker from '@/features/onboarding/AvatarPicker';
 import BirthYearField from '@/features/onboarding/BirthYearField';
 import { deviceTimezone, errorMessage, normalizeUsername } from '@/features/onboarding/logic';
 import { useOnboarding } from '@/features/onboarding/OnboardingProvider';
-import StepHeader from '@/features/onboarding/StepHeader';
 import StepScreen, { StepIntro } from '@/features/onboarding/StepScreen';
 import { useDebouncedValue } from '@/features/onboarding/useDebouncedValue';
 import UsernameField, { type UsernameState } from '@/features/onboarding/UsernameField';
@@ -86,7 +86,7 @@ export default function ProfileScreen() {
         </>
       }>
       {/* Geri: hesabı değiştirmek için oturum kapanır, giriş ekranına dönülür */}
-      <StepHeader step={2} onBack={signOut.isPending ? undefined : () => signOut.mutate()} />
+      <OnboardingHeader step={2} onBack={signOut.isPending ? undefined : () => signOut.mutate()} />
       <StepIntro title="Seni nasıl çağıralım?" body="Arkadaşların seni kullanıcı adınla bulur." />
 
       <AvatarPicker name={name} uri={avatarUri} onChange={setAvatarUri} />
