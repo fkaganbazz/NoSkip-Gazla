@@ -50,6 +50,7 @@ import {
   palette,
   radius,
   spacing,
+  todayColors,
   todayMetrics,
   typography,
   useTheme,
@@ -589,7 +590,8 @@ export default function ComponentsScreen() {
           <Caption>6 px · köşe 3 · renk ve yükseklik ayarlanabilir</Caption>
         </Panel>
 
-        <Swatch bg={colors.actionTint}>
+        {/* Seri çipi ve damlalar Bugün kahraman kartında durur: zemini o kartın (açıkta actionTint) */}
+        <Swatch bg={todayColors[scheme].heroBg}>
           <SectionLabel>Seri ve su</SectionLabel>
           <View style={styles.row}>
             <StreakChip days={12} />

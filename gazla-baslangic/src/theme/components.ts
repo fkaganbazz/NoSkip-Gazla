@@ -218,7 +218,7 @@ export const componentColors: Record<Scheme, ComponentColors> = {
     chipSelectedBg: palette.sand, // DetailDark.dc.html "30 gün"
     chipSelectedText: palette.darkBackground,
     chipBorder: palette.darkLine,
-    chipSuccessBg: '#16392A', // DetailDark.dc.html "Bugün tamam"
+    chipSuccessBg: palette.darkGreenSurface, // DetailDark.dc.html "Bugün tamam"
     chipSuccessText: palette.darkActionText,
     chipWarningBg: '#4A2A1E', // DetailDark.dc.html "4 kişi"
     chipWarningText: '#FFB891',
@@ -242,7 +242,9 @@ export const componentColors: Record<Scheme, ComponentColors> = {
     undoButtonBg: palette.darkSurface,
     progressTrack: palette.darkFill,
     pendingRing: '#FF7A3D',
-    selectedCardBg: palette.darkActionTint,
+    // Seçili kartın koyusu tasarlanmadı. Aktif sekme hapı (#1F4D33) üstünde ikincil metin (#B7AACF) 4.46:1 kalıyordu
+    // (Create tamamlama türü, PickChallenge karosu); TodayDark kahraman kartının yeşil yüzeyinde 5.85:1.
+    selectedCardBg: palette.darkGreenSurface,
     stepFilled: palette.darkAction,
     stepEmpty: palette.darkLine,
     stepLabel: palette.darkTextSecondary,

@@ -30,7 +30,7 @@ export const todayColors: Record<'light' | 'dark', TodayColors> = {
     waitingText: palette.orange700,
   },
   dark: {
-    heroBg: '#16392A',
+    heroBg: palette.darkGreenSurface,
     heroCircle: '#1C4633',
     heroTitle: palette.green50,
     heroSub: '#B8E6CA',

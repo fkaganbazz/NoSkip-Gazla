@@ -47,6 +47,7 @@ export const palette = {
   darkTextBody: '#E4DBF2', // DetailDark: gövde metni
   darkActionText: '#8BE0AE', // TabBar koyu: aktif sekme metni
   darkActionTint: '#1F4D33', // TabBar koyu: aktif sekme hapı
+  darkGreenSurface: '#16392A', // TodayDark: kahraman kartı zemini; DetailDark: "Bugün tamam" çipi
   // Tasarımda koyu hata rengi yok; #B42318 koyu yüzeyde ~2.6:1 okunmuyor. Aynı hata skalasının
   // "Error 400" tonu: yüzey #211538 üstünde 6.1:1, zemin #150E26 üstünde 6.7:1 (WCAG AA).
   darkErrorText: '#F97066', // Koyu: kırmızı metin, ikon, hata kenarı

@@ -36,7 +36,7 @@ export const gardenColors: Record<Scheme, GardenColors> = {
     badgeLockedIcon: palette.ink400, // #6B5E80
   },
   dark: {
-    shelfPanelBg: '#16392A', // koyu: TodayDark kahraman kartı zemini
+    shelfPanelBg: palette.darkGreenSurface, // koyu: TodayDark kahraman kartı zemini
     plank: '#C9965F',
     plankShadow: '#A77645',
     plantLabel: '#B8E6CA', // koyu: TodayDark kahraman kartı açıklaması

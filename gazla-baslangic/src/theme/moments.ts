@@ -87,7 +87,7 @@ export const finishedColors: Record<Scheme, FinishedColors> = {
     badgeText: palette.nightPurple,
     body: darkColors.textBody,
     statLabel: darkColors.textSecondary,
-    gardenBg: '#16392A', // TodayDark kahraman kartı
+    gardenBg: palette.darkGreenSurface, // TodayDark kahraman kartı
     gardenText: palette.green50,
   },
 };
