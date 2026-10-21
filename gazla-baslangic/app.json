@@ -43,7 +43,9 @@
           "enforceContrast": false
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-sharing",
+      "expo-tracking-transparency"
     ],
     "experiments": {
       "typedRoutes": true
