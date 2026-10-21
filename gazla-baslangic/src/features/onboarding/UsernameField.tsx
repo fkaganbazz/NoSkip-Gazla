@@ -38,13 +38,13 @@ export default function UsernameField({ value, onChangeText, state }: Props) {
     state === 'available'
       ? colors.action
       : state === 'unavailable'
-        ? colors.danger
+        ? colors.dangerText
         : focused
           ? colors.action
           : c.fieldBorder;
   const message = MESSAGES[state];
   const messageColor =
-    state === 'available' ? c.availableText : state === 'unavailable' ? colors.danger : colors.textSecondary;
+    state === 'available' ? c.availableText : state === 'unavailable' ? colors.dangerText : colors.textSecondary;
 
   return (
     <View style={styles.field}>

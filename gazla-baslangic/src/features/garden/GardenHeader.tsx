@@ -20,7 +20,7 @@ export default function GardenHeader({ profile, onSettings }: Props) {
 
   return (
     <View style={styles.row}>
-      <Avatar name={profile.displayName} tint={profile.avatarTint} url={profile.avatarUrl} size={m.avatarSize} />
+      <Avatar name={profile.displayName} tint={profile.avatarTint} self url={profile.avatarUrl} size={m.avatarSize} />
       <View style={styles.texts}>
         <Text accessibilityRole="header" numberOfLines={2} style={[typography.screenTitle, { color: colors.text }]}>
           {`${possessive(profile.displayName)} bahçesi`}

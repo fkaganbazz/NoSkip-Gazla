@@ -1,29 +1,23 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { ChevronRightIcon } from '@/components/icons';
-import { Avatar } from '@/components/ui';
+import { Avatar, Card } from '@/components/ui';
 import type { Profile } from '@/data';
-import { borderWidth, radius, typography, useTheme } from '@/theme';
+import { typography, useTheme } from '@/theme';
 import { settingsMetrics as m, settingsTypography as t } from '@/theme/settings';
 
 /**
- * Ayarlar üstündeki profil kartı: avatar, ad, "@kullanıcı · Profili düzenle".
- * Avatar rengi veriye bağlı (`avatarTints`); tasarımdaki #FFE3D2 sabit örnek rengiydi.
+ * Ayarlar üstündeki profil kartı (ortak basılabilir Card): avatar, ad, "@kullanıcı · Profili düzenle".
+ * Avatar rengi veriye bağlı; kendi avatarın olduğu için şeftali tonu tasarımdaki #FFE3D2 (`self`).
  */
 export default function ProfileCard({ profile, onPress }: { profile: Profile; onPress: () => void }) {
   const { colors } = useTheme();
   return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={`${profile.displayName}, profili düzenle`}
-      style={({ pressed }) => [
-        styles.card,
-        { backgroundColor: pressed ? colors.surfaceMuted : colors.surface, borderColor: colors.border },
-      ]}>
+    <Card onPress={onPress} accessibilityLabel={`${profile.displayName}, profili düzenle`} style={styles.card}>
       <Avatar
         name={profile.displayName}
         tint={profile.avatarTint}
+        self
         url={profile.avatarUrl}
         size={m.profileAvatar}
         decorative
@@ -37,7 +31,7 @@ export default function ProfileCard({ profile, onPress }: { profile: Profile; on
         </Text>
       </View>
       <ChevronRightIcon color={colors.textSecondary} size={m.profileChevronSize} strokeWidth={m.chevronStrokeWidth} />
-    </Pressable>
+    </Card>
   );
 }
 
@@ -46,8 +40,6 @@ const styles = StyleSheet.create({
     marginTop: m.profileCardMarginTop,
     paddingVertical: m.profileCardPaddingY,
     paddingHorizontal: m.profileCardPaddingX,
-    borderRadius: radius.card,
-    borderWidth: borderWidth.thin,
     flexDirection: 'row',
     alignItems: 'center',
     gap: m.profileCardGap,

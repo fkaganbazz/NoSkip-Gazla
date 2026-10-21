@@ -9,7 +9,6 @@ import { Button, Chip, TextField } from '@/components/ui';
 import { type OAuthProvider, useSignInWithEmailMutation, useSignInWithProviderMutation, useTemplates } from '@/data';
 import { errorMessage } from '@/features/onboarding/logic';
 import { useOnboarding } from '@/features/onboarding/OnboardingProvider';
-import ProviderButton from '@/features/onboarding/ProviderButton';
 import StepScreen, { StepIntro } from '@/features/onboarding/StepScreen';
 import { typography, useTheme } from '@/theme';
 import { onboardingColors, onboardingMetrics as m, onboardingTypography as t } from '@/theme/onboarding';
@@ -96,17 +95,22 @@ export default function SignInScreen() {
             </>
           ) : (
             <>
-              <ProviderButton
-                provider="apple"
+              {/* SignIn.dc.html: 54, gölgesiz; resmi Apple/Google bileşenleri gelene kadar ortak varyantlar */}
+              <Button
+                title="Apple ile devam et"
+                variant="apple"
+                size="lgCompact"
                 onPress={() => signInWith('apple')}
                 loading={pendingProvider === 'apple'}
-                disabled={busy}
+                disabled={busy && pendingProvider !== 'apple'}
               />
-              <ProviderButton
-                provider="google"
+              <Button
+                title="Google ile devam et"
+                variant="google"
+                size="lgCompact"
                 onPress={() => signInWith('google')}
                 loading={pendingProvider === 'google'}
-                disabled={busy}
+                disabled={busy && pendingProvider !== 'google'}
               />
               <Button
                 title="E-posta ile devam et"
@@ -121,7 +125,7 @@ export default function SignInScreen() {
             </>
           )}
           {error && (
-            <Text accessibilityLiveRegion="polite" style={[typography.meta, styles.center, { color: colors.danger }]}>
+            <Text accessibilityLiveRegion="polite" style={[typography.meta, styles.center, { color: colors.dangerText }]}>
               {error}
             </Text>
           )}
@@ -139,16 +143,16 @@ export default function SignInScreen() {
       <View style={styles.hero}>
         <Diken mood="mutlu" stage="tam" size={m.signInDikenSize} />
         {picked && (
-          // Seçilen challenge: yeşil durum çipi, solda tikli yeşil nokta
+          // Seçilen challenge: yeşil durum çipi, solda tikli yeşil nokta (SignIn.dc.html)
           <Chip
-            status
+            tone="success"
             label={`${picked.title} · ${picked.defaultDurationDays} gün`}
+            numberOfLines={1}
             icon={
               <View style={[styles.chipDot, { backgroundColor: colors.action }]}>
                 <CheckIcon color={colors.onAction} size={m.pickedChipIconSize} strokeWidth={m.pickedChipIconStroke} />
               </View>
             }
-            style={styles.chip}
           />
         )}
       </View>
@@ -168,14 +172,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: m.signInDikenGap,
   },
-  // SignIn.dc.html: padding 8 14 8 10, aralık 8 (ortak durum çipi 12 / 6). Çipin yatay boşluğu aynı anahtarla
-  // ezilir (web'de paddingLeft, ortak çipin paddingHorizontal'ını ezemiyor); soldaki fark noktanın kenar boşluğunda.
-  chip: {
-    gap: m.pickedChipGap,
-    paddingHorizontal: m.pickedChipPaddingRight,
-  },
   chipDot: {
-    marginLeft: m.pickedChipPaddingLeft - m.pickedChipPaddingRight,
     width: m.pickedChipDot,
     height: m.pickedChipDot,
     borderRadius: m.pickedChipDot / 2,

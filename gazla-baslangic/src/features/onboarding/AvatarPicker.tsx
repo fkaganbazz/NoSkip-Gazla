@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { CameraIcon } from '@/components/icons';
 import { Avatar, IconButton } from '@/components/ui';
-import { typography, useTheme } from '@/theme';
+import { componentColors, componentMetrics as cm, typography, useTheme } from '@/theme';
 import { onboardingMetrics as m, onboardingTypography as t } from '@/theme/onboarding';
 
 type Props = {
@@ -15,7 +15,8 @@ type Props = {
 // Profil fotoğrafı satırı (Profile.dc.html): 84 px baş harfli avatar, sağ altta kamera butonu.
 // Fotoğraf isteğe bağlı; seçilen dosya profil tamamlanınca yüklenir.
 export default function AvatarPicker({ name, uri, onChange }: Props) {
-  const { colors } = useTheme();
+  const { colors, scheme } = useTheme();
+  const camera = cm.cameraBadge;
 
   const pick = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -34,20 +35,24 @@ export default function AvatarPicker({ name, uri, onChange }: Props) {
         <Avatar
           name={name.trim()}
           tint="peach"
+          self
           url={uri}
           size={m.avatarSize}
           accessibilityLabel="Profil fotoğrafın"
           decorative={!uri}
         />
-        {/* Kamera butonu: iç 36 + 3 px zemin renginde kenar (tasarımda content-box) */}
+        {/* Kamera rozeti: dış 36 (3 px ekran zemini kenarı dahil), dokunma alanı 44 */}
         <IconButton
           icon={CameraIcon}
           tone="ink"
-          iconSize={m.cameraIconSize}
-          iconStrokeWidth={m.cameraIconStroke}
+          size={camera.size}
+          outlineColor={colors.background}
+          iconSize={camera.iconSize}
+          iconStrokeWidth={camera.iconStroke}
+          iconColor={componentColors[scheme].cameraBadgeIcon}
           accessibilityLabel={uri ? 'Profil fotoğrafını değiştir' : 'Profil fotoğrafı ekle'}
           onPress={pick}
-          style={[styles.camera, { borderColor: colors.background }]}
+          style={styles.camera}
         />
       </View>
       <View style={styles.texts}>
@@ -71,12 +76,8 @@ const styles = StyleSheet.create({
   },
   camera: {
     position: 'absolute',
-    right: m.cameraOffset,
-    bottom: m.cameraOffset,
-    width: m.cameraSize,
-    height: m.cameraSize,
-    borderRadius: m.cameraSize / 2,
-    borderWidth: m.cameraBorder,
+    right: cm.cameraBadge.offset,
+    bottom: cm.cameraBadge.offset,
   },
   texts: {
     flex: 1,

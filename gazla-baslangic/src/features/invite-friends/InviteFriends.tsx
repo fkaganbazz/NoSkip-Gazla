@@ -2,7 +2,7 @@ import type { ComponentType } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { CategoryTile } from '@/components/CategoryTile';
-import { FriendList } from '@/components/FriendRow';
+import { FriendList, FriendRowButton } from '@/components/FriendRow';
 import { ChevronRightIcon, CopyIcon, MessageIcon, ShareIcon, type IconProps } from '@/components/icons';
 import OnboardingHeader from '@/components/OnboardingHeader';
 import { Button, Card, ErrorState, IconButton, LoadingState, ToastHost, useToast } from '@/components/ui';
@@ -150,7 +150,7 @@ function InviteBody({ challengeId, onCopied }: { challengeId: string; onCopied: 
             </Text>
           ) : invite.error ? (
             <Pressable onPress={invite.retry} accessibilityRole="button" style={styles.linkText}>
-              <Text numberOfLines={2} style={[typography.meta, { color: colors.danger }]}>
+              <Text numberOfLines={2} style={[typography.meta, { color: colors.dangerText }]}>
                 {invite.error} Tekrar dene
               </Text>
             </Pressable>
@@ -159,27 +159,25 @@ function InviteBody({ challengeId, onCopied }: { challengeId: string; onCopied: 
               <ActivityIndicator color={colors.textSecondary} />
             </View>
           )}
-          <Pressable
+          {/* InviteFriends.dc.html: 40, 0 14, köşe 12, gece moru (koyuda kum) */}
+          <FriendRowButton
+            title="Kopyala"
+            variant="ink"
+            size="lg"
+            wide
+            icon={CopyIcon}
+            disabled={!invite.url}
+            accessibilityLabel="Davet linkini kopyala"
             onPress={async () => {
               if (invite.url && (await copyText(invite.url))) onCopied();
             }}
-            disabled={!invite.url}
-            accessibilityRole="button"
-            accessibilityLabel="Davet linkini kopyala"
-            accessibilityState={{ disabled: !invite.url }}
-            style={({ pressed }) => [
-              styles.copy,
-              { backgroundColor: c.copyBg, opacity: !invite.url ? 0.5 : pressed ? 0.85 : 1 },
-            ]}>
-            <CopyIcon color={c.copyText} size={m.copyIconSize} strokeWidth={m.copyIconStroke} />
-            <Text style={[typography.captionStrong, { color: c.copyText }]}>Kopyala</Text>
-          </Pressable>
+          />
         </View>
         <View style={styles.shareRow}>
           <Button
             title="Mesajla gönder"
             variant="secondary"
-            size="md"
+            size="mdCompact"
             icon={(color) => <MessageIcon color={color} size={m.shareIconSize} strokeWidth={m.shareIconStroke} />}
             disabled={!message}
             onPress={() => message && sendAsMessage(message)}
@@ -188,7 +186,7 @@ function InviteBody({ challengeId, onCopied }: { challengeId: string; onCopied: 
           <Button
             title="Paylaş"
             variant="secondary"
-            size="md"
+            size="mdCompact"
             icon={(color) => <ShareIcon color={color} size={m.shareIconSize} strokeWidth={m.shareIconStroke} />}
             disabled={!message}
             onPress={() => message && shareText(message)}
@@ -267,24 +265,12 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'flex-start',
   },
-  copy: {
-    height: m.copyHeight,
-    paddingHorizontal: m.copyPaddingX,
-    borderRadius: m.copyRadius,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: m.copyGap,
-  },
   shareRow: {
     flexDirection: 'row',
     gap: m.shareGap,
   },
-  // InviteFriends.dc.html: 50 yükseklik, köşe 16 (ortak md 52 / 18); yarım genişlikte metin sığsın diye iç boşluksuz
   share: {
     flex: 1,
-    minHeight: m.shareHeight,
-    borderRadius: m.shareRadius,
-    paddingHorizontal: 0,
   },
   list: {
     marginTop: m.listMarginTop,

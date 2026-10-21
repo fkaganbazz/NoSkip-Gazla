@@ -11,6 +11,7 @@ export {
   Segmented,
   Toggle,
   type ChipSize,
+  type ChipTone,
   type IconButtonIcon,
   type IconButtonTone,
   type SectionLabelTone,

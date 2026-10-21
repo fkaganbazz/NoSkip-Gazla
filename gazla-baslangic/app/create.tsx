@@ -326,7 +326,7 @@ export default function CreateScreen() {
 
         <View style={styles.footer}>
           {create.isError && (
-            <Text accessibilityLiveRegion="polite" style={[componentTypography.inputError, styles.error, { color: colors.danger }]}>
+            <Text accessibilityLiveRegion="polite" style={[componentTypography.inputError, styles.error, { color: colors.dangerText }]}>
               {create.error.message}
             </Text>
           )}

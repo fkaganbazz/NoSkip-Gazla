@@ -6,7 +6,7 @@ import { FriendRowButton } from '@/components/FriendRow';
 import { DikenFaceIcon, MessageIcon, StarIcon } from '@/components/icons';
 import SpeechBubble from '@/components/SpeechBubble';
 import { useMyMembership, useRespondToInviteMutation, type ActivityItem } from '@/data';
-import { borderWidth, cardColors, cardMetrics, cardTypography, useTheme } from '@/theme';
+import { borderWidth, cardColors, cardTypography, useTheme } from '@/theme';
 import { socialColors, socialMetrics as m, socialTypography } from '@/theme/social';
 
 import { activityText, isPoke, timeLabel } from './logic';
@@ -78,7 +78,7 @@ export default function ActivityRow({ item, now, rich, divider, actions }: Props
           loading={actions.busyFriendshipId === friendshipId}
           onPress={() => actions.onAccept(friendshipId)}
           accessibilityLabel={`${actor.displayName} isteğini kabul et`}
-          style={styles.button}
+          wide
         />
         <FriendRowButton
           title="Sil"
@@ -86,7 +86,7 @@ export default function ActivityRow({ item, now, rich, divider, actions }: Props
           loading={actions.busyUserId === actor.id}
           onPress={() => actions.onDecline(actor.id)}
           accessibilityLabel={`${actor.displayName} isteğini sil`}
-          style={styles.button}
+          wide
         />
       </View>
     );
@@ -99,7 +99,8 @@ export default function ActivityRow({ item, now, rich, divider, actions }: Props
         variant="ink"
         onPress={() => actions.onReply(actor.id)}
         accessibilityLabel={`${actor.displayName} kişisine karşılık ver`}
-        style={[styles.button, styles.alignStart]}
+        wide
+        style={styles.alignStart}
       />
     );
   } else if (rich && actor && item.kind === 'friend_finished_challenge') {
@@ -109,7 +110,8 @@ export default function ActivityRow({ item, now, rich, divider, actions }: Props
         variant="hype"
         onPress={() => actions.onCongrats(actor.id)}
         accessibilityLabel={`${actor.displayName} kişisini tebrik et`}
-        style={[styles.button, styles.squareButton, styles.alignStart]}
+        wide
+        style={styles.alignStart}
       />
     );
   }
@@ -175,7 +177,7 @@ function InviteActions({ challengeId }: { challengeId: string }) {
         <FriendRowButton
           title="Katıl"
           variant="action"
-          style={styles.button}
+          wide
           loading={busy === true}
           disabled={respond.isPending && busy !== true}
           onPress={() => respond.mutate({ challengeId, accept: true })}
@@ -183,14 +185,14 @@ function InviteActions({ challengeId }: { challengeId: string }) {
         <FriendRowButton
           title="Reddet"
           variant="muted"
-          style={styles.button}
+          wide
           loading={busy === false}
           disabled={respond.isPending && busy !== false}
           onPress={() => respond.mutate({ challengeId, accept: false })}
         />
       </View>
       {respond.error && (
-        <Text style={[cardTypography.rowSub, { color: colors.danger }]}>{respond.error.message}</Text>
+        <Text style={[cardTypography.rowSub, { color: colors.dangerText }]}>{respond.error.message}</Text>
       )}
     </View>
   );
@@ -235,13 +237,6 @@ const styles = StyleSheet.create({
     height: m.activityAvatar,
     borderRadius: m.activityAvatar / 2,
     overflow: 'hidden',
-  },
-  // Aktivite butonları satır butonundan geniş (0 14) ve "Tebrik et" hap değil, köşe 12
-  button: {
-    paddingHorizontal: m.activityButtonPaddingX,
-  },
-  squareButton: {
-    borderRadius: cardMetrics.rowButtonRadius,
   },
   buttons: {
     flexDirection: 'row',

@@ -1,9 +1,9 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { CheckIcon, SolidDropIcon } from '@/components/icons';
-import { Card } from '@/components/ui';
+import { Card, Chip } from '@/components/ui';
 import { challengeColors, challengeMetrics as m, challengeTypography as t } from '@/theme/challenge';
-import { radius, useTheme } from '@/theme';
+import { useTheme } from '@/theme';
 
 import type { DayCell } from './logic';
 
@@ -37,12 +37,7 @@ export default function ProgressCard({ title, detail, doneToday, days }: Props) 
           <Text style={[t.day, { color: colors.text }]}>{title}</Text>
           {detail && <Text style={[t.detail, { color: colors.textSecondary }]}>{detail}</Text>}
         </View>
-        {doneToday && (
-          <View style={[styles.statusChip, { backgroundColor: c.todayDoneChipBg }]}>
-            <CheckIcon color={c.todayDoneChipText} size={m.statusIconSize} strokeWidth={m.statusIconStroke} />
-            <Text style={[t.chip, { color: c.todayDoneChipText }]}>Bugün tamam</Text>
-          </View>
-        )}
+        {doneToday && <Chip size="xs" tone="success" icon={CheckIcon} label="Bugün tamam" />}
       </View>
 
       <View style={styles.grid}>
@@ -130,14 +125,6 @@ const styles = StyleSheet.create({
     alignItems: 'baseline',
     gap: m.dayGap,
     flexShrink: 1,
-  },
-  statusChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: m.statusChipGap,
-    paddingVertical: m.statusChipPaddingY,
-    paddingHorizontal: m.statusChipPaddingX,
-    borderRadius: radius.full,
   },
   grid: {
     gap: m.gridGap,

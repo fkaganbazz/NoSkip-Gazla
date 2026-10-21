@@ -17,6 +17,7 @@ import {
 
 import {
   borderWidth,
+  colorsFor,
   componentColors,
   componentMetrics as cm,
   componentTypography as ct,
@@ -24,6 +25,7 @@ import {
   spacing,
   typography,
   useTheme,
+  type ColorScheme,
 } from '@/theme';
 
 import { CheckIcon, WifiOffIcon } from '@/components/icons';
@@ -38,17 +40,31 @@ type TextFieldProps = Omit<TextInputProps, 'style'> & {
   error?: string | null;
   /** Hata yerine gösterilecek yardımcı/başarı satırı */
   hint?: string | null;
+  /**
+   * md: 52 (Components; çok satırda en az 104). sm: kompakt — tek satır 50 (PhotoProof not alanı), çok satır 84,
+   * 12 14 iç boşluk, yazı 15 (Report.dc.html)
+   */
+  size?: 'md' | 'sm';
+  /** Temadan bağımsız sabit ekran (PhotoProof iki modda koyu: `scheme="dark"`) */
+  scheme?: ColorScheme;
   style?: StyleProp<ViewStyle>;
 };
 
-export function TextField({ label, error, hint, style, onFocus, onBlur, ...input }: TextFieldProps) {
-  const { colors, scheme } = useTheme();
+export function TextField({ label, error, hint, size = 'md', scheme: schemeOverride, style, onFocus, onBlur, ...input }: TextFieldProps) {
+  const theme = useTheme();
+  const scheme = schemeOverride ?? theme.scheme;
+  const colors = schemeOverride ? colorsFor(schemeOverride) : theme.colors;
   const c = componentColors[scheme];
   const [focused, setFocused] = useState(false);
+  const sm = size === 'sm';
+  const multiline = !!input.multiline;
+  // Components.dc.html: boş alan 600, dolu ya da odaktaki alan 700
+  const strong = focused || (typeof input.value === 'string' && input.value.length > 0);
+  const font = sm && multiline ? (strong ? ct.inputSmFocused : ct.inputSm) : strong ? ct.inputFocused : ct.input;
 
   return (
     <View style={[styles.field, style]}>
-      {label && <Text style={[ct.inputLabel, { color: colors.text }]}>{label}</Text>}
+      {label && <Text style={[ct.inputLabel, { color: c.inputLabel }]}>{label}</Text>}
       <TextInput
         {...input}
         accessibilityLabel={input.accessibilityLabel ?? label}
@@ -63,18 +79,19 @@ export function TextField({ label, error, hint, style, onFocus, onBlur, ...input
         }}
         style={[
           styles.input,
-          focused ? ct.inputFocused : ct.input,
+          font,
           {
             color: colors.text,
             backgroundColor: c.inputBg,
-            borderColor: error ? colors.danger : focused ? colors.action : c.inputBorder,
+            borderColor: error ? colors.dangerText : focused ? colors.action : c.inputBorder,
             boxShadow: focused && !error ? `0 0 0 ${cm.inputFocusRing}px ${c.inputFocusRing}` : undefined,
           },
-          input.multiline && styles.multiline,
+          sm && styles.inputSm,
+          multiline && (sm ? styles.multilineSm : styles.multiline),
         ]}
       />
       {error ? (
-        <Text accessibilityLiveRegion="polite" style={[ct.inputError, { color: colors.danger }]}>
+        <Text accessibilityLiveRegion="polite" style={[ct.inputError, { color: colors.dangerText }]}>
           {error}
         </Text>
       ) : hint ? (
@@ -137,11 +154,29 @@ export function Toast({ message, kind, action, style }: ToastProps) {
   );
 }
 
+type CountBadgeProps = {
+  count: number;
+  /** Zemin renginde 2 px kenar (Today.dc.html zil rozeti: ekran zemini); iç boşluk 0 5, dış ölçü 22 */
+  outlineColor?: string;
+  /** Konum (ör. zilin sağ üstü) */
+  style?: StyleProp<ViewStyle>;
+};
+
 /** Turuncu sayı rozeti */
-export function CountBadge({ count }: { count: number }) {
+export function CountBadge({ count, outlineColor, style }: CountBadgeProps) {
   const { colors } = useTheme();
   return (
-    <View style={[styles.badge, { backgroundColor: colors.accent }]}>
+    <View
+      style={[
+        styles.badge,
+        { backgroundColor: colors.accent },
+        outlineColor && {
+          borderWidth: cm.countBadgeOutline,
+          borderColor: outlineColor,
+          paddingHorizontal: cm.countBadgeOutlinedPaddingX,
+        },
+        style,
+      ]}>
       <Text style={[typography.micro, { color: colors.onAccent }]}>{count}</Text>
     </View>
   );
@@ -149,9 +184,10 @@ export function CountBadge({ count }: { count: number }) {
 
 // Durumlar ---------------------------------------------------------------------------------------
 
-/** Ekran yükleniyor */
-export function LoadingState() {
-  const { colors } = useTheme();
+/** Ekran yükleniyor. `scheme`: temadan bağımsız sabit ekran (PhotoProof: `"dark"`) */
+export function LoadingState({ scheme }: { scheme?: ColorScheme }) {
+  const theme = useTheme();
+  const colors = scheme ? colorsFor(scheme) : theme.colors;
   return (
     <View style={styles.center}>
       <ActivityIndicator color={colors.action} />
@@ -159,22 +195,33 @@ export function LoadingState() {
   );
 }
 
+type ErrorStateProps = {
+  message?: string;
+  /** Verilirse altta ikincil buton */
+  onRetry?: () => void;
+  /** Buton metni · varsayılan "Tekrar dene" (ör. "Kapat") */
+  actionLabel?: string;
+  /** Temadan bağımsız sabit ekran (PhotoProof: `"dark"`) */
+  scheme?: ColorScheme;
+};
+
 /** Yükleme hatası: mesaj ve "Tekrar dene" */
-export function ErrorState({ message, onRetry }: { message?: string; onRetry?: () => void }) {
-  const { colors } = useTheme();
+export function ErrorState({ message, onRetry, actionLabel = 'Tekrar dene', scheme }: ErrorStateProps) {
+  const theme = useTheme();
+  const colors = scheme ? colorsFor(scheme) : theme.colors;
   return (
     <View style={[styles.center, styles.errorBox]}>
       <Text style={[typography.body, styles.centerText, { color: colors.textBody }]}>
         {message ?? 'Şu an yüklenemedi. Bağlantını kontrol edip tekrar dene.'}
       </Text>
-      {onRetry && <Button title="Tekrar dene" variant="secondary" onPress={onRetry} />}
+      {onRetry && <Button title={actionLabel} variant="secondary" scheme={scheme} onPress={onRetry} />}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   field: {
-    gap: spacing.xs - 2,
+    gap: cm.fieldGap,
   },
   input: {
     // Web: tarayıcının odak çerçevesi kenar rengini örtmesin
@@ -184,11 +231,21 @@ const styles = StyleSheet.create({
     borderRadius: cm.inputRadius,
     borderWidth: borderWidth.thick,
   },
+  inputSm: {
+    height: cm.inputHeightSm,
+  },
   multiline: {
     height: undefined,
-    minHeight: 104,
-    paddingTop: 14,
-    paddingBottom: 14,
+    minHeight: cm.inputMultilineMinHeight,
+    paddingTop: cm.inputMultilinePaddingY,
+    paddingBottom: cm.inputMultilinePaddingY,
+    textAlignVertical: 'top',
+  },
+  multilineSm: {
+    height: cm.inputMultilineHeightSm,
+    paddingTop: cm.inputMultilinePaddingYSm,
+    paddingBottom: cm.inputMultilinePaddingYSm,
+    paddingHorizontal: cm.inputMultilinePaddingXSm,
     textAlignVertical: 'top',
   },
   toast: {
@@ -219,7 +276,7 @@ const styles = StyleSheet.create({
   badge: {
     minWidth: cm.countBadge,
     height: cm.countBadge,
-    paddingHorizontal: 6,
+    paddingHorizontal: cm.countBadgePaddingX,
     borderRadius: cm.countBadge / 2,
     alignItems: 'center',
     justifyContent: 'center',

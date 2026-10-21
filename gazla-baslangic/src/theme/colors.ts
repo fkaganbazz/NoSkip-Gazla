@@ -25,7 +25,7 @@ export const palette = {
   potOrange: '#FF5A1F', // Saksı turuncusu — dürt, saksı
   orange700: '#C2410C', // Turuncu 700 — turuncu metin
   flowerYellow: '#FFC83D', // Çiçek sarısı — kutlama, rozet
-  error: '#B42318', // Hata — silme, şikayet
+  error: '#B42318', // Hata — silme, şikayet (Untitled UI "Error 700")
   rescue: '#FFE3D2', // Kurtarma — kurtarılan gün
 
   // ZEMİN
@@ -47,6 +47,9 @@ export const palette = {
   darkTextBody: '#E4DBF2', // DetailDark: gövde metni
   darkActionText: '#8BE0AE', // TabBar koyu: aktif sekme metni
   darkActionTint: '#1F4D33', // TabBar koyu: aktif sekme hapı
+  // Tasarımda koyu hata rengi yok; #B42318 koyu yüzeyde ~2.6:1 okunmuyor. Aynı hata skalasının
+  // "Error 400" tonu: yüzey #211538 üstünde 6.1:1, zemin #150E26 üstünde 6.7:1 (WCAG AA).
+  darkErrorText: '#F97066', // Koyu: kırmızı metin, ikon, hata kenarı
 
   // ALT MENÜ — Tokens'ta yok, TabBar.dc.html'den
   fabShadow: '#0E0820', // TabBar açık: + butonunun gölgesi
@@ -101,10 +104,15 @@ export type ColorRoles = {
   /** Sarı zemindeki metin */
   onHighlight: string;
 
-  /** Hata — silme, şikayet */
+  /** Hata — kırmızı dolgu (Sil butonu) */
   danger: string;
   /** Hata zeminindeki metin */
   onDanger: string;
+  /**
+   * Yüzey/zemin üstünde kırmızı metin, ikon ve hata kenarı (tehlikeli satır, hata mesajı). Açıkta `danger`
+   * ile aynı; koyuda okunur açık ton.
+   */
+  dangerText: string;
 };
 
 export const lightColors: ColorRoles = {
@@ -133,6 +141,7 @@ export const lightColors: ColorRoles = {
 
   danger: palette.error,
   onDanger: palette.white,
+  dangerText: palette.error,
 };
 
 export const darkColors: ColorRoles = {
@@ -161,4 +170,5 @@ export const darkColors: ColorRoles = {
 
   danger: palette.error,
   onDanger: palette.white,
+  dangerText: palette.darkErrorText,
 };

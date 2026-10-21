@@ -2,14 +2,14 @@
  * Arkadaş satırı ve şerit öğesi — Friends.dc.html (liste kartı, 62 px satır, Dürt / Gaz ver / Kabul et + sil),
  * Components.dc.html ("Arkadaş satırı"), Today.dc.html ve TodayDark.dc.html (yatay arkadaş şeridi).
  */
-import type { ReactNode } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { AddAvatar, Avatar } from '@/components/Avatar';
 import { flatShadowStyle } from '@/components/FlatShadow';
-import { CloseIcon } from '@/components/icons';
+import { CloseIcon, type IconProps } from '@/components/icons';
 import type { AvatarTintKey } from '@/data/types';
-import { borderWidth, cardColors, cardMetrics as m, cardTypography, layout, useTheme } from '@/theme';
+import { borderWidth, cardColors, cardMetrics as m, cardTypography, componentColors, layout, useTheme } from '@/theme';
 
 /** Satırda gösterilen kişi (PersonLite, FriendToday, FriendRequest.person … hepsi uyar) */
 export type FriendRowPerson = {
@@ -23,29 +23,51 @@ export type FriendRowPerson = {
 export type FriendRowButtonVariant = 'action' | 'muted' | 'hype' | 'poke' | 'ink';
 
 type FriendRowButtonProps = {
+  /** Metin; boşsa yalnızca ikon (kare buton, ör. isteği sil) */
   title: string;
   onPress?: () => void;
-  /** action: Kabul et / Ekle · muted: sil, Gönderildi · hype: Gaz ver · poke: Dürt · ink: Paylaş, Karşılık ver */
+  /** action: Kabul et / Ekle · muted: sil, Gönderildi · hype: Gaz ver · poke: Dürt · ink: Paylaş, Karşılık ver, Kopyala */
   variant: FriendRowButtonVariant;
+  /** md 36 (Friends, Activity) · lg 40, 0 14, köşe 14 (Friends davet kartı "Paylaş") */
+  size?: 'md' | 'lg';
+  /** Geniş ve köşeli: 0 14 iç boşluk, köşe 12, hap değil (Activity butonları, InviteFriends "Kopyala") */
+  wide?: boolean;
   loading?: boolean;
   disabled?: boolean;
   accessibilityLabel?: string;
-  /** Metin yerine ikon (sil) — kare buton olur */
-  icon?: ReactNode;
+  /** Metnin solunda ikon (16 / 2.4, aralık 6 — "Kopyala"); metin yoksa ortada (16 / 3) */
+  icon?: ComponentType<IconProps>;
   style?: StyleProp<ViewStyle>;
 };
 
-/** 36 px satır butonu; dokunma alanı 44'e tamamlanır */
-export function FriendRowButton({ title, onPress, variant, loading, disabled, accessibilityLabel, icon, style }: FriendRowButtonProps) {
+/** 36 px satır butonu (lg 40); dokunma alanı 44'e tamamlanır */
+export function FriendRowButton({
+  title,
+  onPress,
+  variant,
+  size = 'md',
+  wide = false,
+  loading,
+  disabled,
+  accessibilityLabel,
+  icon: Icon,
+  style,
+}: FriendRowButtonProps) {
   const { colors, scheme } = useTheme();
   const c = cardColors[scheme];
+  const ink = componentColors[scheme];
   const look = {
     action: { bg: colors.action, fg: colors.onAction, radius: m.rowButtonRadius, paddingX: m.rowButtonPaddingX, shadow: undefined },
     muted: { bg: colors.surfaceMuted, fg: colors.textBody, radius: m.rowButtonRadius, paddingX: m.rowButtonPaddingX, shadow: undefined },
     hype: { bg: c.hypeBg, fg: c.hypeText, radius: m.pillRadius, paddingX: m.rowButtonPaddingX, shadow: undefined },
     poke: { bg: colors.accent, fg: colors.onAccent, radius: m.pillRadius, paddingX: m.pokePaddingX, shadow: c.pokeShadow },
-    ink: { bg: c.inkButtonBg, fg: c.inkButtonText, radius: m.rowButtonRadius, paddingX: m.rowButtonPaddingX, shadow: undefined },
+    ink: { bg: ink.inkButtonBg, fg: ink.inkButtonText, radius: m.rowButtonRadius, paddingX: m.rowButtonPaddingX, shadow: undefined },
   }[variant];
+  const lg = size === 'lg';
+  const height = lg ? m.rowButtonHeightLg : m.rowButtonHeight;
+  const radius = wide ? m.rowButtonRadius : lg ? m.rowButtonRadiusLg : look.radius;
+  const paddingX = wide || lg ? m.rowButtonPaddingXWide : look.paddingX;
+  const iconOnly = !!Icon && !title;
   const inactive = disabled || loading;
 
   return (
@@ -54,15 +76,17 @@ export function FriendRowButton({ title, onPress, variant, loading, disabled, ac
       disabled={inactive}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? title}
-      accessibilityState={{ disabled: inactive, busy: loading }}
-      hitSlop={(layout.minTouchTarget - m.rowButtonHeight) / 2}
+      aria-disabled={inactive}
+      aria-busy={loading}
+      hitSlop={(layout.minTouchTarget - height) / 2}
       style={({ pressed }) => [
         styles.button,
         {
+          height,
           backgroundColor: look.bg,
-          borderRadius: look.radius,
-          paddingHorizontal: icon ? 0 : look.paddingX,
-          width: icon ? m.rowButtonHeight : undefined,
+          borderRadius: radius,
+          paddingHorizontal: iconOnly ? 0 : paddingX,
+          width: iconOnly ? height : undefined,
           opacity: disabled ? 0.5 : 1,
         },
         // Dürt hapı: tok gölge, basılınca aşağı iner; diğerleri basılınca solar
@@ -75,8 +99,13 @@ export function FriendRowButton({ title, onPress, variant, loading, disabled, ac
       ]}>
       {loading ? (
         <ActivityIndicator size="small" color={look.fg} />
+      ) : iconOnly ? (
+        <Icon color={look.fg} size={m.dismissIconSize} strokeWidth={m.dismissIconStrokeWidth} />
       ) : (
-        (icon ?? <Text style={[cardTypography.rowButton, { color: look.fg }]}>{title}</Text>)
+        <>
+          {Icon && <Icon color={look.fg} size={m.rowButtonIconSize} strokeWidth={m.rowButtonIconStrokeWidth} />}
+          <Text style={[cardTypography.rowButton, { color: look.fg }]}>{title}</Text>
+        </>
       )}
     </Pressable>
   );
@@ -165,7 +194,6 @@ export function FriendRow({ person, status, sub, onPress, accessibilityLabel, ac
 }
 
 function RowAction({ action, name }: { action: FriendRowAction; name: string }) {
-  const { colors } = useTheme();
   switch (action.type) {
     case 'poke':
       return (
@@ -196,7 +224,7 @@ function RowAction({ action, name }: { action: FriendRowAction; name: string }) 
           <FriendRowButton
             title=""
             variant="muted"
-            icon={<CloseIcon color={colors.textBody} size={m.dismissIconSize} strokeWidth={m.dismissIconStrokeWidth} />}
+            icon={CloseIcon}
             onPress={action.onDismiss}
             loading={action.dismissing}
             accessibilityLabel={action.onAccept ? 'İsteği sil' : 'İsteği geri çek'}
@@ -318,10 +346,11 @@ const styles = StyleSheet.create({
     opacity: m.pressedOpacity,
   },
   button: {
-    height: m.rowButtonHeight,
     flexShrink: 0,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: m.rowButtonIconGap,
   },
   bubble: {
     width: m.bubbleWidth,

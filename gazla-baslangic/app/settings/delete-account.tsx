@@ -37,7 +37,7 @@ export default function DeleteAccountScreen() {
           styles.content,
           { paddingTop: insets.top + layout.screenTopGap, paddingBottom: insets.bottom + m.deletePaddingBottom },
         ]}>
-        <ScreenHeader title="Hesabı sil" />
+        <ScreenHeader title="Hesabı sil" size="compact" />
 
         <View style={styles.diken}>
           <Diken mood="solgun" size={m.deleteDikenSize} />
@@ -61,7 +61,7 @@ export default function DeleteAccountScreen() {
                   borderBottomColor: settingsColors[scheme].rowDivider,
                 },
               ]}>
-              <Icon color={colors.danger} size={m.deleteIconSize} strokeWidth={m.deleteIconStrokeWidth} />
+              <Icon color={colors.dangerText} size={m.deleteIconSize} strokeWidth={m.deleteIconStrokeWidth} />
               <Text style={[t.deleteRow, styles.flex, { color: colors.text }]}>{label}</Text>
             </View>
           ))}
@@ -79,7 +79,7 @@ export default function DeleteAccountScreen() {
 
         <View style={styles.actions}>
           {remove.isError && (
-            <Text accessibilityLiveRegion="polite" style={[typography.meta, styles.center, { color: colors.danger }]}>
+            <Text accessibilityLiveRegion="polite" style={[typography.meta, styles.center, { color: colors.dangerText }]}>
               {errorText(remove.error)}
             </Text>
           )}

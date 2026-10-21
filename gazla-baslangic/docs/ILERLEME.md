@@ -4,20 +4,20 @@ Durum: ⬜ yapılmadı · 🟨 kısmen · ✅ tasarımla birebir ve kabul kriter
 
 Her ekran bittiğinde bu tabloyu güncelle. ✅ vermeden önce ekranın ekran görüntüsünü al ve `design/png` ile yan yana karşılaştır; farkları "Not" sütununa yaz.
 
-Son durum tespiti: 2026-10-18 (İstek 0). Web (390×844, 2x, açık/koyu) ekran görüntüleri `design/png` ile karşılaştırıldı; web'e özgü farklar (status bar, formSheet'in tam sayfa açılması) sayılmadı. Route ve hook adları spesifikasyondan farklı olup işlevi aynı olanlar eksik sayılmadı, yalnızca not edildi.
+Son durum tespiti: 2026-10-18 (İstek 0); ortak bileşenler 2026-10-21 (İstek 1). Web (390×844, 2x, açık/koyu) ekran görüntüleri `design/png` ile karşılaştırıldı; web'e özgü farklar (status bar, formSheet'in tam sayfa açılması) sayılmadı. Route ve hook adları spesifikasyondan farklı olup işlevi aynı olanlar eksik sayılmadı, yalnızca not edildi.
 
 ## Ortak bileşenler
 | Bileşen | Durum | Not |
 |---|---|---|
-| Tema (renk, yazı, boşluk, köşe, açık/koyu) | ✅ | Tokens ile birebir (`src/theme`); ekranlarda sabit renk yok. Koyu karşılığı çizilmemiş renkler en yakın koyu role bağlı. |
-| Diken (9 ifade, 4 aşama, 2 aksesuar) | ✅ | `src/components/Diken.tsx`; poz eşlemesi, `laf` kolları önde, solgun, yüz kaydırmaları spesifikasyonla aynı. Geliştirme ekranı `app/dev/diken.tsx`. |
-| TabBar | ✅ | `src/components/TabBar.tsx`, js-tabs `tabBar` prop'u; 56×30 aktif hap, + → Create; açık/koyu birebir. |
-| Button (5 varyant, dolu gölge) | 🟨 | `src/components/ui/Button.tsx` renk/köşe/4 px gölge doğru. Basılınca 4 px iniyor ve gölge kayboluyor (spec: 2 px iner, gölge 2 px). Android alt katmanı (FlatShadowUnderlay) kullanılmıyor. `orange` varyantı `poke` adında. Ekranlarda kopyalar var: moments SolidButton, report InkButton, checkin PhotoButton, challenge PokeCta. |
-| IconButton, OnboardingHeader | 🟨 | IconButton yalnızca geri/kapat (seçenekler yok), `accessibilityLabel` zorunlu değil; birkaç ekran kendi daire butonunu çiziyor. OnboardingHeader ortakta yok, `src/features/onboarding/StepHeader.tsx` olarak var. |
-| Chip, Segmented, Toggle, Radio, Checkbox | 🟨 | `ui/controls.tsx` ölçüleri doğru. Keşfet kategori çipleri ortak Chip yerine kendi çipini çiziyor. Koyuda seçili Segmented hapı zeminden zor ayrılıyor. |
-| TaskCard, FriendRow, Avatar | 🟨 | TaskCard Today.png ile birebir ama yalnızca `src/features/today/TaskCard.tsx`'te. Ortak FriendRow yok (friends/list PersonRow, today/FriendsRow ayrı). Ortak Avatar'da yaptı/bekliyor halkası yok; 8 ekranda avatar elle çiziliyor. |
-| StreakChip, DropMeter, ProgressBar | 🟨 | Seri hapı ve damlalar `src/features/today/HeroCard.tsx` içinde, ayrı bileşen değil. Ortak ProgressBar hiçbir ekranda kullanılmıyor. |
-| Sheet, SpeechBubble, SectionLabel, Toast, CategoryTile | 🟨 | Ortak Sheet, SpeechBubble, CategoryTile yok; 6 sheet, 4 balon ve 10 kategori karosu kopyası var. Karartma 0.4/0.45/0.55 tutarsız (spec .55). @gorhom/bottom-sheet kurulu değil. SectionLabel harf aralığı 1.5 (spec .6). Toast'ta ikon yok. |
+| Tema (renk, yazı, boşluk, köşe, açık/koyu) | ✅ | Tokens ile birebir (`src/theme`); ekranlarda sabit renk yok. Koyu modda okunur hata metni için `colors.dangerText` (#F97066, koyu yüzeyde 6.1:1); kendi profil avatarı `selfAvatarTints`. |
+| Diken (9 ifade, 4 aşama, 2 aksesuar) | ✅ | `src/components/Diken.tsx`; `/dev/diken` 9 ifade × 4 aşama × aksesuar matrisi. |
+| TabBar | ✅ | `src/components/TabBar.tsx`; 56×30 aktif hap, + → Create; açık/koyu birebir. |
+| Button (5 varyant, dolu gölge) | ✅ | `ui/Button.tsx`: primary, secondary, orange, danger, text (+ ink, onGreen, onDark, apple, google); lg/lgCompact/md/mdCompact/sm; 4 px dolu gölge, basılınca 2 px iner ve gölge 2 px; Android'de alt katman. Ekranlardaki kopyalar kaldırıldı. |
+| IconButton, OnboardingHeader | ✅ | IconButton: geri/kapat/seçenekler ya da ikon, etiket zorunlu, tonlar, boy + hitSlop. `OnboardingHeader` ortak (yarım segment, izin tonu). |
+| Chip, Segmented, Toggle, Radio, Checkbox | ✅ | `ui/controls.tsx`; Chip boy/ton/tint/ikon, Segmented md/lg + koyu kontrast + web aria; ekran kopyaları kaldırıldı. |
+| TaskCard, FriendRow, Avatar | ✅ | `TaskCard`, `FriendRow`/`FriendList`/`FriendBubble`, `Avatar` (halka yaptı/bekliyor/davet, rozet, self) + `AvatarStack`/`AddAvatar`; tüm ekranlar bunları kullanıyor. |
+| StreakChip, DropMeter, ProgressBar | ✅ | Ayrı ortak bileşenler; Bugün hero kartı ve görev kartı bunları kullanıyor. |
+| Sheet, SpeechBubble, SectionLabel, Toast, CategoryTile | ✅ | `Sheet` (@gorhom/bottom-sheet, köşe 28, 44×5 tutamaç, karartma .55, sayfa üstü Diken slotu), `ActionSheet`, `SpeechBubble` (kuyruk yönleri), `SectionLabel` (.6, tonlar), `Toast` + `useToast` (ikonlu), `CategoryTile` (kategori → renk). Ayrıca `SearchField`, `CountBadge`. Hepsi `/dev/components`'te. Web'de doğrulandı; native simülatörde henüz açılmadı. |
 
 ## Ekranlar
 | # | Ekran | Dosya | Durum | Not |

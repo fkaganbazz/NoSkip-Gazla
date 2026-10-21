@@ -22,7 +22,6 @@ export type ExploreColors = {
   featuredButtonText: string;
   // Popüler listesi
   rowDivider: string;
-  durationPillBg: string;
   // Reklam yer tutucusu
   adBorder: string;
   adBg: string;
@@ -41,7 +40,6 @@ export const exploreColors: Record<Scheme, ExploreColors> = {
     featuredButtonBg: palette.sand,
     featuredButtonText: palette.nightPurple,
     rowDivider: '#F4EDE5',
-    durationPillBg: palette.fill,
     adBorder: '#CFC3B6',
     adBg: '#FBF5EE',
     adTagBg: palette.strongLine,
@@ -57,7 +55,6 @@ export const exploreColors: Record<Scheme, ExploreColors> = {
     featuredButtonBg: palette.sand,
     featuredButtonText: palette.nightPurple,
     rowDivider: darkColors.border, // koyu: çizgi
-    durationPillBg: darkColors.surfaceMuted, // koyu: dolgu
     adBorder: darkColors.border,
     adBg: darkColors.surface,
     adTagBg: darkColors.surfaceMuted,
@@ -68,14 +65,7 @@ export const exploreColors: Record<Scheme, ExploreColors> = {
 
 export const exploreMetrics = {
   searchMarginTop: 12,
-  searchHeight: 48,
-  searchRadius: 16,
-  searchPaddingLeft: 44,
-  searchPaddingRight: 16,
-  searchIconSize: 20,
-  searchIconStrokeWidth: 2.4,
-  searchIconLeft: 15,
-  searchIconTop: 14,
+  // Arama alanı: ortak SearchField (componentMetrics.search*)
 
   chipsMarginTop: 12,
   chipGap: 8,
@@ -104,9 +94,6 @@ export const exploreMetrics = {
   rowGap: 12,
   /** Satırdaki kategori karosu (CategoryTile 42) */
   rowIconTile: 42,
-  durationPillPaddingY: 4,
-  durationPillPaddingX: 9,
-  durationPillRadius: 10,
   /** Keşfet ilk açılışta Popüler'de gösterilen satır sayısı (tasarımda 3) */
   popularPreviewCount: 3,
 
@@ -121,8 +108,6 @@ export const exploreMetrics = {
 } as const;
 
 export const exploreTypography = {
-  /** Arama alanı · Nunito 600 · 16 */
-  search: { fontFamily: fonts.semiBold, fontSize: 16 },
   /** "HAFTANIN CHALLENGE'I" · Nunito 800 · 12 · aralık 1 */
   featuredLabel: { fontFamily: fonts.extraBold, fontSize: 12, letterSpacing: 1 },
   /** Öne çıkan başlık · Baloo 2 800 · 27 · 1.05 */
@@ -188,8 +173,6 @@ export const previewMetrics = {
   contentMarginTop: 18,
   chipsMarginTop: 10,
   chipGap: 8,
-  chipPaddingY: 5,
-  chipPaddingX: 11,
   descriptionMarginTop: 12,
   featuresMarginTop: 14,
   featureGap: 10,
@@ -215,8 +198,6 @@ export const previewMetrics = {
 export const previewTypography = {
   /** Başlık · Baloo 2 800 · 30 · 1.05 */
   title: { fontFamily: fonts.heading, fontSize: 30, lineHeight: 30 * 1.05 },
-  /** Bilgi çipi · Nunito 800 · 13 */
-  chip: { fontFamily: fonts.extraBold, fontSize: 13 },
   /** Açıklama · Nunito 600 · 15 · 1.5 */
   description: { fontFamily: fonts.semiBold, fontSize: 15, lineHeight: 15 * 1.5 },
   /** Özellik satırı · Nunito 700 · 15 */

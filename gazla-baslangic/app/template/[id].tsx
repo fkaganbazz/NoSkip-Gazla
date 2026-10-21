@@ -4,7 +4,7 @@ import { ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AvatarStack } from '@/components/Avatar';
-import { Button, ErrorState, LoadingState, Segmented } from '@/components/ui';
+import { Button, Chip, ErrorState, LoadingState, Segmented } from '@/components/ui';
 import { useCreateChallengeMutation, useTemplates, useTemplateStats } from '@/data';
 import PreviewFeatures from '@/features/explore/PreviewFeatures';
 import PreviewHero from '@/features/explore/PreviewHero';
@@ -16,7 +16,7 @@ import {
   type DurationOption,
 } from '@/features/explore/labels';
 import { doingNowText } from '@/features/explore/logic';
-import { categoryTint, challengeTints, layout, radius, typography, useTheme } from '@/theme';
+import { categoryTint, layout, typography, useTheme } from '@/theme';
 import { previewMetrics as m, previewTypography } from '@/theme/explore';
 
 const DURATION_SEGMENTS = DURATION_OPTIONS.map((d) => ({ value: String(d), label: `${d} gün` }));
@@ -26,7 +26,7 @@ const DURATION_SEGMENTS = DURATION_OPTIONS.map((d) => ({ value: String(d), label
 export default function TemplatePreviewScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { colors, scheme } = useTheme();
+  const { colors } = useTheme();
   const insets = useSafeAreaInsets();
 
   const templates = useTemplates();
@@ -58,7 +58,6 @@ export default function TemplatePreviewScreen() {
     );
   }
 
-  const tint = challengeTints[categoryTint(template.category)][scheme];
   const duration = picked ?? template.defaultDurationDays;
   const doing = stats.data ? doingNowText(stats.data) : null;
   const faces = (stats.data?.friends ?? []).map((f) => ({ name: f.displayName, tint: f.avatarTint, url: f.avatarUrl }));
@@ -88,9 +87,9 @@ export default function TemplatePreviewScreen() {
           </Text>
 
           <View style={styles.chips}>
-            <InfoChip label={CATEGORY_NAMES[template.category]} bg={tint.bg} color={tint.ink} />
-            <InfoChip label={`${DIFFICULTY_NAMES[template.difficulty]} zorluk`} bg={colors.surfaceMuted} color={colors.textBody} />
-            <InfoChip label={TASK_TYPE_NAMES[template.taskType]} bg={colors.surfaceMuted} color={colors.textBody} />
+            <Chip size="xs" tint={categoryTint(template.category)} label={CATEGORY_NAMES[template.category]} />
+            <Chip size="xs" tone="muted" label={`${DIFFICULTY_NAMES[template.difficulty]} zorluk`} />
+            <Chip size="xs" tone="muted" label={TASK_TYPE_NAMES[template.taskType]} />
           </View>
 
           {template.description ? (
@@ -130,7 +129,7 @@ export default function TemplatePreviewScreen() {
           { backgroundColor: colors.background, paddingBottom: Math.max(insets.bottom, m.footerBottom) },
         ]}>
         {create.isError && (
-          <Text accessibilityLiveRegion="polite" style={[typography.meta, styles.error, { color: colors.danger }]}>
+          <Text accessibilityLiveRegion="polite" style={[typography.meta, styles.error, { color: colors.dangerText }]}>
             {create.error.message}
           </Text>
         )}
@@ -139,14 +138,6 @@ export default function TemplatePreviewScreen() {
           <Button title="Tek başıma başla" onPress={startSolo} loading={create.isPending} style={styles.button} />
         </View>
       </View>
-    </View>
-  );
-}
-
-function InfoChip({ label, bg, color }: { label: string; bg: string; color: string }) {
-  return (
-    <View style={[styles.chip, { backgroundColor: bg }]}>
-      <Text style={[previewTypography.chip, { color }]}>{label}</Text>
     </View>
   );
 }
@@ -167,11 +158,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: m.chipGap,
-  },
-  chip: {
-    paddingVertical: m.chipPaddingY,
-    paddingHorizontal: m.chipPaddingX,
-    borderRadius: radius.full,
   },
   description: {
     marginTop: m.descriptionMarginTop,

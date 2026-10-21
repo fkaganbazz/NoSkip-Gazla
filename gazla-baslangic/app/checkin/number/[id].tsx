@@ -7,11 +7,11 @@ import Diken from '@/components/Diken';
 import { CheckIcon } from '@/components/icons';
 import Sheet, { type SheetHandle } from '@/components/Sheet';
 import SpeechBubble from '@/components/SpeechBubble';
-import { Button, ErrorState, IconButton, LoadingState } from '@/components/ui';
+import { Button, Chip, ErrorState, IconButton, LoadingState } from '@/components/ui';
 import { useChallenge, useChallengeCalendar, useCheckinMutation, useToday } from '@/data';
 import { formatNumber, pastValues, targetText, unitName } from '@/features/checkin/logic';
 import StepButton from '@/features/checkin/StepButton';
-import { borderWidth, componentTypography, radius, spacing, typography, useTheme } from '@/theme';
+import { borderWidth, componentTypography, spacing, typography, useTheme } from '@/theme';
 import {
   numberEntryColors,
   numberEntryMetrics as m,
@@ -138,18 +138,12 @@ export default function NumberEntryScreen() {
 
       {target !== null && targetLabel && (
         <View style={styles.chipRow}>
-          <View
-            style={[
-              styles.chip,
-              { backgroundColor: value >= target ? c.onTargetBg : c.belowTargetBg },
-            ]}>
-            {value >= target && (
-              <CheckIcon color={c.onTargetText} size={m.chipIconSize} strokeWidth={m.chipIconStrokeWidth} />
-            )}
-            <Text style={[typography.captionStrong, { color: value >= target ? c.onTargetText : c.belowTargetText }]}>
-              {targetLabel}
-            </Text>
-          </View>
+          {/* Hedef hapı: hedefte yeşil + tik, altında şeftali (NumberEntry.dc.html) */}
+          {value >= target ? (
+            <Chip size="sm" tone="success" icon={CheckIcon} label={targetLabel} />
+          ) : (
+            <Chip size="sm" tone="warning" label={targetLabel} />
+          )}
         </View>
       )}
 
@@ -191,7 +185,7 @@ export default function NumberEntryScreen() {
 
       <View style={styles.footer}>
         {checkin.isError && (
-          <Text accessibilityLiveRegion="polite" style={[componentTypography.inputError, styles.error, { color: colors.danger }]}>
+          <Text accessibilityLiveRegion="polite" style={[componentTypography.inputError, styles.error, { color: colors.dangerText }]}>
             {checkin.error.message}
           </Text>
         )}
@@ -247,14 +241,6 @@ const styles = StyleSheet.create({
     marginTop: m.chipMarginTop,
     flexDirection: 'row',
     justifyContent: 'center',
-  },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: m.chipGap,
-    paddingVertical: m.chipPaddingY,
-    paddingHorizontal: m.chipPaddingX,
-    borderRadius: radius.full,
   },
   quickRow: {
     marginTop: m.quickMarginTop,

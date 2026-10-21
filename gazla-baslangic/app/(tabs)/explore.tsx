@@ -3,12 +3,12 @@ import { useMemo, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import SearchField from '@/components/SearchField';
 import { Button, ErrorState, LoadingState } from '@/components/ui';
 import { useTemplates, useTemplateStats, type ChallengeCategory, type Template } from '@/data';
 import AdBannerSlot from '@/features/explore/AdBannerSlot';
 import CategoryChips from '@/features/explore/CategoryChips';
 import FeaturedCard from '@/features/explore/FeaturedCard';
-import SearchField from '@/features/explore/SearchField';
 import TemplateList from '@/features/explore/TemplateList';
 import { CATEGORY_NAMES } from '@/features/explore/labels';
 import { layout, spacing, typography, useTheme } from '@/theme';
@@ -93,7 +93,7 @@ export default function ExploreScreen() {
           Keşfet
         </Text>
 
-        <SearchField value={query} onChangeText={setQuery} />
+        <SearchField value={query} onChangeText={setQuery} placeholder="Challenge ara" style={styles.search} />
         <CategoryChips value={category} onChange={setCategory} />
 
         {!filtering && featured && (
@@ -143,6 +143,9 @@ export default function ExploreScreen() {
 }
 
 const styles = StyleSheet.create({
+  search: {
+    marginTop: m.searchMarginTop,
+  },
   screen: {
     flex: 1,
   },

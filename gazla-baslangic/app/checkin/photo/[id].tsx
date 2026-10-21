@@ -2,23 +2,11 @@ import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  Image,
-  KeyboardAvoidingView,
-  Linking,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Image, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CameraIcon, LockIcon, SendIcon } from '@/components/icons';
-import { Button, IconButton } from '@/components/ui';
+import { Button, ErrorState, IconButton, LoadingState, TextField } from '@/components/ui';
 import { useCheckinMutation, useToday } from '@/data';
 import { formatClock } from '@/features/checkin/logic';
 import { componentMetrics, layout, radius, typography } from '@/theme';
@@ -89,26 +77,17 @@ export default function PhotoProofScreen() {
 
   const close = () => (router.canGoBack() ? router.back() : router.replace('/'));
 
+  // Ekran iki modda koyu: ortak durumlar koyu temayla (scheme="dark")
   if (today.isPending || !task) {
     return (
-      <SafeAreaView style={[styles.screen, styles.center]}>
+      <SafeAreaView style={styles.screen}>
         <StatusBar style="light" />
         {today.isPending ? (
-          <ActivityIndicator color={c.action} />
+          <LoadingState scheme="dark" />
+        ) : today.isError ? (
+          <ErrorState scheme="dark" onRetry={() => today.refetch()} />
         ) : (
-          <View style={styles.stateBox}>
-            <Text style={[t.row, styles.centerText, { color: c.text }]}>
-              {today.isError ? 'Şu an yüklenemedi. Bağlantını kontrol edip tekrar dene.' : 'Bu görev bugün işaretlenemiyor.'}
-            </Text>
-            <Button
-              scheme="dark"
-              variant="ink"
-              size="md"
-              title={today.isError ? 'Tekrar dene' : 'Kapat'}
-              onPress={today.isError ? () => today.refetch() : close}
-              style={styles.stateButton}
-            />
-          </View>
+          <ErrorState scheme="dark" message="Bu görev bugün işaretlenemiyor." actionLabel="Kapat" onRetry={close} />
         )}
       </SafeAreaView>
     );
@@ -178,21 +157,16 @@ export default function PhotoProofScreen() {
             </Pressable>
           )}
 
-          <View style={styles.field}>
-            <Text nativeID="photo-note" style={[t.label, { color: c.label }]}>
-              Not ekle (isteğe bağlı)
-            </Text>
-            <TextInput
-              value={note}
-              onChangeText={setNote}
-              maxLength={m.noteMaxLength}
-              accessibilityLabel="Not ekle (isteğe bağlı)"
-              accessibilityLabelledBy="photo-note"
-              placeholderTextColor={c.placeholder}
-              returnKeyType="done"
-              style={[styles.input, t.input, { color: c.text, backgroundColor: c.inputBg, borderColor: c.inputBorder }]}
-            />
-          </View>
+          <TextField
+            scheme="dark"
+            size="sm"
+            label="Not ekle (isteğe bağlı)"
+            value={note}
+            onChangeText={setNote}
+            maxLength={m.noteMaxLength}
+            returnKeyType="done"
+            style={styles.field}
+          />
 
           {/* Fotoğraf grubun tüm üyelerine görünür; ayrı bir görünürlük ayarı yok (yalnızca bilgi). */}
           <View style={[styles.row, { backgroundColor: c.rowBg }]}>
@@ -211,7 +185,7 @@ export default function PhotoProofScreen() {
             )}
             {/* Ekran iki modda koyu: butonlar koyu temayla (scheme="dark"); tasarımda 56 yükseklik, 16 yazı */}
             <View style={styles.buttons}>
-              <Button scheme="dark" variant="ink" size="md" title={leftTitle} onPress={leftAction} style={styles.button} />
+              <Button scheme="dark" variant="onDark" size="md" title={leftTitle} onPress={leftAction} style={styles.button} />
               <Button
                 scheme="dark"
                 size="md"
@@ -239,15 +213,6 @@ const styles = StyleSheet.create({
   },
   flex: {
     flex: 1,
-  },
-  center: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stateBox: {
-    alignSelf: 'stretch',
-    paddingHorizontal: layout.screenPadding,
-    gap: m.emptyGap,
   },
   centerText: {
     textAlign: 'center',
@@ -303,13 +268,6 @@ const styles = StyleSheet.create({
   },
   field: {
     marginTop: m.fieldMarginTop,
-    gap: m.fieldGap,
-  },
-  input: {
-    height: m.inputHeight,
-    paddingHorizontal: m.inputPaddingX,
-    borderRadius: m.inputRadius,
-    borderWidth: m.inputBorder,
   },
   row: {
     marginTop: m.rowMarginTop,
@@ -334,9 +292,6 @@ const styles = StyleSheet.create({
   },
   button: {
     flex: 1,
-    height: m.buttonHeight,
-  },
-  stateButton: {
     height: m.buttonHeight,
   },
 });

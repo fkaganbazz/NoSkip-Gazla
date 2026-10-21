@@ -1,15 +1,20 @@
+import type { ComponentType } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { challengeIcons } from '@/components/icons';
+import { challengeIcons, type IconProps } from '@/components/icons';
 import type { ChallengeCategory, ChallengeIconKey, ChallengeTintKey } from '@/data/types';
-import { cardMetrics as m, categoryTint, challengeTints, useTheme, type CategoryTileSize } from '@/theme';
+import { cardMetrics as m, categoryTint, challengeTints, useTheme, type CategoryTileSize, type Tint } from '@/theme';
 
 type Props = {
-  icon: ChallengeIconKey;
+  /** Challenge ikonu (veri anahtarı) ya da ortak ikon bileşeni (ör. Keşfet "Kendin oluştur": `AddIcon`) */
+  icon: ChallengeIconKey | ComponentType<IconProps>;
   /** Zemin/ikon rengini belirler (PickChallenge: detoks mor, sosyal şeftali, spor yeşil …) */
   category?: ChallengeCategory | null;
-  /** Açık renk: kategori yoksa (özel challenge) ya da verideki renk kullanılacaksa; kategoriden önce gelir */
-  tint?: ChallengeTintKey;
+  /**
+   * Challenge rengi (kategori yoksa ya da verideki renk kullanılacaksa) ya da doğrudan zemin/ikon rengi
+   * (ör. `{ bg: colors.actionTint, ink: colors.actionText }`); kategoriden önce gelir
+   */
+  tint?: ChallengeTintKey | Tint;
   /** 36 PickChallenge · 42 Explore · 44 görev kartı · 52 InviteLanding · 56 Detail; köşe ve ikon ölçüsü buna göre */
   size?: CategoryTileSize;
   /** İkon ölçüsünü tasarımdan farklı vermek için (ör. ortak challenge satırında 20) */
@@ -20,9 +25,9 @@ type Props = {
 // Challenge ikon karosu: kategori renginde yuvarlak köşeli kare ve ortasında çizgi ikon.
 export function CategoryTile({ icon, category, tint, size = 44, iconSize, style }: Props) {
   const { scheme } = useTheme();
-  const t = challengeTints[tint ?? categoryTint(category)][scheme];
+  const t = typeof tint === 'object' ? tint : challengeTints[tint ?? categoryTint(category)][scheme];
   const metrics = m.categoryTile[size];
-  const Icon = challengeIcons[icon];
+  const Icon = typeof icon === 'string' ? challengeIcons[icon] : icon;
 
   return (
     <View

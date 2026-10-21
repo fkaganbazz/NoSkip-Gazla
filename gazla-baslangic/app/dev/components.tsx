@@ -5,20 +5,36 @@ import { Pressable, ScrollView, StyleSheet, Text, View, type StyleProp, type Vie
 import { AddAvatar, Avatar, AvatarStack } from '@/components/Avatar';
 import { CategoryTile } from '@/components/CategoryTile';
 import { DropMeter } from '@/components/DropMeter';
-import { FriendBubble, FriendList, FriendRow, InviteBubble } from '@/components/FriendRow';
-import { AddIcon, BellIcon, HandIcon, SendIcon, ShareIcon } from '@/components/icons';
+import { FriendBubble, FriendList, FriendRow, FriendRowButton, InviteBubble } from '@/components/FriendRow';
+import {
+  AddIcon,
+  BellIcon,
+  CameraIcon,
+  CheckIcon,
+  CopyIcon,
+  HandIcon,
+  MessageIcon,
+  SendIcon,
+  ShareIcon,
+} from '@/components/icons';
 import OnboardingHeader from '@/components/OnboardingHeader';
 import { ProgressBar } from '@/components/ProgressBar';
+import SearchField from '@/components/SearchField';
 import { StreakChip } from '@/components/StreakChip';
 import { TaskCard } from '@/components/TaskCard';
 import {
   Button,
   Checkbox,
   Chip,
+  CountBadge,
+  ErrorState,
   IconButton,
+  LoadingState,
   Radio,
+  ScreenHeader,
   SectionLabel,
   Segmented,
+  TextField,
   Toast,
   ToastHost,
   Toggle,
@@ -28,11 +44,13 @@ import SheetBubbleDemos from '@/features/dev/SheetBubbleDemos';
 import {
   borderWidth,
   challengeTints,
+  componentColors,
   componentMetrics as cm,
   layout,
   palette,
   radius,
   spacing,
+  todayMetrics,
   typography,
   useTheme,
 } from '@/theme';
@@ -45,6 +63,8 @@ import { socialColors } from '@/theme/social';
 
 const noop = () => {};
 const icon20 = { size: cm.buttonIconSize, strokeWidth: cm.buttonIconStroke };
+/** InviteFriends paylaşım butonu ikonu (20 / 2.2) */
+const icon20Thin = { size: cm.buttonIconSize, strokeWidth: cm.iconButtonIconStroke };
 
 type Tone = 'hype' | 'roast';
 const TONES: { value: Tone; label: string }[] = [
@@ -68,6 +88,10 @@ export default function ComponentsScreen() {
   const [toggle, setToggle] = useState(true);
   const [radio, setRadio] = useState(true);
   const [checked, setChecked] = useState(true);
+  const [query, setQuery] = useState('');
+  const [note, setNote] = useState('24 sayfa. Kitap bitti sayılır.');
+  const [detail, setDetail] = useState('');
+  const [picked, setPicked] = useState(['Mert']);
   const roastColor = socialColors[scheme].roastText;
 
   return (
@@ -104,6 +128,38 @@ export default function ComponentsScreen() {
             <Button title="Dürt" variant="orange" size="sm" disabled onPress={noop} />
           </View>
           <Button title="Şimdilik atla" variant="text" onPress={noop} />
+          <Caption>lgCompact 54 · Apple / Google (gölgesiz) · iki satır · vurgulu</Caption>
+          <Button title="Kendin oluştur" variant="secondary" size="lgCompact" onPress={noop} />
+          <Button title="Apple ile devam et" variant="apple" size="lgCompact" onPress={noop} />
+          <Button title="Google ile devam et" variant="google" size="lgCompact" onPress={noop} />
+          <Button title="Ücretsiz hakkımı kullan" subtitle="Ayda 1 hak · bu ay 1 hakkın var" variant="secondary" onPress={noop} />
+          <Button
+            title="Ücretsiz hakkımı kullan"
+            subtitle="Ayda 1 hak · bu ay 1 hakkın var"
+            variant="secondary"
+            highlighted
+            onPress={noop}
+          />
+          <Button title="Ücretsiz hakkımı kullan" subtitle="Ayda 1 hak · bu ayın hakkı kullanıldı" variant="secondary" disabled />
+          <Caption>mdCompact 50 · köşe 16 · gölge 3 (yan yana)</Caption>
+          <View style={styles.row}>
+            <Button
+              title="Mesajla gönder"
+              variant="secondary"
+              size="mdCompact"
+              icon={(c) => <MessageIcon color={c} {...icon20Thin} />}
+              onPress={noop}
+              style={styles.half}
+            />
+            <Button
+              title="Paylaş"
+              variant="secondary"
+              size="mdCompact"
+              icon={(c) => <ShareIcon color={c} {...icon20Thin} />}
+              onPress={noop}
+              style={styles.half}
+            />
+          </View>
         </Panel>
 
         <Swatch bg={celebrationColors.bg}>
@@ -113,7 +169,7 @@ export default function ComponentsScreen() {
 
         <Swatch bg={palette.darkBackground}>
           <View style={styles.row}>
-            <Button title="Tekrar çek" variant="ink" scheme="dark" onPress={noop} style={styles.half} />
+            <Button title="Tekrar çek" variant="onDark" scheme="dark" onPress={noop} style={styles.half} />
             <Button
               title="Gönder"
               scheme="dark"
@@ -122,6 +178,12 @@ export default function ComponentsScreen() {
               style={styles.half}
             />
           </View>
+          <TextField scheme="dark" size="sm" label="Not ekle (isteğe bağlı)" value={note} onChangeText={setNote} />
+          <TextField scheme="dark" label="Hatalı alan" value="mert" error="Bu kullanıcı adı alınmış" onChangeText={noop} />
+          <View style={styles.stateBox}>
+            <LoadingState scheme="dark" />
+          </View>
+          <ErrorState scheme="dark" message="Bu görev bugün işaretlenemiyor." actionLabel="Kapat" onRetry={noop} />
         </Swatch>
 
         <Panel title="İkon butonu">
@@ -131,7 +193,54 @@ export default function ComponentsScreen() {
             <IconButton icon="options" accessibilityLabel="Seçenekler" onPress={noop} />
             <IconButton icon={BellIcon} accessibilityLabel="Aktivite" onPress={noop} />
             <IconButton icon={AddIcon} tone="ink" accessibilityLabel="Arkadaş ekle" onPress={noop} />
+            <IconButton icon={BellIcon} accessibilityLabel="Aktivite, 3 yeni" onPress={noop}>
+              <CountBadge count={3} outlineColor={colors.surface} style={styles.bellBadge} />
+            </IconButton>
           </View>
+          <Caption>Kamera rozeti: size 36 · 3 px zemin kenarı · beyaz ikon · dokunma 44</Caption>
+          <View style={styles.row}>
+            <View>
+              <Avatar name="Deniz" tint="peach" self size={84} />
+              <IconButton
+                icon={CameraIcon}
+                tone="ink"
+                size={cm.cameraBadge.size}
+                outlineColor={colors.surface}
+                iconSize={cm.cameraBadge.iconSize}
+                iconStrokeWidth={cm.cameraBadge.iconStroke}
+                iconColor={componentColors[scheme].cameraBadgeIcon}
+                accessibilityLabel="Profil fotoğrafı ekle"
+                onPress={noop}
+                style={styles.cameraBadge}
+              />
+            </View>
+            <CountBadge count={3} />
+            <CountBadge count={12} outlineColor={colors.surface} />
+          </View>
+          <Caption>sayı rozeti · düz (Components) · kenarlı (Today zili)</Caption>
+        </Panel>
+
+        <Swatch bg={colors.background} bordered>
+          <Caption>Ekran başlığı · varsayılan · compact · compact ortalı</Caption>
+          <ScreenHeader title="Bildirimler" onLeadingPress={noop} />
+          <ScreenHeader title="Hesabı sil" size="compact" onLeadingPress={noop} />
+          <ScreenHeader title="Şikayet et" leading="close" size="compact" align="center" onLeadingPress={noop} />
+          <Caption>Arama alanı</Caption>
+          <SearchField value={query} onChangeText={setQuery} placeholder="Kullanıcı adıyla ara" />
+        </Swatch>
+
+        <Panel title="Form">
+          <TextField label="Adın" placeholder="Adın" value="" onChangeText={noop} />
+          <TextField label="Kullanıcı adın" value="mert" error="Bu kullanıcı adı alınmış" onChangeText={noop} />
+          <TextField
+            label="Ayrıntı ekle (isteğe bağlı)"
+            placeholder="Ne olduğunu kısaca yaz"
+            size="sm"
+            multiline
+            value={detail}
+            onChangeText={setDetail}
+          />
+          <Caption>md 52 · hata (koyuda okunur kırmızı) · sm çok satır 84</Caption>
         </Panel>
         <View style={styles.row}>
           <Swatch bg={challengeTints.butter[scheme].bg} style={styles.half}>
@@ -161,7 +270,7 @@ export default function ComponentsScreen() {
 
         {/* Seçim kutusu ekranlarda zeminin üstünde durur (Poke, ChallengePreview, Settings) */}
         <Swatch bg={colors.background} bordered>
-          <Caption>Seçim kutusu · md 42 · lg 44 · tek seçim</Caption>
+          <Caption>Seçim kutusu · md 42 / 15 · lg 44 / 16 (Poke) · tek seçim (gölge .14)</Caption>
           <Segmented
             options={TONES}
             value={tone}
@@ -170,6 +279,7 @@ export default function ComponentsScreen() {
           />
           <Segmented
             size="lg"
+            textSize="lg"
             options={TONES}
             value={toneLg}
             onChange={setToneLg}
@@ -181,7 +291,18 @@ export default function ComponentsScreen() {
           <View style={styles.row}>
             <Chip label="Seçili" selected />
             <Chip label="Çip" />
-            <Chip label="Durum" status />
+            <Chip label="Durum" tone="success" />
+          </View>
+          <View style={styles.row}>
+            {['Mert', 'Ece'].map((name) => (
+              <Chip
+                key={name}
+                label={name}
+                selected={picked.includes(name)}
+                onPress={() => setPicked((p) => (p.includes(name) ? p.filter((x) => x !== name) : [...p, name]))}
+                icon={<Avatar name={name} tint={name === 'Mert' ? 'peach' : 'lavender'} size={24} decorative />}
+              />
+            ))}
           </View>
           <View style={styles.row}>
             {CATEGORIES.map((label) => (
@@ -210,6 +331,51 @@ export default function ComponentsScreen() {
               <Checkbox checked={!checked} />
             </Pressed>
           </View>
+        </Panel>
+
+        <Panel title="Bilgi çipleri">
+          <View style={styles.row}>
+            <Chip size="xs" tone="ink" label="30 gün" />
+            <Chip size="xs" tint="lilac" label="Dijital detoks" />
+            <Chip size="xs" tone="warning" label="4 kişi" />
+            <Chip size="xs" tone="muted" label="Hatırlatma 08:00" />
+            <Chip size="xs" tone="success" icon={CheckIcon} label="Bugün tamam" />
+          </View>
+          <Caption>xs 13 · ink · challenge rengi · warning · muted · success + ikon (Detail)</Caption>
+          <View style={styles.row}>
+            <Chip size="sm" tone="success" icon={CheckIcon} label="Hedefte: 70 sn" />
+            <Chip size="sm" tone="warning" label="Hedefe 10 sn kaldı" />
+            <Chip size="xxs" tint={{ bg: colors.surfaceMuted, ink: colors.text }} label="30 gün" />
+          </View>
+          <Caption>sm 14 hap (NumberEntry) · xxs 12 köşe 10 (Keşfet süre)</Caption>
+          <View style={styles.row}>
+            <Chip tone="ink" label="Diken günde en fazla 2 kez konuşur" />
+            <Chip tint="lilac" label="Sessiz saatler 23:30–08:00" />
+            <Chip tone="warning" label="Laf sokma sadece sert mod açıksa" />
+          </View>
+          <Caption>md 14 · Notifications kural çipleri</Caption>
+        </Panel>
+
+        <Panel title="Satır butonu">
+          <View style={styles.row}>
+            <FriendRowButton title="Kabul et" variant="action" onPress={noop} />
+            <FriendRowButton title="" variant="muted" icon={CheckIcon} accessibilityLabel="Onayla" onPress={noop} />
+            <FriendRowButton title="Gaz ver" variant="hype" onPress={noop} />
+            <FriendRowButton title="Dürt" variant="poke" onPress={noop} />
+          </View>
+          <Caption>md 36 · Friends</Caption>
+          <View style={styles.row}>
+            <FriendRowButton title="Karşılık ver" variant="ink" wide onPress={noop} />
+            <FriendRowButton title="Tebrik et" variant="hype" wide onPress={noop} />
+            <FriendRowButton title="Sil" variant="muted" wide onPress={noop} />
+          </View>
+          <Caption>wide: 0 14, köşe 12 · Activity</Caption>
+          <View style={styles.row}>
+            <FriendRowButton title="Paylaş" variant="ink" size="lg" onPress={noop} />
+            <FriendRowButton title="Kopyala" variant="ink" size="lg" wide icon={CopyIcon} onPress={noop} />
+            <FriendRowButton title="Kopyala" variant="ink" size="lg" wide icon={CopyIcon} disabled />
+          </View>
+          <Caption>lg 40 · Friends davet kartı · InviteFriends Kopyala (ikon + metin)</Caption>
         </Panel>
 
         <Panel title="Bölüm etiketi">
@@ -261,8 +427,9 @@ export default function ComponentsScreen() {
             <CategoryTile category="money" icon="wallet" />
             <CategoryTile category="quirky" icon="toothbrush" />
             <CategoryTile category={null} icon="check" />
+            <CategoryTile icon={AddIcon} tint={{ bg: colors.actionTint, ink: colors.actionText }} />
           </View>
-          <Caption>detoks · sosyal · spor · yeme · okuma · para · tuhaf · özel</Caption>
+          <Caption>detoks · sosyal · spor · yeme · okuma · para · tuhaf · özel · ikon bileşeni + doğrudan renk</Caption>
           <View style={styles.row}>
             <CategoryTile category="detox" icon="phoneOff" size={36} />
             <CategoryTile category="detox" icon="phoneOff" size={42} />
@@ -315,6 +482,12 @@ export default function ComponentsScreen() {
             ))}
           </View>
           <Caption>26 · 30 · 36 · 40 · 44 · 52 · 56 · 72 · 84 · 88</Caption>
+          <View style={styles.row}>
+            <Avatar name="Deniz" tint="peach" self size={52} />
+            <Avatar name="Mert" tint="peach" size={52} />
+            <AddAvatar size={40} />
+          </View>
+          <Caption>kendi avatarın (self) · arkadaş şeftalisi · ekle yuvası 40 (18 / 2.8)</Caption>
           <View style={styles.row}>
             <AvatarStack
               people={[
@@ -507,6 +680,19 @@ const styles = StyleSheet.create({
   },
   controls: {
     gap: spacing.sm,
+  },
+  bellBadge: {
+    position: 'absolute',
+    top: todayMetrics.badgeTop,
+    right: todayMetrics.badgeRight,
+  },
+  cameraBadge: {
+    position: 'absolute',
+    right: cm.cameraBadge.offset,
+    bottom: cm.cameraBadge.offset,
+  },
+  stateBox: {
+    height: layout.minTouchTarget * 2,
   },
   pressed: {
     minWidth: layout.minTouchTarget,

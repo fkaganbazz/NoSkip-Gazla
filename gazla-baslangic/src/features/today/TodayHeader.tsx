@@ -28,11 +28,8 @@ export default function TodayHeader({ dayLabel, title, unread, onPressBell }: Pr
         icon={BellIcon}
         onPress={onPressBell}
         accessibilityLabel={unread > 0 ? `Aktivite, ${unread} yeni` : 'Aktivite'}>
-        {unread > 0 && (
-          <View style={styles.badge}>
-            <CountBadge count={unread} />
-          </View>
-        )}
+        {/* Okunmamış rozeti zilin sağ üst köşesinde, ekran zemini renginde 2 px kenarla (Today.dc.html) */}
+        {unread > 0 && <CountBadge count={unread} outlineColor={colors.background} style={styles.badge} />}
       </IconButton>
     </View>
   );
@@ -48,7 +45,6 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     gap: m.headerGap,
   },
-  // Okunmamış rozeti zilin sağ üst köşesinde
   badge: {
     position: 'absolute',
     top: m.badgeTop,

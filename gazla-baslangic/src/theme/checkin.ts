@@ -2,7 +2,8 @@
  * İşaretleme ekranlarına özel token'lar — kaynak: design/NumberEntry.dc.html (sayı girişi, alt sayfa)
  * ve design/PhotoProof.dc.html (fotoğraf kanıtı). Genel rollerle aynı olanlar `lightColors`/`darkColors`tan.
  * Alt sayfa (karartma, köşe, tutamaç, Diken + balon) ortak `Sheet`/`SpeechBubble` ile: `sheet.ts`; başlıktaki karo
- * ortak `CategoryTile`; fotoğraf ekranının butonları ortak `Button` (`scheme="dark"`) ve `IconButton` (`onDark`).
+ * ortak `CategoryTile`; fotoğraf ekranının butonları, not alanı ve durumları ortak `Button` (`onDark`), `TextField`
+ * (`size="sm"`), `LoadingState` / `ErrorState` — hepsi `scheme="dark"` — ve `IconButton` (`onDark`).
  */
 import type { TextStyle } from 'react-native';
 
@@ -15,12 +16,6 @@ export type NumberEntryColors = {
   /** Eksi butonu: zemin, kenar ve alt gölge */
   minusBg: string;
   minusBorder: string;
-  /** Hedefte / hedefi geçti çipi */
-  onTargetBg: string;
-  onTargetText: string;
-  /** Hedefe kalan çipi */
-  belowTargetBg: string;
-  belowTargetText: string;
   /** Hızlı ekleme butonları */
   quickBg: string;
   quickBorder: string;
@@ -30,15 +25,12 @@ export type NumberEntryColors = {
   statsValue: string;
 };
 
-// Koyu tasarım yok: zeminler en yakın koyu yüzeye, çipler TodayDark'taki yeşil/turuncu tonlarına bağlandı.
+// Koyu tasarım yok: zeminler en yakın koyu yüzeye bağlandı. Hedef hapı ortak Chip sm (success / warning;
+// koyusu DetailDark'taki yeşil/turuncu çipler).
 export const numberEntryColors: Record<'light' | 'dark', NumberEntryColors> = {
   light: {
     minusBg: palette.white,
     minusBorder: palette.strongLine,
-    onTargetBg: palette.green100,
-    onTargetText: palette.pressedGreen,
-    belowTargetBg: palette.rescue,
-    belowTargetText: '#9A3412',
     quickBg: palette.white,
     quickBorder: palette.strongLine,
     statsBg: palette.fill,
@@ -48,10 +40,6 @@ export const numberEntryColors: Record<'light' | 'dark', NumberEntryColors> = {
   dark: {
     minusBg: palette.darkSurface,
     minusBorder: palette.darkLine,
-    onTargetBg: palette.darkActionTint,
-    onTargetText: palette.darkActionText,
-    belowTargetBg: '#5A2E1C',
-    belowTargetText: '#FFD8C2',
     quickBg: palette.darkSurface,
     quickBorder: palette.darkLine,
     statsBg: palette.darkFill,
@@ -78,13 +66,8 @@ export const numberEntryMetrics = {
   stepIconStrokeWidth: 3,
   valueGap: 6,
 
-  // Hedef çipi
+  // Hedef hapı (ortak Chip sm)
   chipMarginTop: 16,
-  chipGap: 6,
-  chipPaddingY: 6,
-  chipPaddingX: 12,
-  chipIconSize: 16,
-  chipIconStrokeWidth: 3,
 
   // Hızlı ekleme (adımın 1, 2 ve 6 katı; tasarımda adım 5: +5, +10, +30)
   quickMarginTop: 18,
@@ -122,7 +105,7 @@ export const photoProofColors = {
   background: palette.darkBackground,
   text: palette.sand,
   textSecondary: palette.darkTextSecondary,
-  /** Koyu aksiyon yeşili: yükleniyor göstergesi, "Ayarları aç" bağlantısı */
+  /** Koyu aksiyon yeşili: "Ayarları aç" bağlantısı */
   action: palette.darkAction,
   /** Fotoğraf çerçevesi (fotoğraf yokken görünen zemin) */
   frameBg: '#FFE9D6',
@@ -130,13 +113,10 @@ export const photoProofColors = {
   emptyFrameBg: palette.darkSurface,
   emptyFrameBorder: '#3A2C5C',
   stampBg: 'rgba(21, 14, 38, 0.72)',
-  label: palette.darkTextBody,
-  inputBorder: '#3A2C5C',
-  inputBg: palette.darkSurface,
-  placeholder: palette.darkTextSecondary,
   rowBg: palette.darkSurface,
   rowIcon: palette.darkTextSecondary,
-  error: '#FF9A6B',
+  /** Hata metni: koyu `dangerText` (#F97066, koyu zeminde 6.7:1) */
+  error: darkColors.dangerText,
 } as const;
 
 export const photoProofMetrics = {
@@ -153,12 +133,8 @@ export const photoProofMetrics = {
   emptyIconSize: 40,
   emptyIconStrokeWidth: 2.2,
   emptyBorder: 2,
+  /** Not alanı: ortak TextField sm (50) `scheme="dark"` */
   fieldMarginTop: 16,
-  fieldGap: 6,
-  inputHeight: 50,
-  inputRadius: 16,
-  inputPaddingX: 16,
-  inputBorder: 2,
   /** Not sınırı: checkins.note ≤ 200 */
   noteMaxLength: 200,
   rowMarginTop: 12,
@@ -181,10 +157,6 @@ export const photoProofTypography = {
   title: { fontFamily: fonts.extraBold, fontSize: 16 },
   /** Zaman damgası · Nunito 800 · 12 */
   stamp: { fontFamily: fonts.extraBold, fontSize: 12 },
-  /** Alan etiketi · Nunito 800 · 14 */
-  label: { fontFamily: fonts.extraBold, fontSize: 14 },
-  /** Not alanı · Nunito 700 · 16 */
-  input: { fontFamily: fonts.bold, fontSize: 16 },
   /** Görünürlük satırı · Nunito 700 · 15 (kalın kısım 800) */
   row: { fontFamily: fonts.bold, fontSize: 15 },
   rowStrong: { fontFamily: fonts.extraBold, fontSize: 15 },

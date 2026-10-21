@@ -180,7 +180,7 @@ export default function SettingsScreen() {
           />
           <LinkRow
             title="Hesabı sil"
-            titleColor={colors.danger}
+            titleColor={colors.dangerText}
             chevron={false}
             onPress={() => router.push('/settings/delete-account')}
             last

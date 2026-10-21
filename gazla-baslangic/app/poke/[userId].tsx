@@ -128,6 +128,7 @@ export default function PokeSheet() {
           <View style={styles.segment}>
             <Segmented<PokeTone>
               size="lg"
+              textSize="lg"
               role="tabs"
               accessibilityLabel="Mesaj türü"
               options={[
@@ -155,7 +156,7 @@ export default function PokeSheet() {
           {!!error && (
             <Text
               accessibilityLiveRegion="polite"
-              style={[componentTypography.inputError, styles.error, { color: colors.danger }]}>
+              style={[componentTypography.inputError, styles.error, { color: colors.dangerText }]}>
               {error.message}
             </Text>
           )}

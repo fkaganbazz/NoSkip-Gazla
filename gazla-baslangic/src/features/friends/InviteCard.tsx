@@ -23,6 +23,7 @@ export default function InviteCard({ onShare }: { onShare: () => void }) {
         variant="ink"
         onPress={onShare}
         accessibilityLabel="Davet linkini paylaş"
+        size="lg"
         style={styles.share}
       />
       <View style={styles.diken}>
@@ -48,11 +49,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     gap: m.inviteTextGap,
   },
-  // Satır butonundan büyük: 40 yükseklik, 0 14 iç boşluk, köşe 14
   share: {
-    height: m.shareHeight,
-    paddingHorizontal: m.sharePaddingX,
-    borderRadius: m.shareRadius,
     marginLeft: 'auto',
     marginRight: m.shareMarginRight,
   },

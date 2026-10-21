@@ -67,6 +67,16 @@ export const challengeTints = {
   },
 } as const satisfies Record<string, Record<Scheme, Tint>>;
 
+/**
+ * Kendi avatarın (Profile, Settings, Garden, Detail "Sen" satırı; Avatar `self`): tasarımlarda kullanıcının şeftalisi
+ * #FFE3D2 / #9A3412, arkadaşlarınki #FFD8C2. Koyuda DetailDark'ta ikisi aynı (#5A2E1C / #FFD8C2). Diğer tonların
+ * kendi avatar örneği yok: arkadaş tonuyla aynı.
+ */
+export const selfAvatarTints = {
+  ...avatarTints,
+  peach: { light: challengeTints.peach.light, dark: avatarTints.peach.dark },
+} as const satisfies Record<keyof typeof avatarTints, Record<Scheme, Tint>>;
+
 export type AvatarTint = keyof typeof avatarTints;
 export type ChallengeTint = keyof typeof challengeTints;
 

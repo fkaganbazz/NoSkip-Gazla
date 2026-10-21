@@ -104,8 +104,6 @@ export type StreakLostColors = {
   stackBorder: string;
   adDrop: string;
   adBadgeBg: string;
-  freeBorder: string;
-  freeBg: string;
 };
 
 export const streakLostColors: Record<Scheme, StreakLostColors> = {
@@ -119,8 +117,6 @@ export const streakLostColors: Record<Scheme, StreakLostColors> = {
     stackBorder: palette.white,
     adDrop: '#8BE0AE',
     adBadgeBg: 'rgba(255, 255, 255, 0.18)',
-    freeBorder: palette.strongLine,
-    freeBg: palette.white,
   },
   dark: {
     bgLost: darkColors.background,
@@ -132,8 +128,6 @@ export const streakLostColors: Record<Scheme, StreakLostColors> = {
     stackBorder: darkColors.surface,
     adDrop: palette.darkActionTint,
     adBadgeBg: 'rgba(21, 14, 38, 0.18)',
-    freeBorder: darkColors.border,
-    freeBg: darkColors.surface,
   },
 };
 
@@ -253,10 +247,6 @@ export const momentsMetrics = {
   adBadgePaddingY: 3,
   adBadgePaddingX: 8,
   adBadgeRadius: 8,
-  freeButtonMinHeight: 56,
-  freeButtonPaddingY: 8,
-  freeButtonPaddingX: 16,
-  freeButtonGap: 1,
 } as const;
 
 // Yazı ------------------------------------------------------------------------------------------------
@@ -311,8 +301,4 @@ export const momentsTypography = {
   friendsPill: { fontFamily: fonts.bold, fontSize: 14 },
   /** "30 sn" rozeti · Nunito 800 · 12 */
   adBadge: { fontFamily: fonts.extraBold, fontSize: 12 },
-  /** Ücretsiz hak başlığı · Nunito 800 · 16 */
-  freeTitle: { fontFamily: fonts.extraBold, fontSize: 16 },
-  /** Ücretsiz hak alt satırı · Nunito 700 · 12 */
-  freeSub: { fontFamily: fonts.bold, fontSize: 12 },
 } as const satisfies Record<string, TextStyle>;

@@ -64,7 +64,7 @@ function Row({
       <Text style={[t.rowStrong, styles.rank, { color: member.rank === 1 ? c.rankFirst : colors.textSecondary }]}>
         {member.rank}
       </Text>
-      <Avatar name={member.displayName} tint={member.avatarTint} url={member.avatarUrl} size={m.avatar} decorative />
+      <Avatar name={member.displayName} tint={member.avatarTint} self={isMe} url={member.avatarUrl} size={m.avatar} decorative />
       <View style={styles.names}>
         <Text numberOfLines={1} style={[t.name, { color: colors.text }]}>
           {name}

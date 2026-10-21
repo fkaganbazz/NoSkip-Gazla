@@ -52,7 +52,7 @@ export default function ShareScreen() {
   const stage = garden.data?.find((g) => g.challengeId === ch.id)?.stage ?? 'cicek';
 
   // Kart 360×640; ekrana sığacak kadar küçültülür (büyütülmez)
-  const availableHeight = height - top - bottom - cm.iconButton - cm.buttonHeight.lg - cm.buttonShadow - 2 * m.previewGap;
+  const availableHeight = height - top - bottom - cm.iconButton - cm.button.lg.height - cm.button.lg.shadow - 2 * m.previewGap;
   const scale = Math.min(1, (width - 2 * layout.screenPadding) / m.cardWidth, availableHeight / m.cardHeight);
 
   const onShare = async () => {

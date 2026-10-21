@@ -13,13 +13,6 @@ import { fonts } from './typography';
 export type SettingsColors = {
   /** Kart içi satır ayracı (açıkta kart kenarından açık) */
   rowDivider: string;
-  /** Bildirimler: lila ve şeftali kural çipinin zemini (koyu kural çipi ortak Chip'in seçili hali) */
-  ruleChipLilacBg: string;
-  ruleChipPeachBg: string;
-  /** Profil düzenleme: kamera butonu zemini, ikonu, dış halkası */
-  cameraBg: string;
-  cameraIcon: string;
-  cameraRing: string;
   /** Bildirim metni başlığı: Diken'den gelen / arkadaştan gelen */
   dikenTitle: string;
   friendTitle: string;
@@ -36,11 +29,6 @@ export type SettingsColors = {
 export const settingsColors: Record<'light' | 'dark', SettingsColors> = {
   light: {
     rowDivider: '#F4EDE5',
-    ruleChipLilacBg: challengeTints.lilac.light.bg,
-    ruleChipPeachBg: palette.rescue,
-    cameraBg: palette.nightPurple,
-    cameraIcon: palette.white,
-    cameraRing: palette.sand,
     dikenTitle: palette.actionGreen,
     friendTitle: palette.orange700,
     adCircle: palette.green100,
@@ -54,11 +42,6 @@ export const settingsColors: Record<'light' | 'dark', SettingsColors> = {
   dark: {
     // Koyu tasarım yok: ayraç kart kenarından bir ton koyu (DetailDark dolgu)
     rowDivider: palette.darkFill,
-    ruleChipLilacBg: challengeTints.lilac.dark.bg,
-    ruleChipPeachBg: avatarTints.peach.dark.bg,
-    cameraBg: palette.sand,
-    cameraIcon: palette.darkBackground,
-    cameraRing: palette.darkBackground,
     dikenTitle: palette.darkActionText,
     friendTitle: '#FF9A6B', // TodayDark: turuncu metin
     adCircle: palette.darkActionTint,
@@ -101,13 +84,9 @@ export const settingsMetrics = {
   optionRowPaddingY: 10,
 
   // Profil düzenleme (Profile.dc.html)
+  /** Avatar 84; kamera rozeti ortak `componentMetrics.cameraBadge` */
   editAvatar: 84,
   editAvatarGap: 16,
-  cameraButton: 36,
-  cameraBorder: 3,
-  cameraOffset: -4,
-  cameraIconSize: 16,
-  cameraIconStrokeWidth: 2.4,
   editFieldsMarginTop: 24,
   editFieldsGap: 16,
 

@@ -8,10 +8,10 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { CameraIcon } from '@/components/icons';
 import Sheet from '@/components/Sheet';
-import { Avatar, Button, TextField } from '@/components/ui';
+import { Avatar, Button, IconButton, TextField } from '@/components/ui';
 import { ApiError, useUpdateProfileMutation, useUsernameAvailable, type Profile, type ProfileUpdate } from '@/data';
-import { typography, useTheme } from '@/theme';
-import { settingsColors, settingsMetrics as m, settingsTypography as t } from '@/theme/settings';
+import { componentColors, componentMetrics as cm, typography, useTheme } from '@/theme';
+import { settingsMetrics as m, settingsTypography as t } from '@/theme/settings';
 
 import { displayNameProblem, errorText, normalizeUsername, usernameProblem } from './logic';
 
@@ -26,7 +26,7 @@ type Props = {
 
 export default function ProfileEditSheet({ visible, profile, onClose, onSaved }: Props) {
   const { colors, scheme } = useTheme();
-  const c = settingsColors[scheme];
+  const camera = cm.cameraBadge;
   const update = useUpdateProfileMutation();
 
   const [name, setName] = useState(profile.displayName);
@@ -104,24 +104,30 @@ export default function ProfileEditSheet({ visible, profile, onClose, onSaved }:
           <Avatar
             name={name || profile.displayName}
             tint={profile.avatarTint}
+            self
             url={photoUrl}
             size={m.editAvatar}
             accessibilityLabel="Profil fotoğrafın"
           />
-          <Pressable
-            onPress={pickPhoto}
-            accessibilityRole="button"
+          {/* Kamera rozeti (Profile.dc.html): kenar sayfa zemininde */}
+          <IconButton
+            icon={CameraIcon}
+            tone="ink"
+            size={camera.size}
+            outlineColor={colors.surface}
+            iconSize={camera.iconSize}
+            iconStrokeWidth={camera.iconStroke}
+            iconColor={componentColors[scheme].cameraBadgeIcon}
             accessibilityLabel="Profil fotoğrafı seç"
-            hitSlop={4}
-            style={[styles.camera, { backgroundColor: c.cameraBg, borderColor: c.cameraRing }]}>
-            <CameraIcon color={c.cameraIcon} size={m.cameraIconSize} strokeWidth={m.cameraIconStrokeWidth} />
-          </Pressable>
+            onPress={pickPhoto}
+            style={styles.camera}
+          />
         </View>
         <View style={styles.photoTexts}>
           <Text style={[t.rowTitle, { color: colors.text }]}>Profil fotoğrafı</Text>
           {photoUrl ? (
             <Pressable onPress={() => setAvatar(null)} accessibilityRole="button" hitSlop={10}>
-              <Text style={[typography.caption, { color: colors.danger }]}>Fotoğrafı kaldır</Text>
+              <Text style={[typography.caption, { color: colors.dangerText }]}>Fotoğrafı kaldır</Text>
             </Pressable>
           ) : (
             <Text style={[t.photoHint, { color: colors.textSecondary }]}>
@@ -153,7 +159,7 @@ export default function ProfileEditSheet({ visible, profile, onClose, onSaved }:
       </View>
 
       {saveError ? (
-        <Text accessibilityLiveRegion="polite" style={[typography.meta, styles.error, { color: colors.danger }]}>
+        <Text accessibilityLiveRegion="polite" style={[typography.meta, styles.error, { color: colors.dangerText }]}>
           {saveError}
         </Text>
       ) : null}
@@ -175,14 +181,8 @@ const styles = StyleSheet.create({
   },
   camera: {
     position: 'absolute',
-    right: m.cameraOffset,
-    bottom: m.cameraOffset,
-    width: m.cameraButton,
-    height: m.cameraButton,
-    borderRadius: m.cameraButton / 2,
-    borderWidth: m.cameraBorder,
-    alignItems: 'center',
-    justifyContent: 'center',
+    right: cm.cameraBadge.offset,
+    bottom: cm.cameraBadge.offset,
   },
   photoTexts: {
     flex: 1,

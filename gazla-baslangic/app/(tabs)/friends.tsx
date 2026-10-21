@@ -4,6 +4,7 @@ import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, T
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FriendList, FriendRow, FriendRowButton } from '@/components/FriendRow';
+import SearchField from '@/components/SearchField';
 import { ErrorState, IconButton, SectionLabel, type SectionLabelTone } from '@/components/ui';
 import {
   ApiError,
@@ -20,7 +21,6 @@ import {
 import { UserPlusIcon } from '@/features/friends/icons';
 import InviteCard from '@/features/friends/InviteCard';
 import { friendSub, groupFriends, searchTerm, useDebounced } from '@/features/friends/logic';
-import SearchField from '@/features/friends/SearchField';
 import { componentTypography, layout, typography, useTheme } from '@/theme';
 import { socialMetrics as m } from '@/theme/social';
 
@@ -223,12 +223,19 @@ export default function FriendsScreen() {
           />
         </View>
 
-        <SearchField ref={searchRef} value={query} onChangeText={setQuery} />
+        <SearchField
+          ref={searchRef}
+          value={query}
+          onChangeText={setQuery}
+          placeholder="Kullanıcı adıyla ara"
+          autoCapitalize="none"
+          style={styles.search}
+        />
 
         {mutationError && (
           <Text
             accessibilityLiveRegion="polite"
-            style={[componentTypography.inputError, styles.error, { color: colors.danger }]}>
+            style={[componentTypography.inputError, styles.error, { color: colors.dangerText }]}>
             {mutationError.message}
           </Text>
         )}
@@ -253,6 +260,9 @@ export default function FriendsScreen() {
 }
 
 const styles = StyleSheet.create({
+  search: {
+    marginTop: m.searchMarginTop,
+  },
   screen: {
     flex: 1,
   },

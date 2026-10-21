@@ -70,14 +70,7 @@ export const socialMetrics = {
   // Arkadaşlar: üst satır, arama, davet kartı
   addIconStrokeWidth: 2.3,
   searchMarginTop: 14,
-  searchHeight: 48,
-  searchRadius: 16,
-  searchPaddingLeft: 44,
-  searchPaddingRight: 16,
-  searchIconSize: 20,
-  searchIconStrokeWidth: 2.4,
-  searchIconLeft: 15,
-  searchIconTop: 14,
+  // Arama alanı: ortak SearchField (componentMetrics.search*)
   inviteMarginTop: 12,
   inviteHeight: 92,
   invitePaddingY: 14,
@@ -85,10 +78,7 @@ export const socialMetrics = {
   inviteRadius: 22,
   inviteTextWidth: 220,
   inviteTextGap: 4,
-  shareHeight: 40,
-  sharePaddingX: 14,
-  shareRadius: 14,
-  /** Paylaş butonunun sağında Diken için ayrılan alan */
+  /** "Paylaş": ortak FriendRowButton lg (40, 0 14, köşe 14); sağında Diken için ayrılan alan */
   shareMarginRight: 58,
   inviteDikenSize: 76,
   inviteDikenRight: -6,
@@ -157,15 +147,13 @@ export const socialMetrics = {
   activityRichGap: 6,
   activityPlainGap: 2,
   activityHeaderGap: 8,
-  activityButtonPaddingX: 14,
   activityButtonsGap: 8,
   unreadDotSize: 7,
   unreadDotLeft: 6,
   unreadDotTop: 30,
   markAllPaddingX: 4,
 
-  // Şikayet
-  reportTitleSide: 44,
+  // Şikayet (başlık: ortak ScreenHeader compact, ayrıntı alanı: ortak TextField sm)
   reportIntroMarginTop: 20,
   reportIntroGap: 6,
   reasonsMarginTop: 16,
@@ -182,8 +170,6 @@ export const socialMetrics = {
 
 /** Bu ekranlara özgü metin stilleri */
 export const socialTypography = {
-  /** Arama alanı · Nunito 600 · 16 */
-  search: { fontFamily: fonts.semiBold, fontSize: 16 },
   /** Davet kartı açıklaması · Nunito 700 · 13 · 1.35 */
   inviteSub: { fontFamily: fonts.bold, fontSize: 13, lineHeight: 13 * 1.35 },
   /** Profil adı · Baloo 2 800 · 28 · 1 */

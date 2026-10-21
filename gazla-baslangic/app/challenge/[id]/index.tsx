@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ActionSheet, { type ActionSheetItem } from '@/components/ActionSheet';
 import { CategoryTile } from '@/components/CategoryTile';
 import { AddIcon, CameraIcon, CheckIcon, HandIcon, type IconProps } from '@/components/icons';
-import { Button, ErrorState, IconButton, LoadingState, Toast } from '@/components/ui';
+import { Button, Chip, ErrorState, IconButton, LoadingState, Toast } from '@/components/ui';
 import {
   useAuth,
   useChallenge,
@@ -29,8 +29,8 @@ import {
 } from '@/features/challenge/logic';
 import ProgressCard from '@/features/challenge/ProgressCard';
 import { useNow } from '@/features/today/useNow';
-import { challengeColors, challengeMetrics as m, challengeTypography as t } from '@/theme/challenge';
-import { challengeTints, componentMetrics as cm, layout, radius, useTheme } from '@/theme';
+import { challengeMetrics as m, challengeTypography as t } from '@/theme/challenge';
+import { componentMetrics as cm, layout, useTheme } from '@/theme';
 
 // Challenge detayı — design/Detail.dc.html (açık) ve design/DetailDark.dc.html (koyu).
 // Veri: challenges, challenge_members (kendi satırı), challenge_board, takvim; gün numarası my_today'den.
@@ -38,8 +38,7 @@ export default function ChallengeDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { colors, scheme } = useTheme();
-  const c = challengeColors[scheme];
+  const { colors } = useTheme();
   const now = useNow();
   const { session } = useAuth();
   const meId = session?.userId;
@@ -114,7 +113,6 @@ export default function ChallengeDetailScreen() {
 
   const ch = challenge.data;
   const members = board.data ?? [];
-  const tint = challengeTints[ch.tint][scheme];
   const active = membership.data?.status === 'active';
   const phase = challengePhase(ch, membership.data, task, todayIso);
 
@@ -228,12 +226,10 @@ export default function ChallengeDetailScreen() {
         </View>
 
         <View style={styles.chips}>
-          <ChipTag label={`${ch.durationDays} gün`} bg={c.durationChipBg} fg={c.durationChipText} />
-          {ch.category && <ChipTag label={CATEGORY_LABELS[ch.category]} bg={tint.bg} fg={tint.ink} />}
-          {members.length > 0 && <ChipTag label={`${members.length} kişi`} bg={c.membersChipBg} fg={c.membersChipText} />}
-          {ch.reminderTime && (
-            <ChipTag label={`Hatırlatma ${ch.reminderTime}`} bg={c.reminderChipBg} fg={c.reminderChipText} />
-          )}
+          <Chip size="xs" tone="ink" label={`${ch.durationDays} gün`} />
+          {ch.category && <Chip size="xs" tint={ch.tint} label={CATEGORY_LABELS[ch.category]} />}
+          {members.length > 0 && <Chip size="xs" tone="warning" label={`${members.length} kişi`} />}
+          {ch.reminderTime && <Chip size="xs" tone="muted" label={`Hatırlatma ${ch.reminderTime}`} />}
         </View>
 
         <ProgressCard
@@ -276,14 +272,6 @@ function ctaIcon(Icon: ComponentType<IconProps>) {
   return (color: string) => <Icon color={color} size={cm.buttonIconSize} strokeWidth={cm.buttonIconStroke} />;
 }
 
-function ChipTag({ label, bg, fg }: { label: string; bg: string; fg: string }) {
-  return (
-    <View style={[styles.chip, { backgroundColor: bg }]}>
-      <Text style={[t.chip, { color: fg }]}>{label}</Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
@@ -310,11 +298,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: m.chipsGap,
-  },
-  chip: {
-    paddingVertical: m.chipPaddingY,
-    paddingHorizontal: m.chipPaddingX,
-    borderRadius: radius.full,
   },
   cta: {
     position: 'absolute',

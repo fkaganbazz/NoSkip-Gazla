@@ -98,7 +98,7 @@ export default function ActivityScreen() {
         {error && (
           <Text
             accessibilityLiveRegion="polite"
-            style={[componentTypography.inputError, styles.error, { color: colors.danger }]}>
+            style={[componentTypography.inputError, styles.error, { color: colors.dangerText }]}>
             {error.message}
           </Text>
         )}

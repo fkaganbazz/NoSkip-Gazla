@@ -3,12 +3,13 @@
  * seçim kutusu (segment), anahtar, seçim düğmesi, onay kutusu, bölüm etiketi, kart.
  */
 import { useRouter } from 'expo-router';
-import type { ComponentType, ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { createElement, isValidElement, type ComponentType, type ReactElement, type ReactNode } from 'react';
+import { Platform, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { BackIcon, CheckIcon, CloseIcon, DotsIcon, type IconProps } from '@/components/icons';
 import {
   borderWidth,
+  challengeTints,
   componentColors,
   componentMetrics as cm,
   componentTypography as ct,
@@ -16,6 +17,8 @@ import {
   radius,
   typography,
   useTheme,
+  type ChallengeTint,
+  type Tint,
 } from '@/theme';
 
 // Yuvarlak ikon butonu ve ekran başlığı ---------------------------------------------------------
@@ -25,7 +28,7 @@ export type IconButtonIcon = 'back' | 'close' | 'options';
 /**
  * default: beyaz, 1 px #EFE6DC kenar (çoğu ekran). onColor: renkli zeminde beyaz, kenarsız (ChallengePreview,
  * StreakLost). onDark: koyu ekranda #2B1E47 (PhotoProof). onBrand: yeşil kutlama zemininde yarı saydam kum
- * (Completion). ink: gece moru dolgu, kum ikon (Friends "Arkadaş ekle").
+ * (Completion). ink: gece moru dolgu, kum ikon; koyuda ters (Friends "Arkadaş ekle", avatar kamera rozeti).
  */
 export type IconButtonTone = 'default' | 'onColor' | 'onDark' | 'onBrand' | 'ink';
 
@@ -37,9 +40,16 @@ type IconButtonProps = {
   /** Verilmezse geri gider (yığın boşsa ana sayfaya) */
   onPress?: () => void;
   tone?: IconButtonTone;
+  /** Dış ölçü (kenar dahil) · varsayılan 44; küçükse dokunma alanı hitSlop ile 44'e tamamlanır */
+  size?: number;
+  /** Zemin renginde dış kenar (kamera rozeti: 3 px ekran/sayfa zemini) */
+  outlineColor?: string;
+  outlineWidth?: number;
   /** Özel ikon ölçüsü (varsayılan 22, çizgi 2.2 — Today aktivite zili) */
   iconSize?: number;
   iconStrokeWidth?: number;
+  /** Tonun ikon rengini ezer (Profile kamera rozeti: beyaz — `componentColors.cameraBadgeIcon`) */
+  iconColor?: string;
   /** İkonun üstüne çizilen öğe (ör. okunmamış sayısı rozeti) */
   children?: ReactNode;
   disabled?: boolean;
@@ -52,8 +62,12 @@ export function IconButton({
   accessibilityLabel,
   onPress,
   tone = 'default',
+  size = cm.iconButton,
+  outlineColor,
+  outlineWidth = cm.cameraBadge.outline,
   iconSize = cm.iconButtonIconSize,
   iconStrokeWidth = cm.iconButtonIconStroke,
+  iconColor,
   children,
   disabled,
   style,
@@ -69,18 +83,19 @@ export function IconButton({
     onBrand: { bg: c.iconButtonOnBrandBg, fg: c.iconButtonOnBrandIcon },
     ink: { bg: c.chipSelectedBg, fg: c.chipSelectedText },
   }[tone];
+  const fg = iconColor ?? look.fg;
   const bordered = tone === 'default';
 
   let glyph: ReactNode;
   if (icon === 'back') {
-    glyph = <BackIcon color={look.fg} size={cm.backIconSize} strokeWidth={cm.backIconStroke} />;
+    glyph = <BackIcon color={fg} size={cm.backIconSize} strokeWidth={cm.backIconStroke} />;
   } else if (icon === 'close') {
-    glyph = <CloseIcon color={look.fg} size={cm.closeIconSize} strokeWidth={cm.closeIconStroke} />;
+    glyph = <CloseIcon color={fg} size={cm.closeIconSize} strokeWidth={cm.closeIconStroke} />;
   } else if (icon === 'options') {
-    glyph = <DotsIcon color={look.fg} size={cm.optionsIconSize} />;
+    glyph = <DotsIcon color={fg} size={cm.optionsIconSize} />;
   } else {
     const Icon = icon;
-    glyph = <Icon color={look.fg} size={iconSize} strokeWidth={iconStrokeWidth} />;
+    glyph = <Icon color={fg} size={iconSize} strokeWidth={iconStrokeWidth} />;
   }
 
   return (
@@ -89,11 +104,14 @@ export function IconButton({
       disabled={disabled}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      accessibilityState={disabled ? { disabled } : undefined}
+      aria-disabled={disabled || undefined}
+      hitSlop={size < layout.minTouchTarget ? (layout.minTouchTarget - size) / 2 : undefined}
       style={({ pressed }) => [
         styles.iconButton,
+        { width: size, height: size, borderRadius: size / 2 },
         { backgroundColor: bordered && pressed ? colors.surfaceMuted : look.bg },
         bordered && { borderWidth: borderWidth.thin, borderColor: colors.border },
+        outlineColor && { borderWidth: outlineWidth, borderColor: outlineColor },
         !bordered && pressed && styles.pressed,
         disabled && styles.disabled,
         style,
@@ -109,87 +127,167 @@ type ScreenHeaderProps = {
   /** Sol buton: geri (varsayılan), kapat ya da yok */
   leading?: 'back' | 'close' | 'none';
   onLeadingPress?: () => void;
+  /** default: Baloo 26 ekran başlığı; compact: Nunito 800 · 17 (DeleteAccount.dc.html, Report.dc.html) */
+  size?: 'default' | 'compact';
+  /** center: başlık ortada, sağda buton genişliğinde boşluk (Report.dc.html) */
+  align?: 'start' | 'center';
   /** Sağ taraf (ör. "Tümü okundu") */
   trailing?: ReactNode;
   style?: StyleProp<ViewStyle>;
 };
 
-/** Ekran başlık satırı: geri/kapat butonu + Baloo 26 başlık (+ sağda isteğe bağlı öğe) */
-export function ScreenHeader({ title, leading = 'back', onLeadingPress, trailing, style }: ScreenHeaderProps) {
+/** Ekran başlık satırı: geri/kapat butonu + başlık (+ sağda isteğe bağlı öğe) */
+export function ScreenHeader({
+  title,
+  leading = 'back',
+  onLeadingPress,
+  size = 'default',
+  align = 'start',
+  trailing,
+  style,
+}: ScreenHeaderProps) {
   const { colors } = useTheme();
+  const centered = align === 'center';
   return (
     <View style={[styles.header, style]}>
       {leading !== 'none' && (
         <IconButton icon={leading} accessibilityLabel={leading === 'back' ? 'Geri' : 'Kapat'} onPress={onLeadingPress} />
       )}
-      <Text accessibilityRole="header" numberOfLines={2} style={[typography.screenTitle, styles.headerTitle, { color: colors.text }]}>
+      <Text
+        accessibilityRole="header"
+        numberOfLines={2}
+        style={[
+          size === 'compact' ? ct.headerCompact : typography.screenTitle,
+          styles.headerTitle,
+          centered && styles.headerCentered,
+          { color: colors.text },
+        ]}>
         {title}
       </Text>
-      {trailing}
+      {trailing ?? (centered && leading !== 'none' ? <View style={styles.headerSide} /> : null)}
     </View>
   );
 }
 
 // Çip ve segment -------------------------------------------------------------------------------
 
-export type ChipSize = 'md' | 'lg';
+/** xxs 12 (Explore süre hapı) · xs 13 (Detail bilgi çipi) · sm 14 hap (NumberEntry) · md 38 (Components) · lg 40 (Explore) */
+export type ChipSize = keyof typeof cm.chip;
+
+/**
+ * default: kenarlı yüzey. ink: gece moru / kum (koyuda ters; Detail "30 gün", seçili çip). success: yeşil
+ * (Durum, "Bugün tamam", hedefte). warning: şeftali ("4 kişi", hedefe kalan, "Laf sokma…"). muted: dolgu +
+ * gövde metni ("Hatırlatma 08:00", "Orta zorluk").
+ */
+export type ChipTone = 'default' | 'ink' | 'success' | 'warning' | 'muted';
 
 type ChipProps = {
   label: string;
-  /** Seçili: gece moru zemin, kum metin (koyuda ters) */
+  /** Seçili (basılabilir çip): `ink` görünümü; ekran okuyucuya seçili / basılı bilgisi */
   selected?: boolean;
-  /** Yeşil durum çipi ("Durum") */
-  status?: boolean;
+  tone?: ChipTone;
+  /** Challenge rengi (kategori çipi) ya da doğrudan zemin/metin; tonun yerine geçer */
+  tint?: ChallengeTint | Tint;
   onPress?: () => void;
-  /** Metnin solundaki ikon; fonksiyon verilirse çip metninin rengiyle çağrılır */
-  icon?: ReactNode | ((color: string) => ReactNode);
-  /** md 38 / 14 (Components.dc.html), lg 40 / 16 köşe 20 (Explore.dc.html kategori çipi) */
+  /**
+   * Metnin solundaki ikon: ikon bileşeni (`CheckIcon`) çipin metin renginde ve boyun ölçüsünde çizilir;
+   * hazır öğe (ör. avatar, SignIn'deki tikli yeşil nokta) olduğu gibi konur
+   */
+  icon?: ComponentType<IconProps> | ReactElement;
   size?: ChipSize;
+  /** Uzun metin: satır sınırı (verilmezse alt satıra geçer) */
+  numberOfLines?: number;
   accessibilityLabel?: string;
   style?: StyleProp<ViewStyle>;
 };
 
-/** Tam yuvarlak çip: seçili (koyu), varsayılan (kenarlı), durum (yeşil) */
+/** Tam yuvarlak çip: seçilebilir (kenarlı / seçili) ya da renkli bilgi etiketi (tonlar, challenge rengi) */
 export function Chip({
   label,
   selected = false,
-  status = false,
+  tone = 'default',
+  tint,
   onPress,
   icon,
   size = 'md',
+  numberOfLines,
   accessibilityLabel,
   style,
 }: ChipProps) {
   const { colors, scheme } = useTheme();
   const c = componentColors[scheme];
-  const lg = size === 'lg';
-  const height = lg ? cm.chipHeightLg : cm.chipHeight;
-  const bg = selected ? c.chipSelectedBg : status ? c.statusChipBg : colors.surface;
-  const fg = selected ? c.chipSelectedText : status ? c.statusChipText : colors.text;
-  // Components'ta seçili/durum çipi kenarsız; Keşfet'te seçili çipin kenarı zeminle aynı renk (ölçü değişmez)
-  const bordered = lg || (!selected && !status);
+  const spec = cm.chip[size];
+  const t = selected ? 'ink' : tone;
+
+  const look: Tint = tint
+    ? typeof tint === 'string'
+      ? challengeTints[tint][scheme]
+      : tint
+    : {
+        default: { bg: colors.surface, ink: colors.text },
+        ink: { bg: c.chipSelectedBg, ink: c.chipSelectedText },
+        success: { bg: c.chipSuccessBg, ink: c.chipSuccessText },
+        warning: { bg: c.chipWarningBg, ink: c.chipWarningText },
+        muted: { bg: colors.surfaceMuted, ink: colors.textBody },
+      }[t];
+  // Components'ta yalnızca varsayılan çip kenarlı; Keşfet'te (lg) seçili çipin kenarı zeminle aynı (ölçü değişmez)
+  const isDefault = t === 'default' && !tint;
+  const bordered = size === 'lg' || isDefault;
+
+  const iconNode = !icon ? null : isValidElement(icon) ? (
+    icon
+  ) : (
+    createElement(icon as ComponentType<IconProps>, { color: look.ink, size: spec.iconSize, strokeWidth: spec.iconStroke })
+  );
+  const [iconPaddingY, iconPaddingLeft, iconPaddingRight] = spec.iconPadding;
+  const paddingX = t === 'success' && size === 'md' ? cm.chipSuccessPaddingX : spec.paddingX;
+  const pad = iconNode
+    ? { paddingTop: iconPaddingY, paddingBottom: iconPaddingY, paddingLeft: iconPaddingLeft, paddingRight: iconPaddingRight }
+    : { paddingTop: spec.paddingY, paddingBottom: spec.paddingY, paddingLeft: paddingX, paddingRight: paddingX };
+  const height = spec.height || undefined;
+  const textStyle = size === 'xxs' ? ct.chipXxs : size === 'xs' ? ct.chipXs : ct.chip;
+  const chipStyle = [
+    styles.chip,
+    pad,
+    {
+      minHeight: height,
+      gap: spec.gap,
+      borderRadius: spec.radius || radius.full,
+      backgroundColor: look.bg,
+      borderColor: isDefault ? c.chipBorder : look.bg,
+      borderWidth: bordered ? borderWidth.thin : 0,
+    },
+    style,
+  ];
+  const content = (
+    <>
+      {iconNode}
+      <Text numberOfLines={numberOfLines} style={[textStyle, styles.chipLabel, { color: look.ink }]}>
+        {label}
+      </Text>
+    </>
+  );
+
+  // Bilgi çipi: basılmaz, düz görünüm
+  if (!onPress) {
+    return (
+      <View accessibilityLabel={accessibilityLabel} style={chipStyle}>
+        {content}
+      </View>
+    );
+  }
+  const slop = height ? (layout.minTouchTarget - height) / 2 : undefined;
   return (
     <Pressable
       onPress={onPress}
-      disabled={!onPress}
-      accessibilityRole={onPress ? 'button' : undefined}
+      accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      accessibilityState={onPress ? { selected } : undefined}
-      hitSlop={onPress ? { top: (layout.minTouchTarget - height) / 2, bottom: (layout.minTouchTarget - height) / 2 } : undefined}
-      style={[
-        styles.chip,
-        {
-          height,
-          borderRadius: lg ? cm.chipRadiusLg : cm.chipRadius,
-          backgroundColor: bg,
-          borderColor: selected || status ? bg : c.chipBorder,
-          borderWidth: bordered ? borderWidth.thin : 0,
-          paddingHorizontal: status ? cm.statusChipPaddingX : lg ? cm.chipPaddingXLg : cm.chipPaddingX,
-        },
-        style,
-      ]}>
-      {typeof icon === 'function' ? icon(fg) : icon}
-      <Text style={[typography.chip, { color: fg }]}>{label}</Text>
+      accessibilityState={{ selected }}
+      // Web: seçilebilir çip aç/kapa butonu (Explore.dc.html aria-pressed); RN'de accessibilityState.selected
+      {...(Platform.OS === 'web' ? ({ 'aria-pressed': selected } as object) : null)}
+      hitSlop={slop ? { top: slop, bottom: slop } : undefined}
+      style={chipStyle}>
+      {content}
     </Pressable>
   );
 }
@@ -202,9 +300,14 @@ type SegmentedProps<T extends string> = {
   onChange: (value: T) => void;
   /** Seçili hücrenin metin rengi (ör. "Laf sok" turuncu) */
   selectedColor?: (value: T) => string | undefined;
-  /** md 42 / 15 (Components, ChallengePreview), lg 44 / 16 (Poke "Gaz ver / Laf sok") */
+  /** Yükseklik: md 42 (Components, ChallengePreview), lg 44 (Poke, Settings tema seçici) */
   size?: SegmentedSize;
-  /** Ekran okuyucu: sekmeler (Poke mesaj türü) ya da tek seçim (süre, tema) */
+  /** Yazı: md 15 (varsayılan), lg 16 (Poke "Gaz ver / Laf sok") */
+  textSize?: SegmentedSize;
+  /**
+   * Ekran okuyucu: sekmeler (Poke mesaj türü; seçili gölge .12) ya da tek seçim (süre, tema; gölge .14).
+   * Web'de seçim `aria-selected` / `aria-checked` olarak çıkar.
+   */
   role?: 'tabs' | 'radio';
   accessibilityLabel?: string;
   style?: StyleProp<ViewStyle>;
@@ -217,17 +320,19 @@ export function Segmented<T extends string>({
   onChange,
   selectedColor,
   size = 'md',
+  textSize = 'md',
   role = 'tabs',
   accessibilityLabel,
   style,
 }: SegmentedProps<T>) {
   const { colors, scheme } = useTheme();
   const c = componentColors[scheme];
-  const lg = size === 'lg';
+  const tabs = role === 'tabs';
+  const shadow = tabs ? c.segmentShadow : c.segmentShadowRadio;
   return (
     <View
-      accessibilityRole={role === 'tabs' ? 'tablist' : 'radiogroup'}
-      accessibilityLabel={accessibilityLabel}
+      role={tabs ? 'tablist' : 'radiogroup'}
+      aria-label={accessibilityLabel}
       style={[styles.segmentTrack, { backgroundColor: c.segmentTrack }, style]}>
       {options.map((o) => {
         const active = o.value === value;
@@ -235,17 +340,18 @@ export function Segmented<T extends string>({
           <Pressable
             key={o.value}
             onPress={() => onChange(o.value)}
-            accessibilityRole={role === 'tabs' ? 'tab' : 'radio'}
-            accessibilityState={role === 'tabs' ? { selected: active } : { checked: active }}
+            role={tabs ? 'tab' : 'radio'}
+            aria-selected={tabs ? active : undefined}
+            aria-checked={tabs ? undefined : active}
             style={[
               styles.segment,
-              { height: lg ? cm.segmentHeightLg : cm.segmentHeight },
-              active && { backgroundColor: c.segmentThumb, boxShadow: `0 1px 3px ${c.segmentShadow}` },
+              { height: size === 'lg' ? cm.segmentHeightLg : cm.segmentHeight },
+              active && { backgroundColor: c.segmentThumb, boxShadow: `0 1px 3px ${shadow}` },
             ]}>
             <Text
               numberOfLines={1}
               style={[
-                lg ? ct.segmentLg : ct.segment,
+                textSize === 'lg' ? ct.segmentLg : ct.segment,
                 { color: active ? (selectedColor?.(o.value) ?? colors.text) : colors.textSecondary },
               ]}>
               {o.label}
@@ -273,9 +379,10 @@ export function Toggle({ value, onChange, accessibilityLabel, disabled }: Toggle
     <Pressable
       onPress={() => onChange(!value)}
       disabled={disabled}
-      accessibilityRole="switch"
-      accessibilityLabel={accessibilityLabel}
-      accessibilityState={{ checked: value, disabled }}
+      role="switch"
+      aria-label={accessibilityLabel}
+      aria-checked={value}
+      aria-disabled={disabled || undefined}
       hitSlop={6}
       style={[styles.toggle, { backgroundColor: value ? colors.action : c.toggleOff, opacity: disabled ? 0.5 : 1 }]}>
       <View
@@ -350,13 +457,27 @@ export function SectionLabel({ children, tone = 'default', count, style }: Secti
   );
 }
 
+type CardProps = {
+  children: ReactNode;
+  /** Verilirse kart basılır (ör. Ayarlar profil kartı); basılıyken zemin ikincil yüzey */
+  onPress?: () => void;
+  accessibilityLabel?: string;
+  accessibilityHint?: string;
+  style?: StyleProp<ViewStyle>;
+};
+
 /** Kart: yüzey, 1 px kenar, 22 köşe */
-export function Card({ children, style, onPress }: { children: ReactNode; style?: StyleProp<ViewStyle>; onPress?: () => void }) {
+export function Card({ children, onPress, accessibilityLabel, accessibilityHint, style }: CardProps) {
   const { colors } = useTheme();
-  const base = [styles.card, { backgroundColor: colors.surface, borderColor: colors.border }, style];
-  if (!onPress) return <View style={base}>{children}</View>;
+  const base = [styles.card, { backgroundColor: colors.surface, borderColor: colors.border }];
+  if (!onPress) return <View style={[base, style]}>{children}</View>;
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" style={({ pressed }) => [base, pressed && { opacity: 0.85 }]}>
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityHint={accessibilityHint}
+      style={({ pressed }) => [base, pressed && { backgroundColor: colors.surfaceMuted }, style]}>
       {children}
     </Pressable>
   );
@@ -384,10 +505,20 @@ const styles = StyleSheet.create({
   headerTitle: {
     flex: 1,
   },
+  headerCentered: {
+    textAlign: 'center',
+  },
+  // Ortalı başlığın sağında, soldaki butonla aynı genişlikte boşluk
+  headerSide: {
+    width: cm.iconButton,
+  },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: cm.chipGap,
+    maxWidth: '100%',
+  },
+  chipLabel: {
+    flexShrink: 1,
   },
   segmentTrack: {
     flexDirection: 'row',

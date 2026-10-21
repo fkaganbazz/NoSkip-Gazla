@@ -5,6 +5,7 @@ import { darkColors, lightColors, type ColorRoles } from './colors';
 export {
   avatarTints,
   challengeTints,
+  selfAvatarTints,
   type AvatarTint,
   type ChallengeTint,
   type Tint,

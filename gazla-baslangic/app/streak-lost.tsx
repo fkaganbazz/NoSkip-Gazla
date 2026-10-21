@@ -1,11 +1,10 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AvatarStack } from '@/components/Avatar';
 import Diken from '@/components/Diken';
-import { flatShadowStyle } from '@/components/FlatShadow';
 import { CheckIcon, ClockIcon, SolidDropIcon } from '@/components/icons';
 import { Button, ErrorState, IconButton, LoadingState, Toast } from '@/components/ui';
 import {
@@ -19,7 +18,7 @@ import { addDays, formatShortDate, isoDate, joinNames } from '@/features/challen
 import { formatRemaining } from '@/features/moments/logic';
 import { useNow } from '@/features/today/useNow';
 import { momentsMetrics as m, momentsTypography as t, streakLostColors } from '@/theme/moments';
-import { borderWidth, componentMetrics as cm, layout, radius, useTheme } from '@/theme';
+import { layout, radius, useTheme } from '@/theme';
 
 type Saved = { item: PendingRescue; via: 'ad' | 'free' };
 
@@ -198,10 +197,16 @@ export default function StreakLostScreen() {
                   </View>
                 }
               />
-              <FreeButton
-                available={current.freeRescueAvailable}
-                loading={rescue.isPending}
+              {/* Reklam yüklenemezse kenar aksiyon yeşiliyle vurgulanır (ücretsiz hak önerilir) */}
+              <Button
+                title="Ücretsiz hakkımı kullan"
+                subtitle={
+                  current.freeRescueAvailable ? 'Ayda 1 hak · bu ay 1 hakkın var' : 'Ayda 1 hak · bu ayın hakkı kullanıldı'
+                }
+                variant="secondary"
                 highlighted={adFailed}
+                disabled={!current.freeRescueAvailable}
+                loading={rescue.isPending}
                 onPress={onFree}
               />
               <Button title="Baştan başla" variant="text" size="md" onPress={close} />
@@ -212,42 +217,6 @@ export default function StreakLostScreen() {
         </View>
       </ScrollView>
     </View>
-  );
-}
-
-/** "Ücretsiz hakkımı kullan" — beyaz, 2 px kenarlı, altında hak bilgisi */
-function FreeButton({
-  available,
-  loading,
-  highlighted,
-  onPress,
-}: {
-  available: boolean;
-  loading: boolean;
-  /** Reklam yüklenemedi: kenar aksiyon yeşiliyle vurgulanır */
-  highlighted: boolean;
-  onPress: () => void;
-}) {
-  const { colors, scheme } = useTheme();
-  const c = streakLostColors[scheme];
-  const border = highlighted && available ? colors.action : c.freeBorder;
-  const disabled = !available || loading;
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      accessibilityRole="button"
-      accessibilityState={{ disabled, busy: loading }}
-      style={({ pressed }) => [
-        styles.free,
-        { backgroundColor: c.freeBg, borderColor: border, opacity: available ? 1 : 0.6 },
-        pressed ? { transform: [{ translateY: cm.buttonShadow }] } : flatShadowStyle(cm.buttonShadow, border),
-      ]}>
-      <Text style={[t.freeTitle, { color: colors.text }]}>{loading ? 'Kurtarılıyor…' : 'Ücretsiz hakkımı kullan'}</Text>
-      <Text style={[t.freeSub, { color: colors.textSecondary }]}>
-        {available ? 'Ayda 1 hak · bu ay 1 hakkın var' : 'Ayda 1 hak · bu ayın hakkı kullanıldı'}
-      </Text>
-    </Pressable>
   );
 }
 
@@ -318,16 +287,6 @@ const styles = StyleSheet.create({
     paddingVertical: m.adBadgePaddingY,
     paddingHorizontal: m.adBadgePaddingX,
     borderRadius: m.adBadgeRadius,
-  },
-  free: {
-    minHeight: m.freeButtonMinHeight,
-    paddingVertical: m.freeButtonPaddingY,
-    paddingHorizontal: m.freeButtonPaddingX,
-    borderRadius: radius.button,
-    borderWidth: borderWidth.thick,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: m.freeButtonGap,
   },
   empty: {
     alignItems: 'center',

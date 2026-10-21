@@ -28,12 +28,7 @@ export type OnboardingColors = {
   tileSelected: string;
   tileShadow: string | undefined;
   tileBadgeIcon: string;
-  // SignIn
-  appleBg: string;
-  appleText: string;
-  googleBg: string;
-  googleBorder: string;
-  googleText: string;
+  // SignIn (Apple/Google: ortak Button `apple` / `google`)
   legalText: string;
   legalLink: string;
   // Profile
@@ -44,8 +39,6 @@ export type OnboardingColors = {
   // InviteFriends
   linkBorder: string;
   linkText: string;
-  copyBg: string;
-  copyText: string;
   rowIconBg: string;
   // NotifPermission
   permissionBg: string;
@@ -71,11 +64,6 @@ export const onboardingColors: Record<'light' | 'dark', OnboardingColors> = {
     tileSelected: palette.actionGreen,
     tileShadow: 'rgba(36, 22, 63, 0.05)',
     tileBadgeIcon: palette.white,
-    appleBg: '#0B0B0F',
-    appleText: palette.white,
-    googleBg: palette.card,
-    googleBorder: palette.strongLine,
-    googleText: palette.nightPurple,
     legalText: palette.ink500,
     legalLink: palette.nightPurple,
     fieldBg: palette.card,
@@ -84,8 +72,6 @@ export const onboardingColors: Record<'light' | 'dark', OnboardingColors> = {
     availableText: palette.actionGreen,
     linkBorder: '#CFC3B6',
     linkText: palette.ink700,
-    copyBg: palette.nightPurple,
-    copyText: palette.sand,
     rowIconBg: palette.fill,
     permissionBg: palette.green50,
     previewBg: 'rgba(255, 255, 255, 0.85)',
@@ -109,12 +95,6 @@ export const onboardingColors: Record<'light' | 'dark', OnboardingColors> = {
     tileSelected: darkColors.action,
     tileShadow: undefined, // TodayDark: koyu kartlarda gölge yok
     tileBadgeIcon: darkColors.onAction,
-    // Apple yönergesi: koyu zeminde beyaz buton
-    appleBg: palette.white,
-    appleText: '#0B0B0F',
-    googleBg: darkColors.surface,
-    googleBorder: darkColors.border,
-    googleText: darkColors.text,
     legalText: darkColors.textSecondary,
     legalLink: darkColors.text,
     fieldBg: componentColors.dark.inputBg,
@@ -123,8 +103,6 @@ export const onboardingColors: Record<'light' | 'dark', OnboardingColors> = {
     availableText: darkColors.actionText,
     linkBorder: darkColors.border,
     linkText: darkColors.textBody,
-    copyBg: palette.sand, // koyu tost gibi ters renk
-    copyText: palette.darkBackground,
     rowIconBg: darkColors.surfaceMuted,
     permissionBg: darkColors.background,
     previewBg: darkColors.surface,
@@ -187,16 +165,12 @@ export const onboardingMetrics = {
   signInDikenMarginTop: 22,
   signInDikenSize: 184,
   signInDikenGap: 14,
-  pickedChipGap: 8,
-  pickedChipPaddingLeft: 10,
-  pickedChipPaddingRight: 14,
+  /** Seçilen challenge çipi (ortak Chip md, ikonla 8 14 8 10): soldaki tikli yeşil nokta */
   pickedChipDot: 22,
   pickedChipIconSize: 13,
   pickedChipIconStroke: 3.6,
   signInIntroMarginTop: 20,
   providerGap: 10,
-  providerHeight: 54,
-  providerBorder: 2,
   mailIconSize: 20,
   mailIconStroke: 2.2,
   legalMarginTop: 6,
@@ -204,13 +178,8 @@ export const onboardingMetrics = {
   // Profile
   avatarRowMarginTop: 22,
   avatarRowGap: 16,
+  /** Avatar 84; kamera rozeti ortak `componentMetrics.cameraBadge` */
   avatarSize: 84,
-  /** Kamera butonu: iç 36 + 2 × 3 kenar (tasarımda content-box) */
-  cameraSize: 42,
-  cameraBorder: 3,
-  cameraOffset: -4,
-  cameraIconSize: 16,
-  cameraIconStroke: 2.4,
   avatarTextGap: 2,
   fieldsMarginTop: 24,
   fieldsGap: 16,
@@ -244,15 +213,8 @@ export const onboardingMetrics = {
   linkPaddingLeft: 16,
   linkPaddingRight: 6,
   linkGap: 8,
-  copyHeight: 40,
-  copyPaddingX: 14,
-  copyRadius: 12,
-  copyGap: 6,
-  copyIconSize: 16,
-  copyIconStroke: 2.4,
+  /** Kopyala: ortak FriendRowButton ink lg wide; paylaşım butonları: ortak Button secondary mdCompact (ikon 20 / 2.2) */
   shareGap: 10,
-  shareHeight: 50,
-  shareRadius: 16,
   shareIconSize: 20,
   shareIconStroke: 2.2,
   listMarginTop: 16,

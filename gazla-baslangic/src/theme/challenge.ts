@@ -8,16 +8,7 @@ import { darkColors, lightColors, palette } from './colors';
 import { fonts } from './typography';
 
 export type ChallengeColors = {
-  // Üst çipler
-  durationChipBg: string;
-  durationChipText: string;
-  membersChipBg: string;
-  membersChipText: string;
-  reminderChipBg: string;
-  reminderChipText: string;
-  // İlerleme kartı
-  todayDoneChipBg: string;
-  todayDoneChipText: string;
+  // İlerleme kartı (üst çipler ve "Bugün tamam": ortak Chip xs — ink / challenge rengi / warning / muted / success)
   cellDone: string;
   cellSaved: string;
   cellSavedDrop: string;
@@ -36,14 +27,6 @@ export type ChallengeColors = {
 
 export const challengeColors: Record<'light' | 'dark', ChallengeColors> = {
   light: {
-    durationChipBg: palette.nightPurple,
-    durationChipText: palette.sand,
-    membersChipBg: palette.rescue,
-    membersChipText: '#9A3412',
-    reminderChipBg: lightColors.surfaceMuted,
-    reminderChipText: lightColors.textBody,
-    todayDoneChipBg: palette.green100,
-    todayDoneChipText: palette.pressedGreen,
     cellDone: palette.dikenGreen,
     cellSaved: palette.rescue,
     cellSavedDrop: palette.potOrange,
@@ -59,14 +42,6 @@ export const challengeColors: Record<'light' | 'dark', ChallengeColors> = {
     streakText: lightColors.actionText,
   },
   dark: {
-    durationChipBg: palette.sand,
-    durationChipText: palette.darkBackground,
-    membersChipBg: '#4A2A1E',
-    membersChipText: '#FFB891',
-    reminderChipBg: darkColors.surfaceMuted,
-    reminderChipText: darkColors.textBody,
-    todayDoneChipBg: '#16392A',
-    todayDoneChipText: palette.darkActionText,
     cellDone: palette.dikenGreen,
     cellSaved: '#4A2A1E',
     cellSavedDrop: '#FF7A3D',
@@ -84,13 +59,11 @@ export const challengeColors: Record<'light' | 'dark', ChallengeColors> = {
 };
 
 export const challengeMetrics = {
-  // Üst satır (geri/seçenekler: ortak IconButton, karo: ortak CategoryTile 56)
+  // Üst satır (geri/seçenekler: ortak IconButton, karo: ortak CategoryTile 56, çipler: ortak Chip xs)
   titleMarginTop: 14,
   titleGap: 14,
   chipsMarginTop: 12,
   chipsGap: 8,
-  chipPaddingY: 5,
-  chipPaddingX: 11,
 
   // İlerleme kartı
   progressMarginTop: 16,
@@ -98,11 +71,6 @@ export const challengeMetrics = {
   cardRadius: 24,
   cardGap: 12,
   dayGap: 8,
-  statusChipGap: 4,
-  statusChipPaddingY: 4,
-  statusChipPaddingX: 10,
-  statusIconSize: 14,
-  statusIconStroke: 3.2,
   gridColumns: 10,
   gridGap: 6,
   cellRadius: 9,
@@ -141,8 +109,6 @@ export const challengeMetrics = {
 export const challengeTypography = {
   /** Başlık · Baloo 2 800 · 25 · 1.05 */
   title: { fontFamily: fonts.heading, fontSize: 25, lineHeight: 25 * 1.05 },
-  /** Çip · Nunito 800 · 13 */
-  chip: { fontFamily: fonts.extraBold, fontSize: 13 },
   /** "Gün 12/30" · Baloo 2 800 · 22 · 1 */
   day: { fontFamily: fonts.heading, fontSize: 22, lineHeight: 22 },
   /** "18 gün kaldı" ve "Seriye göre" · Nunito 700 · 13 */

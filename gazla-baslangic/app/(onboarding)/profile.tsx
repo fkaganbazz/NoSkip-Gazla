@@ -78,7 +78,7 @@ export default function ProfileScreen() {
       footer={
         <>
           {error && (
-            <Text accessibilityLiveRegion="polite" style={[typography.meta, styles.error, { color: colors.danger }]}>
+            <Text accessibilityLiveRegion="polite" style={[typography.meta, styles.error, { color: colors.dangerText }]}>
               {error}
             </Text>
           )}

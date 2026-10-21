@@ -113,7 +113,7 @@ export default function InviteLandingScreen() {
 
       <View style={styles.actions}>
         {join.isError && (
-          <Text accessibilityLiveRegion="polite" style={[typography.meta, styles.center, { color: colors.danger }]}>
+          <Text accessibilityLiveRegion="polite" style={[typography.meta, styles.center, { color: colors.dangerText }]}>
             {join.error.message}
           </Text>
         )}

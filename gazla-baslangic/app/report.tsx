@@ -4,7 +4,7 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ClockIcon } from '@/components/icons';
-import { Button, Checkbox, IconButton, TextField } from '@/components/ui';
+import { Button, Checkbox, ScreenHeader, TextField } from '@/components/ui';
 import { useFriendProfile, useSubmitReportMutation, type ReportReason, type ReportTarget } from '@/data';
 import { toAccusative } from '@/features/friends/names';
 import ReasonList from '@/features/report/ReasonList';
@@ -80,13 +80,7 @@ export default function ReportScreen() {
     });
   };
 
-  const header = (
-    <View style={styles.header}>
-      <IconButton icon="close" accessibilityLabel="Kapat" onPress={close} />
-      <Text style={[componentTypography.button, styles.headerTitle, { color: colors.text }]}>Şikayet et</Text>
-      <View style={styles.headerSide} />
-    </View>
-  );
+  const header = <ScreenHeader title="Şikayet et" leading="close" onLeadingPress={close} size="compact" align="center" />;
 
   if (sent) {
     return (
@@ -134,6 +128,7 @@ export default function ReportScreen() {
             value={details}
             onChangeText={setDetails}
             placeholder="Ne olduğunu kısaca yaz"
+            size="sm"
             multiline
             maxLength={DETAILS_MAX}
             style={styles.detail}
@@ -163,7 +158,7 @@ export default function ReportScreen() {
             {submit.error && (
               <Text
                 accessibilityLiveRegion="polite"
-                style={[componentTypography.inputError, styles.error, { color: colors.danger }]}>
+                style={[componentTypography.inputError, styles.error, { color: colors.dangerText }]}>
                 {submit.error.message}
               </Text>
             )}
@@ -184,18 +179,6 @@ const styles = StyleSheet.create({
     paddingTop: layout.screenTopGap,
     paddingHorizontal: layout.screenPadding,
     paddingBottom: m.reportPaddingBottom,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: m.rowGap,
-  },
-  headerTitle: {
-    flex: 1,
-    textAlign: 'center',
-  },
-  headerSide: {
-    width: m.reportTitleSide,
   },
   intro: {
     marginTop: m.reportIntroMarginTop,

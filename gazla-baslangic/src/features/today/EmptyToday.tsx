@@ -55,7 +55,8 @@ export default function EmptyToday({ name }: Props) {
 
         <View style={styles.buttons}>
           <Button title="Challenge bul" onPress={() => router.navigate('/explore')} />
-          <Button title="Kendin oluştur" variant="secondary" onPress={() => router.push('/create')} />
+          {/* EmptyToday.dc.html: ikincil buton 54 */}
+          <Button title="Kendin oluştur" variant="secondary" size="lgCompact" onPress={() => router.push('/create')} />
         </View>
       </ScrollView>
     </SafeAreaView>

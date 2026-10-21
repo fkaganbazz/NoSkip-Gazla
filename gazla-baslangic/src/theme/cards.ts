@@ -38,9 +38,6 @@ export type CardColors = {
   /** "Gaz ver" yeşil hap */
   hypeBg: string;
   hypeText: string;
-  /** Koyu dolu satır butonu (Paylaş, Karşılık ver) */
-  inkButtonBg: string;
-  inkButtonText: string;
   /** Turuncu "Dürt" hapının alt gölgesi */
   pokeShadow: string;
   // Seri çipi
@@ -69,8 +66,6 @@ export const cardColors: Record<'light' | 'dark', CardColors> = {
     rowDivider: '#F4EDE5',
     hypeBg: palette.green100,
     hypeText: palette.pressedGreen,
-    inkButtonBg: palette.nightPurple,
-    inkButtonText: palette.sand,
     pokeShadow: palette.orange700,
     streakChipBg: palette.nightPurple,
     streakChipText: palette.sand,
@@ -91,13 +86,11 @@ export const cardColors: Record<'light' | 'dark', CardColors> = {
     ringDone: palette.dikenGreen,
     ringPending: componentColors.dark.pendingRing,
     ringInvite: '#5E4F82',
-    // Friends'in koyu tasarımı yok: ayraç koyu çizgi, "Gaz ver" koyu aksiyon hapı (TabBar koyu),
-    // koyu buton seçili çip gibi kum zemin + koyu metin
+    // Friends'in koyu tasarımı yok: ayraç koyu çizgi, "Gaz ver" koyu aksiyon hapı (TabBar koyu).
+    // Koyu satır butonu (ink) ortak `componentColors.inkButton*`: seçili çip gibi kum zemin + koyu metin.
     rowDivider: palette.darkLine,
     hypeBg: palette.darkActionTint,
     hypeText: palette.darkActionText,
-    inkButtonBg: palette.sand,
-    inkButtonText: palette.darkBackground,
     pokeShadow: palette.orange700,
     streakChipBg: '#0E2A1C',
     streakChipText: palette.green100,
@@ -114,6 +107,12 @@ const avatarRings = [
   { minSize: 52, width: 3, gap: 3 }, // Today, Components · 54
   { minSize: 44, width: 2, gap: 3 }, // Poke · 48
   { minSize: 0, width: 2, gap: 2 }, // Friends, Components · 40
+] as const;
+
+/** Ekle yuvasının artısı: Today "Davet et" 54 → 22 / 2.6, Create davet satırı 40 → 18 / 2.8 (Create.dc.html) */
+const addAvatarIcons = [
+  { minSize: 52, iconSize: 22, iconStrokeWidth: 2.6 },
+  { minSize: 0, iconSize: 18, iconStrokeWidth: 2.8 },
 ] as const;
 
 /** Tik rozeti: büyük avatarlarda Today (20 + 2 kenar, content-box, köşe 10), küçüklerde Friends (18, border-box) */
@@ -168,8 +167,7 @@ export const cardMetrics = {
   /** Davet halkası her ölçüde 2 px (Today "Davet et" · 54) */
   inviteRingWidth: 2,
   avatarBadges,
-  addIconSize: 22,
-  addIconStrokeWidth: 2.6,
+  addAvatarIcons,
   /** Yüz yığını: üst üste binme ve zemin renginde kenar */
   stackOverlap: -8,
   stackOutline: 2,
@@ -181,9 +179,20 @@ export const cardMetrics = {
   rowPaddingRight: 12,
   rowGap: 12,
   rowAvatar: 40,
+  /**
+   * Satır butonu (FriendRowButton): md 36 (Friends satırı, Activity), lg 40, 0 14, köşe 14 (Friends davet kartı
+   * "Paylaş"; InviteFriends "Kopyala" köşe 12). Activity'de iç boşluk 0 14 (`rowButtonPaddingXWide`).
+   */
   rowButtonHeight: 36,
+  rowButtonHeightLg: 40,
   rowButtonPaddingX: 12,
+  rowButtonPaddingXWide: 14,
   rowButtonRadius: 12,
+  rowButtonRadiusLg: 14,
+  /** İkon + metin (InviteFriends "Kopyala"): ikon 16 / 2.4, aralık 6 */
+  rowButtonIconSize: 16,
+  rowButtonIconStrokeWidth: 2.4,
+  rowButtonIconGap: 6,
   pillRadius: 18,
   pokePaddingX: 16,
   pokeShadow: 2,

@@ -3,9 +3,9 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { CategoryTile } from '@/components/CategoryTile';
 import { AddIcon } from '@/components/icons';
-import { Card } from '@/components/ui';
+import { Card, Chip } from '@/components/ui';
 import type { Template } from '@/data';
-import { borderWidth, cardMetrics, typography, useTheme } from '@/theme';
+import { borderWidth, useTheme } from '@/theme';
 import { exploreColors, exploreMetrics as m, exploreTypography } from '@/theme/explore';
 
 import { CATEGORY_NAMES, DIFFICULTY_NAMES } from './labels';
@@ -16,9 +16,6 @@ type Props = {
   /** Verilirse listenin sonunda "Kendin oluştur" satırı */
   onCreate?: () => void;
 };
-
-/** "Kendin oluştur" karosu: satırdaki kategori karosuyla aynı ölçü (ikonu challenge ikonu değil) */
-const ADD_TILE = cardMetrics.categoryTile[m.rowIconTile];
 
 // Popüler listesi: tek kartta ayraçlı satırlar (Explore.dc.html).
 export default function TemplateList({ templates, onOpen, onCreate }: Props) {
@@ -46,9 +43,13 @@ export default function TemplateList({ templates, onOpen, onCreate }: Props) {
                   {meta}
                 </Text>
               </View>
-              <View style={[styles.pill, { backgroundColor: c.durationPillBg }]}>
-                <Text style={[typography.smallStrong, { color: colors.text }]}>{`${t.defaultDurationDays} gün`}</Text>
-              </View>
+              {/* Süre hapı: dolgu zemin, ana metin (Explore.dc.html) */}
+              <Chip
+                size="xxs"
+                tint={{ bg: colors.surfaceMuted, ink: colors.text }}
+                label={`${t.defaultDurationDays} gün`}
+                style={styles.pill}
+              />
             </Pressable>
             {!last && <View style={[styles.divider, { backgroundColor: c.rowDivider }]} />}
           </Fragment>
@@ -59,9 +60,8 @@ export default function TemplateList({ templates, onOpen, onCreate }: Props) {
           onPress={onCreate}
           accessibilityRole="button"
           style={({ pressed }) => [styles.row, pressed && { backgroundColor: colors.surfaceMuted }]}>
-          <View style={[styles.addTile, { backgroundColor: colors.actionTint }]}>
-            <AddIcon color={colors.actionText} size={ADD_TILE.iconSize} strokeWidth={cardMetrics.categoryTileStrokeWidth} />
-          </View>
+          {/* "Kendin oluştur": satırdaki kategori karosuyla aynı ölçü, aksiyon yeşili tonunda artı */}
+          <CategoryTile icon={AddIcon} tint={{ bg: colors.actionTint, ink: colors.actionText }} size={m.rowIconTile} />
           <View style={styles.texts}>
             <Text style={[exploreTypography.rowTitle, { color: colors.actionText }]}>Kendin oluştur</Text>
           </View>
@@ -83,21 +83,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: m.rowGap,
   },
-  addTile: {
-    width: m.rowIconTile,
-    height: m.rowIconTile,
-    borderRadius: ADD_TILE.radius,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   texts: {
     flex: 1,
     minWidth: 0,
   },
   pill: {
-    paddingVertical: m.durationPillPaddingY,
-    paddingHorizontal: m.durationPillPaddingX,
-    borderRadius: m.durationPillRadius,
+    flexShrink: 0,
   },
   divider: {
     height: borderWidth.thin,

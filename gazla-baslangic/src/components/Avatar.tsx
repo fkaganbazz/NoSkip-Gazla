@@ -8,7 +8,7 @@ import { Image, StyleSheet, Text, View, type StyleProp, type TextStyle, type Vie
 
 import { AddIcon, CheckIcon } from '@/components/icons';
 import type { AvatarTintKey } from '@/data/types';
-import { avatarInitialStyle, avatarTints, cardColors, cardMetrics as m, useTheme } from '@/theme';
+import { avatarInitialStyle, avatarTints, cardColors, cardMetrics as m, selfAvatarTints, useTheme } from '@/theme';
 
 /** Türkçe büyük harf (i → İ, ı → I); Intl'e bağlı kalmadan */
 export const upperTr = (ch: string) => (ch === 'i' ? 'İ' : ch === 'ı' ? 'I' : ch.toUpperCase());
@@ -21,6 +21,8 @@ export type AvatarProps = {
   name: string;
   /** Fotoğraf yokken zemin/harf rengi (avatarTints) */
   tint: AvatarTintKey;
+  /** Kullanıcının kendi avatarı (Profile, Settings, Garden, Detail "Sen"): şeftali tonu #FFE3D2 (`selfAvatarTints`) */
+  self?: boolean;
   url?: string | null;
   /** Dış ölçü, halka ve kenar dahil · varsayılan 40 */
   size?: number;
@@ -49,6 +51,7 @@ export type AvatarProps = {
 export function Avatar({
   name,
   tint,
+  self = false,
   url,
   size = m.avatarSize,
   ring,
@@ -66,7 +69,7 @@ export function Avatar({
 }: AvatarProps) {
   const { colors, scheme } = useTheme();
   const c = cardColors[scheme];
-  const t = avatarTints[tint][scheme];
+  const t = (self ? selfAvatarTints : avatarTints)[tint][scheme];
 
   const ringSpec = m.avatarRings.find((r) => size >= r.minSize) ?? m.avatarRings[m.avatarRings.length - 1];
   const rw = ring ? (ringWidth ?? (ring === 'invite' ? m.inviteRingWidth : ringSpec.width)) : 0;
@@ -136,9 +139,10 @@ function DoneBadge({ size, borderColor }: { size: number; borderColor: string })
   );
 }
 
-/** Boş davet yuvası: kesikli gri halka ve artı (Today "Davet et") */
+/** Boş davet yuvası: kesikli gri halka ve artı (Today "Davet et" 54, Create davet satırı 40; artı ölçüye göre) */
 export function AddAvatar({ size = m.bubbleAvatar, style }: { size?: number; style?: StyleProp<ViewStyle> }) {
   const { colors, scheme } = useTheme();
+  const icon = m.addAvatarIcons.find((x) => size >= x.minSize) ?? m.addAvatarIcons[m.addAvatarIcons.length - 1];
   return (
     <View
       accessibilityElementsHidden
@@ -154,7 +158,7 @@ export function AddAvatar({ size = m.bubbleAvatar, style }: { size?: number; sty
         },
         style,
       ]}>
-      <AddIcon color={colors.textSecondary} size={m.addIconSize} strokeWidth={m.addIconStrokeWidth} />
+      <AddIcon color={colors.textSecondary} size={icon.iconSize} strokeWidth={icon.iconStrokeWidth} />
     </View>
   );
 }

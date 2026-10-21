@@ -2,14 +2,21 @@ import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Chip, ErrorState, LoadingState, ScreenHeader, SectionLabel, ToastHost, useToast } from '@/components/ui';
+import { Chip, ErrorState, LoadingState, ScreenHeader, SectionLabel, ToastHost, useToast, type ChipTone } from '@/components/ui';
 import { useMySettings, useUpdateSettingsMutation, type SettingsUpdate } from '@/data';
 import { DEFAULT_REMINDER, REMINDER_OPTIONS, errorText, formatTime } from '@/features/settings/logic';
 import { NOTIFICATION_COPY, NOTIFICATION_RULES, type RuleTone } from '@/features/settings/notificationCopy';
 import OptionSheet from '@/features/settings/OptionSheet';
 import { LinkRow, SettingsGroup, ToggleRow } from '@/features/settings/rows';
-import { borderWidth, layout, useTheme } from '@/theme';
+import { borderWidth, layout, useTheme, type ChallengeTint } from '@/theme';
 import { settingsColors, settingsMetrics as m, settingsTypography as t } from '@/theme/settings';
+
+/** Kural çipinin rengi: gece moru (ink), lila (challenge rengi), şeftali (warning) */
+const RULE_CHIP: Record<RuleTone, { tone?: ChipTone; tint?: ChallengeTint }> = {
+  strong: { tone: 'ink' },
+  lilac: { tint: 'lilac' },
+  peach: { tone: 'warning' },
+};
 
 // Bildirimler — design/Notifications.dc.html (kurallar ve metinler) + Settings.dc.html satır dili.
 // Tercihler user_settings: dürtme bildirimi ve günlük hatırlatma saati. Sessiz saat kuralı sunucuda.
@@ -25,9 +32,6 @@ export default function NotificationsScreen() {
   const save = (u: SettingsUpdate) => update.mutate(u, { onError: (e) => toast.show({ message: errorText(e) }) });
   const top = { paddingTop: insets.top + layout.screenTopGap };
 
-  // Kural çipleri ortak Chip: koyu olan seçili çip görünümü. Lila/şeftali tonu Chip'te yok; şimdilik yalnızca
-  // zemin rengi verilir (metin rengi ortak bileşene ton eklenince tasarımdaki gibi olacak).
-  const chipTint: Record<RuleTone, string | null> = { strong: null, lilac: c.ruleChipLilacBg, peach: c.ruleChipPeachBg };
 
   if (settings.isPending || settings.isError) {
     return (
@@ -47,17 +51,10 @@ export default function NotificationsScreen() {
         <ScreenHeader title="Bildirimler" />
 
         <View style={styles.chips}>
-          {NOTIFICATION_RULES.map((r) => {
-            const tint = chipTint[r.tone];
-            return (
-              <Chip
-                key={r.label}
-                label={r.label}
-                selected={!tint}
-                style={tint ? { backgroundColor: tint, borderColor: tint } : undefined}
-              />
-            );
-          })}
+          {/* Kural çipleri (Notifications.dc.html): gece moru, lila, şeftali */}
+          {NOTIFICATION_RULES.map((r) => (
+            <Chip key={r.label} label={r.label} {...RULE_CHIP[r.tone]} />
+          ))}
         </View>
 
         <SectionLabel style={styles.section}>TERCİHLER</SectionLabel>

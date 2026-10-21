@@ -115,7 +115,7 @@ export default function ActionSheet({
             {!!confirm.error && (
               <Text
                 accessibilityLiveRegion="polite"
-                style={[componentTypography.inputError, styles.center, { color: colors.danger }]}>
+                style={[componentTypography.inputError, styles.center, { color: colors.dangerText }]}>
                 {confirm.error}
               </Text>
             )}
@@ -139,7 +139,8 @@ export default function ActionSheet({
               </Text>
             )}
             {items.map((item, i) => {
-              const color = item.danger ? colors.danger : colors.text;
+              // Kırmızı satır metni: koyuda okunur ton (colors.dangerText)
+              const color = item.danger ? colors.dangerText : colors.text;
               const Icon = item.icon;
               return (
                 <Pressable
