@@ -18,7 +18,7 @@ const DESIGN: Row[] = [
 const SCREENS: Row[] = [
   { href: '/challenge/c-phone', title: 'Detail', detail: 'challenge/[id] · Telefonsuz sabah' },
   { href: '/challenge/g-okuma/finished', title: 'Finished', detail: 'challenge/[id]/finished · Bahçem: 30 gün okuma' },
-  { href: '/challenge/c-phone/share', title: 'ShareCard', detail: 'challenge/[id]/share' },
+  { href: '/dev/share-card', title: 'ShareCard', detail: 'Ekran değil: Finished "Story\'de paylaş" görseli · önizleme ve PNG paylaşımı' },
   { href: '/completion', title: 'Completion', detail: 'Günün hepsi bitti anı' },
   { href: '/streak-lost', title: 'StreakLost', detail: 'Seri koptu, kurtarma' },
   { href: '/ad-consent', title: 'AdConsent', detail: 'Reklam izni' },

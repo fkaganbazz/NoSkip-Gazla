@@ -218,7 +218,10 @@ export const momentsMetrics = {
   cardSubTop: 8,
   handlePaddingY: 10,
   handlePaddingX: 18,
-  /** Önizleme kartının ekrandaki köşesi (paylaşılan görselde köşe yok) */
+  /** Görsel çıktı (EKRANLAR 2.7): 360×640 tasarım = 1080×1920 PNG (3 kat) */
+  shareImageWidth: 1080,
+  shareImageHeight: 1920,
+  /** Geliştirme önizlemesi (/dev/share-card): kartın ekrandaki köşesi (paylaşılan görselde köşe yok) */
   previewRadius: 22,
   previewGap: 16,
 
@@ -247,6 +250,35 @@ export const momentsMetrics = {
   adBadgePaddingY: 3,
   adBadgePaddingX: 8,
   adBadgeRadius: 8,
+} as const;
+
+// Hareket (Completion) --------------------------------------------------------------------------------
+
+/**
+ * Tamamlama anı: Diken aşağıdan küçülmüş gelir, iki kez hafifçe zıplar; konfeti ilk zıplamayla
+ * yukarıdan süzülerek belirir. Tasarımda hareket yok — hepsi bitince görünüm tasarımla birebir.
+ * "Hareketi azalt" açıksa hiçbiri oynamaz.
+ */
+export const momentsMotion = {
+  /** Başlamadan önce bir kare bekle (ilk karede zaman sapması sıçrama yapmasın) */
+  startDelayMs: 32,
+  /** Giriş: aşağıdan (px) ve küçükten (ölçek) saksının altından büyüyerek */
+  enterOffset: 24,
+  enterScale: 0.88,
+  enterDurationMs: 320,
+  /** Zıplama: yükseklik (px), çıkış/iniş süresi, sayısı ve aralarındaki bekleme */
+  hopHeight: 14,
+  hopUpMs: 170,
+  hopDownMs: 230,
+  hopCount: 2,
+  hopGapMs: 70,
+  /** İnişte saksı hafifçe basılır (dikey ölçek) */
+  landSquash: 0.96,
+  landSquashMs: 90,
+  /** Konfeti girişin sonunda, ilk zıplamayla birlikte belirir ve bu kadar (px) yukarıdan iner */
+  confettiDelayMs: 320,
+  confettiDurationMs: 600,
+  confettiDrop: 14,
 } as const;
 
 // Yazı ------------------------------------------------------------------------------------------------

@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Diken from '@/components/Diken';
 import { ChevronRightIcon, ShareIcon } from '@/components/icons';
-import { Button, Card, ErrorState, IconButton, LoadingState } from '@/components/ui';
+import { Button, Card, ErrorState, IconButton, LoadingState, ToastHost, useToast } from '@/components/ui';
 import {
   useAuth,
   useChallenge,
@@ -16,6 +16,7 @@ import {
   useMyMembership,
 } from '@/data';
 import Confetti from '@/features/moments/Confetti';
+import { ShareCardCapture, storyShareMessage, useStoryShare } from '@/features/moments/StoryShare';
 import { finishedColors, momentsMetrics as m, momentsTypography as t } from '@/theme/moments';
 import { componentMetrics as cm, layout, radius, useTheme } from '@/theme';
 
@@ -26,6 +27,9 @@ const DESIGN_TOP = 56;
 // (src/theme/moments.ts). Sonuçlar sunucunun yazdığı üyelik satırından (final_*), yoksa
 // challenge_board ve takvimden okunur. Açılınca "görüldü" işaretlenir (Bugün açılışında bir daha gelmez);
 // challenge sunucuya göre bitmemişse "bitirdin" demez, detaya geçer.
+// "Story'de paylaş": ShareCard ekranın arkasında çizili durur, 1080×1920 PNG'ye çevrilip sistem paylaşım
+// sayfasında açılır (EKRANLAR 2.7; src/features/moments/StoryShare.tsx). Web'de PNG indirilir/paylaşılır;
+// görsel üretilemezse metin paylaşılır.
 export default function FinishedScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -33,7 +37,9 @@ export default function FinishedScreen() {
   const { width } = useWindowDimensions();
   const { colors, scheme } = useTheme();
   const c = finishedColors[scheme];
-  const { session } = useAuth();
+  const { session, profile } = useAuth();
+  const story = useStoryShare();
+  const toast = useToast();
 
   const challenge = useChallenge(id);
   const board = useChallengeBoard(id);
@@ -104,9 +110,25 @@ export default function FinishedScreen() {
   const dx = (width - DESIGN_WIDTH) / 2;
   const dy = top - DESIGN_TOP;
 
+  const card = {
+    durationDays: ch.durationDays,
+    title: ch.title,
+    name: profile?.displayName ?? '',
+    username: profile?.username ?? '',
+    stage,
+  };
+  const shareStory = async () => {
+    const result = await story.share({ fileBase: ch.title, fallbackMessage: storyShareMessage(card) });
+    if (result === 'downloaded') toast.show({ message: 'Paylaşım görseli indirildi.', kind: 'success' });
+    else if (result === 'error') toast.show({ message: 'Paylaşım açılamadı. Tekrar dene.' });
+  };
+
   return (
     <View style={[styles.screen, { backgroundColor: c.bg }]}>
+      {/* Paylaşılacak kart: içeriğin arkasında (ScrollView opak zeminle örter) */}
+      <ShareCardCapture story={story} {...card} />
       <ScrollView
+        style={{ backgroundColor: c.bg }}
         contentContainerStyle={[
           styles.content,
           { paddingTop: top, paddingBottom: Math.max(m.bottomPadding, insets.bottom) },
@@ -165,11 +187,14 @@ export default function FinishedScreen() {
           <Button
             title="Story'de paylaş"
             icon={(color) => <ShareIcon color={color} size={cm.buttonIconSize} strokeWidth={cm.buttonIconStroke} />}
-            onPress={() => router.push({ pathname: '/challenge/[id]/share', params: { id: ch.id } })}
+            loading={story.busy}
+            accessibilityLabel={story.busy ? 'Paylaşım görseli hazırlanıyor' : undefined}
+            onPress={shareStory}
           />
           <Button title="Yeni challenge seç" variant="text" onPress={() => router.navigate('/explore')} />
         </View>
       </ScrollView>
+      <ToastHost toast={toast} />
     </View>
   );
 }

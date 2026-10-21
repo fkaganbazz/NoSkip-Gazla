@@ -98,7 +98,6 @@ function RootNavigator() {
           />
           <Stack.Screen name="challenge/[id]/index" />
           <Stack.Screen name="challenge/[id]/finished" options={{ presentation: 'fullScreenModal' }} />
-          <Stack.Screen name="challenge/[id]/share" options={{ presentation: 'fullScreenModal' }} />
           <Stack.Screen name="checkin/number/[id]" options={SHEET} />
           <Stack.Screen name="checkin/photo/[id]" options={{ presentation: 'fullScreenModal' }} />
           <Stack.Screen name="completion" options={{ presentation: 'fullScreenModal', animation: 'fade' }} />

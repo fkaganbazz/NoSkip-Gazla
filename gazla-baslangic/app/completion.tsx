@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
-import { useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AvatarStack } from '@/components/Avatar';
@@ -11,6 +12,8 @@ import { accusative, joinNames } from '@/features/challenge/logic';
 import Confetti from '@/features/moments/Confetti';
 import { alsoParticle, weekCells } from '@/features/moments/logic';
 import StreakCard from '@/features/moments/StreakCard';
+import { useCelebrationMotion } from '@/features/moments/useCelebrationMotion';
+import { successHaptic } from '@/media/haptics';
 import { celebrationColors as c, momentsMetrics as m, momentsTypography as t } from '@/theme/moments';
 import { layout } from '@/theme';
 
@@ -22,6 +25,8 @@ const DESIGN_TOP = 56;
 // Veri: my_streak (seri), my_recent_days (son 7 gün), friends_today (bitiren / bekleyen arkadaşlar).
 // Koyu tasarımı yok; yeşil kutlama zemini iki modda aynı. İlk tamamlanan günden sonra kapatınca bir kez
 // reklam izni ön ekranı açılır (EKRANLAR 6.2; cihazdaki adConsentShown bayrağı).
+// Açılışta hafif "başarılı" titreşimi (expo-haptics; web'de yok) ve Diken'in giriş zıplaması + konfeti
+// (reanimated; "hareketi azalt" açıksa durağan). Hareket bitince görünüm tasarımla birebir.
 export default function CompletionScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -29,6 +34,15 @@ export default function CompletionScreen() {
   const streak = useStreak();
   const recent = useRecentDays(7);
   const friends = useFriendsToday();
+  const { dikenStyle, confettiStyle } = useCelebrationMotion();
+
+  // Açılışta bir kez titreşim
+  const buzzed = useRef(false);
+  useEffect(() => {
+    if (buzzed.current) return;
+    buzzed.current = true;
+    successHaptic();
+  }, []);
 
   const week = useMemo(() => weekCells(recent.data ?? []), [recent.data]);
   const done = (friends.data ?? []).filter((f) => f.doneToday === true);
@@ -85,17 +99,17 @@ export default function CompletionScreen() {
             { left: m.ringInnerLeft + dx, top: m.ringInnerTop + dy, width: m.ringInner, height: m.ringInner, borderRadius: m.ringInner / 2, backgroundColor: c.ringInner },
           ]}
         />
-        <View style={[styles.confetti, { top: dy }]}>
+        <Animated.View style={[styles.confetti, { top: dy }, confettiStyle]}>
           <Confetti variant="completion" left={dx} />
-        </View>
+        </Animated.View>
 
         <View style={styles.closeRow}>
           <IconButton icon="close" tone="onBrand" accessibilityLabel="Kapat" onPress={finish} />
         </View>
 
-        <View style={styles.diken}>
+        <Animated.View style={[styles.diken, dikenStyle]}>
           <Diken mood="cosku" stage="tam" gear="bant" size={m.completionDiken} />
-        </View>
+        </Animated.View>
 
         <View style={styles.texts}>
           <Text accessibilityRole="header" style={[t.completionTitle, styles.center, { color: c.text }]}>
@@ -164,6 +178,8 @@ const styles = StyleSheet.create({
   diken: {
     marginTop: m.completionDikenTop,
     alignItems: 'center',
+    // Zıplamada ölçek saksının tabanından (yere basar)
+    transformOrigin: 'bottom',
   },
   texts: {
     marginTop: m.completionTextTop,

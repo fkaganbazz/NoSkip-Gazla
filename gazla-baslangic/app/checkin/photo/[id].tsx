@@ -2,26 +2,44 @@ import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useMemo, useState } from 'react';
-import { Image, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Image,
+  KeyboardAvoidingView,
+  Linking,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CameraIcon, ChevronRightIcon, LockIcon, SendIcon } from '@/components/icons';
 import { Button, ErrorState, IconButton, LoadingState, TextField } from '@/components/ui';
 import { useCheckinMutation, useToday, useUndoCheckinMutation } from '@/data';
+import CameraPane from '@/features/checkin/CameraPane';
 import GroupSheet from '@/features/checkin/GroupSheet';
 import { formatClock } from '@/features/checkin/logic';
+import { useCameraAccess, type CameraAccessState } from '@/media/camera';
+import { compressImage } from '@/media/compressImage';
 import { componentMetrics, layout, radius, typography } from '@/theme';
 import { photoProofColors as c, photoProofMetrics as m, photoProofTypography as t } from '@/theme/checkin';
 
 type Picked = { uri: string; fromCamera: boolean; takenAt: Date };
-type CameraBlock = null | 'denied' | 'blocked';
 
-// Web'de kamera yok: yalnızca galeriden seçilir.
-const CAN_USE_CAMERA = Platform.OS !== 'web';
+const IS_WEB = Platform.OS === 'web';
 
 // Fotoğraf kanıtı — design/PhotoProof.dc.html (yalnızca koyu çizilmiş; açık modda da koyu).
-// Seçilen dosya useCheckinMutation'a verilir; veri katmanı önce Storage'a yükler, sonra checkin çağırır.
-// Gün zaten gönderildiyse çerçevede gönderilen fotoğraf durur (dokununca yenisi seçilir, "Gönder" değiştirir);
+// Önce canlı kamera (expo-camera; çerçevenin içinde deklanşör ve ön/arka geçiş), çekimden sonra tasarımdaki
+// önizleme: foto, "Bugün · SS:DD", not, "Kimler görecek", "Tekrar çek" ve "Gönder". Kamera izni istenmediyse
+// ekran açılınca istenir; reddedildiyse yeniden isteme ya da Ayarlar bağlantısı; galeriden seçme her zaman açık.
+// Kamera yoksa (web'de kamera bulunamadı, simülatör) yalnızca galeri.
+// Gönder: görsel küçültülür (uzun kenar 1080, JPEG %80) ve useCheckinMutation'a verilir; veri katmanı önce
+// Storage'a yükler, sonra checkin çağırır (çevrimdışıysa dosyayı kuyruğa kopyalar). Küçültme + yükleme
+// boyunca buton yükleniyor.
+// Gün zaten gönderildiyse çerçevede gönderilen fotoğraf durur ("Tekrar çek" kamerayı açar, "Gönder" değiştirir);
 // altta "Bugünü geri al" (tasarımda yok) kaydı siler (Bugün'deki sağ buton fotoğraf tipinde bu ekranı açar).
 export default function PhotoProofScreen() {
   const { id, date } = useLocalSearchParams<{ id: string; date?: string }>();
@@ -29,6 +47,7 @@ export default function PhotoProofScreen() {
   const today = useToday();
   const checkin = useCheckinMutation();
   const undo = useUndoCheckinMutation();
+  const camera = useCameraAccess();
 
   const task = useMemo(
     () => today.data?.find((x) => x.challengeId === id && (!date || x.localDate === date)),
@@ -36,32 +55,19 @@ export default function PhotoProofScreen() {
   );
   const [photo, setPhoto] = useState<Picked | null>(null);
   const [note, setNote] = useState('');
-  const [cameraBlock, setCameraBlock] = useState<CameraBlock>(null);
+  // Gönderilmiş fotoğrafın yerine kamera açıldı mı
+  const [retaking, setRetaking] = useState(false);
+  // Kamera açılamadı (CameraView onMountError): galeriye düş
+  const [cameraFailed, setCameraFailed] = useState(false);
   const [pickError, setPickError] = useState<string | null>(null);
+  const [compressing, setCompressing] = useState(false);
   const [groupOpen, setGroupOpen] = useState(false);
-
-  const takePhoto = async () => {
-    setPickError(null);
-    try {
-      const permission = await ImagePicker.requestCameraPermissionsAsync();
-      if (!permission.granted) {
-        setCameraBlock(permission.canAskAgain ? 'denied' : 'blocked');
-        return;
-      }
-      setCameraBlock(null);
-      const result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: m.pickQuality });
-      if (!result.canceled && result.assets[0]) {
-        setPhoto({ uri: result.assets[0].uri, fromCamera: true, takenAt: new Date() });
-      }
-    } catch {
-      setPickError('Kamera açılamadı. Galeriden seçebilirsin.');
-    }
-  };
 
   const pickFromLibrary = async () => {
     setPickError(null);
     try {
-      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: m.pickQuality });
+      // Tam kalite; küçültme "Gönder"de
+      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'] });
       if (!result.canceled && result.assets[0]) {
         setPhoto({ uri: result.assets[0].uri, fromCamera: false, takenAt: new Date() });
       }
@@ -70,13 +76,20 @@ export default function PhotoProofScreen() {
     }
   };
 
-  const primaryPick = CAN_USE_CAMERA ? takePhoto : pickFromLibrary;
-
-  const send = () => {
-    if (!task || !photo) return;
+  const send = async () => {
+    if (!task || !photo || compressing) return;
     undo.reset();
+    setPickError(null);
+    setCompressing(true);
+    let uri = photo.uri;
+    try {
+      uri = (await compressImage(photo.uri, { maxEdge: m.uploadMaxEdge, quality: m.uploadQuality })).uri;
+    } catch {
+      // Küçültülemedi (bozuk/desteklenmeyen dosya): özgün dosya gönderilir
+    }
+    setCompressing(false);
     checkin.mutate(
-      { challengeId: task.challengeId, localDate: task.localDate, photoFileUri: photo.uri, note: note.trim() || undefined },
+      { challengeId: task.challengeId, localDate: task.localDate, photoFileUri: uri, note: note.trim() || undefined },
       { onSuccess: () => router.back() },
     );
   };
@@ -99,17 +112,28 @@ export default function PhotoProofScreen() {
     );
   }
 
-  const leftTitle = photo
-    ? photo.fromCamera
-      ? 'Tekrar çek'
-      : 'Başka seç'
-    : CAN_USE_CAMERA
-      ? 'Galeriden seç'
-      : 'Fotoğraf seç';
-  const leftAction = photo ? (photo.fromCamera ? takePhoto : pickFromLibrary) : pickFromLibrary;
+  // Canlı kamera kullanılabilir mi (izin durumu ayrı: çerçeve izin akışını gösterir)
+  const cameraCapable = camera.state !== 'unavailable' && !cameraFailed;
+  // Bugün gönderilmiş kanıt (yeni fotoğraf çekilene/seçilene kadar çerçevede)
+  const sentUri = !photo && !retaking && task.done ? task.photoUrl : null;
+  const showCamera = !photo && !sentUri && cameraCapable;
+
+  const retake = () => {
+    setPickError(null);
+    if (cameraCapable) {
+      setPhoto(null);
+      setRetaking(true);
+    } else {
+      pickFromLibrary();
+    }
+  };
+
+  // Sol buton: önizlemede / gönderilmiş fotoğrafta "Tekrar çek" (kamera yoksa "Başka seç"), kamerada galeri
+  const leftTitle =
+    photo || sentUri ? (cameraCapable ? 'Tekrar çek' : 'Başka seç') : cameraCapable ? 'Galeriden seç' : 'Fotoğraf seç';
+  const leftAction = photo || sentUri ? retake : pickFromLibrary;
+  const sending = compressing || checkin.isPending;
   const error = pickError ?? checkin.error?.message ?? undo.error?.message ?? null;
-  // Bugün gönderilmiş kanıt (yeni fotoğraf seçilene kadar çerçevede)
-  const sentUri = !photo && task.done ? task.photoUrl : null;
   // Geri alma sürerken de görünür (iyimser güncelleme görevi hemen "yapılmadı" yapar)
   const canUndo = task.done || undo.isPending;
   const undoDay = () => {
@@ -141,7 +165,7 @@ export default function PhotoProofScreen() {
                 style={styles.photo}
                 resizeMode="cover"
                 accessible
-                accessibilityLabel="Seçtiğin fotoğraf"
+                accessibilityLabel={photo.fromCamera ? 'Çektiğin fotoğraf' : 'Seçtiğin fotoğraf'}
               />
               {photo.fromCamera && (
                 <View style={[styles.stamp, { backgroundColor: c.stampBg }]}>
@@ -151,32 +175,34 @@ export default function PhotoProofScreen() {
             </View>
           ) : sentUri ? (
             <Pressable
-              onPress={primaryPick}
+              onPress={retake}
               accessibilityRole="button"
-              accessibilityLabel={`Bugün gönderdiğin fotoğraf. ${CAN_USE_CAMERA ? 'Yenisini çek' : 'Yenisini seç'}`}
+              accessibilityLabel={`Bugün gönderdiğin fotoğraf. ${cameraCapable ? 'Yenisini çek' : 'Yenisini seç'}`}
               style={[styles.frame, { backgroundColor: c.frameBg }]}>
               <Image source={{ uri: sentUri }} style={styles.photo} resizeMode="cover" />
             </Pressable>
+          ) : showCamera && camera.state === 'granted' ? (
+            <CameraPane
+              onCapture={(shot) => {
+                setPickError(null);
+                setPhoto({ uri: shot.uri, fromCamera: true, takenAt: new Date() });
+              }}
+              onMountError={() => {
+                setCameraFailed(true);
+                setPickError('Kamera açılamadı. Galeriden seçebilirsin.');
+              }}
+              onCaptureError={() => setPickError('Fotoğraf çekilemedi. Tekrar dene.')}
+            />
+          ) : showCamera ? (
+            <PermissionFrame state={camera.state} requesting={camera.requesting} onRequest={camera.request} />
           ) : (
             <Pressable
-              onPress={primaryPick}
+              onPress={pickFromLibrary}
               accessibilityRole="button"
-              accessibilityLabel={CAN_USE_CAMERA ? 'Fotoğraf çek' : 'Fotoğraf seç'}
+              accessibilityLabel="Fotoğraf seç"
               style={[styles.frame, styles.emptyFrame, { backgroundColor: c.emptyFrameBg, borderColor: c.emptyFrameBorder }]}>
               <CameraIcon color={c.textSecondary} size={m.emptyIconSize} strokeWidth={m.emptyIconStrokeWidth} />
-              <Text style={[t.emptyLabel, { color: c.text }]}>{CAN_USE_CAMERA ? 'Fotoğraf çek' : 'Fotoğraf seç'}</Text>
-              {cameraBlock && (
-                <Text style={[t.row, styles.centerText, { color: c.textSecondary }]}>
-                  {cameraBlock === 'blocked'
-                    ? 'Kamera izni kapalı. Ayarlar’dan açabilir ya da galeriden seçebilirsin.'
-                    : 'Fotoğraf çekmek için kamera izni gerekiyor. Galeriden de seçebilirsin.'}
-                </Text>
-              )}
-              {cameraBlock === 'blocked' && (
-                <Pressable onPress={() => Linking.openSettings()} accessibilityRole="button" hitSlop={8} style={styles.link}>
-                  <Text style={[t.rowStrong, { color: c.action }]}>Ayarları aç</Text>
-                </Pressable>
-              )}
+              <Text style={[t.emptyLabel, { color: c.text }]}>Fotoğraf seç</Text>
             </Pressable>
           )}
 
@@ -214,14 +240,23 @@ export default function PhotoProofScreen() {
             )}
             {/* Ekran iki modda koyu: butonlar koyu temayla (scheme="dark"); tasarımda 56 yükseklik, 16 yazı */}
             <View style={styles.buttons}>
-              <Button scheme="dark" variant="onDark" size="md" title={leftTitle} onPress={leftAction} style={styles.button} />
+              <Button
+                scheme="dark"
+                variant="onDark"
+                size="md"
+                title={leftTitle}
+                onPress={leftAction}
+                disabled={sending}
+                style={styles.button}
+              />
               <Button
                 scheme="dark"
                 size="md"
                 title="Gönder"
                 onPress={send}
                 disabled={!photo || undo.isPending}
-                loading={checkin.isPending}
+                loading={sending}
+                accessibilityLabel={sending ? 'Gönderiliyor' : 'Gönder'}
                 icon={(color) => (
                   <SendIcon color={color} size={componentMetrics.buttonIconSize} strokeWidth={componentMetrics.buttonIconStroke} />
                 )}
@@ -236,7 +271,7 @@ export default function PhotoProofScreen() {
                 title="Bugünü geri al"
                 onPress={undoDay}
                 loading={undo.isPending}
-                disabled={checkin.isPending}
+                disabled={sending}
                 accessibilityHint="Bugünkü fotoğraf kanıtı silinir, görev yapılmadı olur"
               />
             )}
@@ -245,6 +280,59 @@ export default function PhotoProofScreen() {
       </KeyboardAvoidingView>
       <GroupSheet visible={groupOpen} challengeId={task.challengeId} onClose={() => setGroupOpen(false)} />
     </SafeAreaView>
+  );
+}
+
+/**
+ * Kamera izni çerçevesi: denetlenirken / istenirken (yükleniyor), sorulmadı ya da reddedildi (izin iste),
+ * kalıcı reddedildi (Ayarlar; web'de tarayıcı ayarları). Galeri sol butonda her zaman açık.
+ */
+function PermissionFrame({
+  state,
+  requesting,
+  onRequest,
+}: {
+  state: CameraAccessState;
+  requesting: boolean;
+  onRequest: () => void;
+}) {
+  if (state === 'checking' || requesting) {
+    return (
+      <View
+        accessible
+        accessibilityLabel="Kamera hazırlanıyor"
+        style={[styles.frame, styles.emptyFrame, { backgroundColor: c.emptyFrameBg, borderColor: c.emptyFrameBorder }]}>
+        <ActivityIndicator color={c.text} />
+      </View>
+    );
+  }
+
+  const blocked = state === 'blocked';
+  const canOpenSettings = blocked && !IS_WEB;
+  const message = blocked
+    ? IS_WEB
+      ? 'Kamera izni kapalı. Tarayıcı ayarlarından açabilir ya da galeriden seçebilirsin.'
+      : 'Kamera izni kapalı. Ayarlar’dan açabilir ya da galeriden seçebilirsin.'
+    : 'Fotoğraf çekmek için kamera izni gerekiyor. Galeriden de seçebilirsin.';
+  const action = blocked ? (canOpenSettings ? 'Ayarları aç' : null) : 'İzin ver';
+  const onPress = blocked ? (canOpenSettings ? () => Linking.openSettings() : undefined) : onRequest;
+
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={!onPress}
+      accessibilityRole={onPress ? 'button' : undefined}
+      accessibilityLabel={action ? `${message} ${action}` : message}
+      style={[styles.frame, styles.emptyFrame, { backgroundColor: c.emptyFrameBg, borderColor: c.emptyFrameBorder }]}>
+      <CameraIcon color={c.textSecondary} size={m.emptyIconSize} strokeWidth={m.emptyIconStrokeWidth} />
+      <Text style={[t.emptyLabel, { color: c.text }]}>Fotoğraf çek</Text>
+      <Text style={[t.row, styles.centerText, { color: c.textSecondary }]}>{message}</Text>
+      {action && (
+        <View style={styles.link}>
+          <Text style={[t.rowStrong, { color: c.action }]}>{action}</Text>
+        </View>
+      )}
+    </Pressable>
   );
 }
 

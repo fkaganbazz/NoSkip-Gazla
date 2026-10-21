@@ -113,6 +113,14 @@ export const photoProofColors = {
   emptyFrameBg: palette.darkSurface,
   emptyFrameBorder: '#3A2C5C',
   stampBg: 'rgba(21, 14, 38, 0.72)',
+  /**
+   * Canlı kamera deklanşörü (tasarımda yok): "Gönder"in yeşili ve 4 px düz gölgesi, ikon onun metin rengi;
+   * dış halka ekran metni (kum) — görüntünün üstünde net ayrılsın.
+   */
+  shutterBg: palette.darkAction,
+  shutterShadow: palette.actionGreen,
+  shutterRing: palette.sand,
+  shutterIcon: palette.darkBackground,
   rowBg: palette.darkSurface,
   /** Görünürlük satırı basılıyken: koyu ikincil yüzey */
   rowPressedBg: palette.darkFill,
@@ -156,8 +164,24 @@ export const photoProofMetrics = {
   buttonsGap: 10,
   /** Butonlar ortak Button md (16 yazı) ama tasarımda 56 yükseklik */
   buttonHeight: 56,
-  /** Seçilen fotoğrafın sıkıştırma kalitesi (Storage'a yüklenecek) */
-  pickQuality: 0.7,
+
+  // Canlı kamera (tasarımda yok; önizleme çerçevesinin içinde)
+  /** Deklanşör: TabBar + butonunun dış ölçüsü (56 iç + 2 × 4 kenar), Gönder gibi 4 px düz gölge */
+  shutterSize: 64,
+  shutterBorder: 4,
+  shutterShadow: 4,
+  /** Deklanşörün çerçevenin altından uzaklığı (damga hapının kenar boşluğu gibi, gölge payıyla) */
+  shutterInset: 18,
+  shutterIconSize: 26,
+  shutterIconStrokeWidth: 2.6,
+  /** Ön/arka kamera hapı: zaman damgası hapıyla aynı ölçü, sağ üstte; dokunma alanı hitSlop ile 44 */
+  flipHitSlop: 10,
+
+  // Gönderilen görsel (EKRANLAR 2.4): uzun kenar 1080 px, JPEG %80. Çekim ve galeri tam kalite;
+  // sıkıştırma "Gönder"de bir kez yapılır.
+  uploadMaxEdge: 1080,
+  uploadQuality: 0.8,
+  captureQuality: 1,
 } as const;
 
 export const photoProofTypography = {
