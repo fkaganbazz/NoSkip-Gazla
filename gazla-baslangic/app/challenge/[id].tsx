@@ -78,10 +78,9 @@ export default function ChallengeDetailScreen() {
     if (!openTask) return;
     if (openTask.taskType === 'check') {
       checkin.mutate({ challengeId: openTask.challengeId, localDate: openTask.localDate });
-    } else if (openTask.taskType === 'number') {
-      router.push({ pathname: '/checkin/number/[id]', params: { id: openTask.challengeId, date: openTask.localDate } });
     } else {
-      router.push({ pathname: '/checkin/photo/[id]', params: { id: openTask.challengeId, date: openTask.localDate } });
+      const params = { challengeId: openTask.challengeId, date: openTask.localDate };
+      router.push({ pathname: openTask.taskType === 'number' ? '/checkin/number' : '/checkin/photo', params });
     }
   }, [openTask, checkin, router]);
 
@@ -200,18 +199,24 @@ export default function ChallengeDetailScreen() {
         },
       ]
     : [];
+  // Challenge şikayeti, oluşturan kişiye yazılır (submit_report: /report/<kurucu>?target=challenge); kendi
+  // challenge'ında ya da kurucunun hesabı silindiyse şikayet edilecek kişi yok, satır gösterilmez
+  const creatorId = ch.createdBy && ch.createdBy !== meId ? ch.createdBy : null;
   const menuItems: ActionSheetItem[] = [
     ...memberItems,
-    {
-      key: 'report',
-      label: 'Şikayet et',
-      // Challenge şikayeti, oluşturan kişiye yazılır (submit_report)
-      onPress: () =>
-        router.push({
-          pathname: '/report',
-          params: { targetType: 'challenge', targetId: ch.id, ...(ch.createdBy ? { userId: ch.createdBy } : {}) },
-        }),
-    },
+    ...(creatorId
+      ? [
+          {
+            key: 'report',
+            label: 'Şikayet et',
+            onPress: () =>
+              router.push({
+                pathname: '/report/[userId]',
+                params: { userId: creatorId, target: 'challenge', challengeId: ch.id },
+              }),
+          },
+        ]
+      : []),
   ];
 
   const onReminder = (time: string | null) =>
@@ -227,7 +232,9 @@ export default function ChallengeDetailScreen() {
         refreshControl={<RefreshControl refreshing={challenge.isRefetching || board.isRefetching} onRefresh={refetchAll} />}>
         <View style={styles.headerRow}>
           <IconButton icon="back" accessibilityLabel="Geri" />
-          <IconButton icon="options" accessibilityLabel="Challenge seçenekleri" onPress={() => setMenuOpen(true)} />
+          {menuItems.length > 0 && (
+            <IconButton icon="options" accessibilityLabel="Challenge seçenekleri" onPress={() => setMenuOpen(true)} />
+          )}
         </View>
 
         <View style={styles.titleRow}>

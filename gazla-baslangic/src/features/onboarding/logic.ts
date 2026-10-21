@@ -2,7 +2,7 @@ import { ApiError, type AuthStatus, type ChallengeCategory, type Template } from
 
 /** (onboarding) grubundaki ekranlar (dosya adları) */
 export type OnboardingScreen =
-  | 'index'
+  | 'welcome'
   | 'pick-challenge'
   | 'sign-in'
   | 'profile'
@@ -11,7 +11,7 @@ export type OnboardingScreen =
   | 'notifications';
 
 export type OnboardingTarget =
-  | '/(onboarding)'
+  | '/(onboarding)/welcome'
   | '/(onboarding)/sign-in'
   | '/(onboarding)/profile'
   | '/(onboarding)/create'
@@ -59,7 +59,7 @@ export function onboardingRedirect({
       return null;
     case 'signedOut':
       if (screen === 'profile') return '/(onboarding)/sign-in';
-      if (screen === 'create' || screen === 'invite' || screen === 'notifications') return '/(onboarding)';
+      if (screen === 'create' || screen === 'invite' || screen === 'notifications') return '/(onboarding)/welcome';
       return null;
     case 'needsProfile':
       return screen === 'profile' ? null : '/(onboarding)/profile';
@@ -67,7 +67,7 @@ export function onboardingRedirect({
       if (!flow.inviteChecked) return null;
       const next = nextStepAfterProfile(flow);
       switch (screen) {
-        case 'index':
+        case 'welcome':
         case 'sign-in':
         case 'profile':
           return next;

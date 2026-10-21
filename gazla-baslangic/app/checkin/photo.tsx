@@ -42,7 +42,8 @@ const IS_WEB = Platform.OS === 'web';
 // Gün zaten gönderildiyse çerçevede gönderilen fotoğraf durur ("Tekrar çek" kamerayı açar, "Gönder" değiştirir);
 // altta "Bugünü geri al" (tasarımda yok) kaydı siler (Bugün'deki sağ buton fotoğraf tipinde bu ekranı açar).
 export default function PhotoProofScreen() {
-  const { id, date } = useLocalSearchParams<{ id: string; date?: string }>();
+  // /checkin/photo?challengeId=…&date=YYYY-AA-GG (date: işaretlenecek yerel gün; yoksa my_today'deki ilk satırı)
+  const { challengeId, date } = useLocalSearchParams<{ challengeId: string; date?: string }>();
   const router = useRouter();
   const today = useToday();
   const checkin = useCheckinMutation();
@@ -50,8 +51,8 @@ export default function PhotoProofScreen() {
   const camera = useCameraAccess();
 
   const task = useMemo(
-    () => today.data?.find((x) => x.challengeId === id && (!date || x.localDate === date)),
-    [today.data, id, date],
+    () => today.data?.find((x) => x.challengeId === challengeId && (!date || x.localDate === date)),
+    [today.data, challengeId, date],
   );
   const [photo, setPhoto] = useState<Picked | null>(null);
   const [note, setNote] = useState('');

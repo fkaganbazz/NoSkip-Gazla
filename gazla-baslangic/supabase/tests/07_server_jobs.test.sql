@@ -10,7 +10,7 @@
 -- Zaman: B now()'a göre kurulur (grant_ad_rescue now() kullanır); D sabit anlarla app.* sürümünü
 -- çağırır (p_at). Her şey işlem içinde oluşturulur ve geri alınır.
 begin;
-select plan(69);
+select plan(70);
 
 -- ------------------------------------------------------------------------------------------------
 -- Yardımcılar
@@ -379,12 +379,20 @@ update public.user_settings set daily_reminder_time = null where user_id = :'dfe
 select pg_temp.mk_ch('Yürüyüş', date '2026-11-01', 30) as dc4 \gset
 select pg_temp.add_member(:'dc4', :'dfer', date '2026-11-01') as _n \gset
 select pg_temp.ci(:'dfer', :'dc4', date '2026-11-01', date '2026-11-08') as _n \gset
+-- İkinci bekleyen kurtarma (4 günlük seri): bildirim tek, yol en uzun serili challenge'ın (my_pending_rescues sırası)
+select pg_temp.mk_ch('Esneme', date '2026-11-05', 30) as dc5 \gset
+select pg_temp.add_member(:'dc5', :'dfer', date '2026-11-05') as _n \gset
+select pg_temp.ci(:'dfer', :'dc5', date '2026-11-05', date '2026-11-08') as _n \gset
 select is_empty(format($$select * from app.queue_diken_notifications('2026-11-10 05:30+00') where recipient_id = %L$$, :'dfer'),
                 'Diken: nothing before the 09:00 "streak broken" time (08:30 local)');
 select results_eq(
   format($$select kind::text, body, url from app.queue_diken_notifications('2026-11-10 06:05+00') where recipient_id = %L$$, :'dfer'),
-  $$values ('streak_broken', 'Dün kaçtı. Beni sulamak için 24 saatin var.', '/streak-lost')$$,
-  'Diken: "streak broken" at 09:05 local while the rescue is pending');
+  format($$values ('streak_broken', 'Dün kaçtı. Beni sulamak için 24 saatin var.', %L)$$, '/streak-lost/' || :'dc4'),
+  'Diken: "streak broken" at 09:05 local while the rescue is pending, linking to the longest pending streak');
+select is(
+  (select payload->>'url' from public.notifications where recipient_id = :'dfer' and kind = 'streak_broken'),
+  '/streak-lost/' || :'dc4',
+  'Diken: the "streak broken" row keeps the same app path');
 select is_empty(format($$select * from app.queue_diken_notifications('2026-11-10 06:20+00') where recipient_id = %L$$, :'dfer'),
                 'Diken: "streak broken" once a day');
 

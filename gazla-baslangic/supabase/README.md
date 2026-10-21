@@ -69,6 +69,38 @@ Zaman: tüm `public.*` RPC'leri zamanı `now()` ile, kullanıcıyı `auth.uid()`
 ya da kimliği değiştiremez. Aynı mantığın zamanı parametre alan `app.*(…, p_at)` sürümleri testler ve
 zamanlanmış işler içindir, API rollerine kapalıdır.
 
+### Tipler (`src/types/database.ts`)
+
+İstemcinin şema tipleri `supabase gen types typescript` çıktısıdır: `Database` (`public` ve
+`graphql_public`: Tables / Views / Functions / Enums / CompositeTypes), `Tables<>`, `TablesInsert<>`,
+`TablesUpdate<>`, `Enums<>`, `CompositeTypes<>`, `Constants`. `supabaseApi.ts` `createClient<Database>`
+kullanır: RPC adı, parametreleri, dönüşü ve tablo sorguları (gömülü ilişkiler dahil) derleyicide
+denetlenir. Migration değişince dosyayı yeniden üret:
+
+```bash
+# Gerçek projede (Supabase CLI)
+supabase gen types typescript --project-id <ref> --schema public,graphql_public > src/types/database.ts
+# (yerel Supabase: --local)
+
+# CLI/Docker yoksa: aynı çıktı, psql ile (scripts/gen-db-types.mjs)
+DATABASE_URL=postgresql://postgres@127.0.0.1:54329/postgres npm run gen:types
+```
+
+- `npm run gen:types` CLI'nin introspection sorgularını `psql` ile çalıştırır, aynı kuralları ve biçimi
+  (oxfmt, 80 sütun) uygular; postgres-meta'nın kendi test şemasında CLI çıktısıyla bayt bayt aynı.
+  Bağlantı `--db-url`, `DATABASE_URL` ya da `PGHOST`/`PGPORT`/`PGUSER`/`PGDATABASE`. Migration'ları
+  uygulanmış herhangi bir PostgreSQL 16 yeter (yukarıdaki test ortamı gibi). `graphql_public` yoksa
+  Supabase'teki iskeleti (`graphql_public.graphql`) yazar; `--postgrest-version 13`
+  `__InternalSupabase.PostgrestVersion` ekler (CLI'nin uzak projede yazdığı gibi).
+- jsonb dönen RPC'lerin (`challenge_detail`, `my_membership`, `set_my_reminder`, `number_stats`,
+  `template_stats`, `get_invite_preview`, `friend_profile`) içi şemada görünmez (`Returns: Json`);
+  şekilleri `supabaseApi.ts`'teki `*Json` tipleri. `jsonb_build_object` alanı değişince onları da güncelle.
+- CLI `returns table (…)` sütunlarını null'suz yazar (PostgreSQL fonksiyon sonucunun null olabilirliğini
+  bildirmez); `my_today.value` gibi alanlar null gelebilir, istemci buna hazır. Üretilmiş
+  `challenges.end_date` da null olabilir görünür ama olmaz.
+- SQL fonksiyon parametreleri NULL alır; üretilen `Args` bunu yazmaz. `supabaseApi`'nin `rpc()`
+  sarmalayıcısı her parametreye `null` da kabul eder (verilmeyen parametre varsayılanını alır).
+
 ## Sunucudaki kurallar
 
 ### Yerel gün ve tolerans
@@ -209,8 +241,10 @@ zamanlanmış işler içindir, API rollerine kapalıdır.
   bitirdi" + "{challenge} tamam. Tebrik etmek ister misin?"; "{ad} arkadaşlık isteği gönderdi"; "{ad}
   seni bir challenge'a ekledi" + challenge adı.
 - Android kanalı (`channelId`, src/notifications/channels.ts): Diken `diken`; arkadaş bildirimleri
-  `friends`; diğerleri `default`. `data.url`: Diken `/`, `/challenge/<id>`, `/streak-lost`; dürtme
-  `/poke/<gönderen>` (geri dürt), istek `/friends`, davet ve bitirdi `/activity`.
+  `friends`; diğerleri `default`. `data.url`: Diken `/`, `/challenge/<id>`, `/streak-lost/<challenge_id>`
+  (ilk bekleyen kurtarma, en uzun seri önce; ekran sıradakilere kendisi geçer; eski `/streak-lost`
+  uygulamada Bugün'e eşlenir); dürtme `/poke/<gönderen>` (geri dürt), istek `/friends`, davet ve bitirdi
+  `/activity`.
 - Expo `DeviceNotRegistered` dönen token `push_tokens`'tan silinir. Uygulama çıkışta kendi token'ını
   siler (`push_tokens` owner delete).
 

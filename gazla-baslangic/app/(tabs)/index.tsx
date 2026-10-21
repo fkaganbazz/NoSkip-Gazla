@@ -89,11 +89,14 @@ export default function TodayScreen() {
       router.push('/completion');
       return;
     }
-    const rescue = rescues.data?.[0];
-    const rescueKey = rescue && `${rescue.challengeId}|${rescue.missedDate}`;
-    if (rescueKey && !rescueShown.current.has(rescueKey)) {
-      rescueShown.current.add(rescueKey);
-      router.push('/streak-lost');
+    // Seri koptu ilk bekleyen kurtarmanın challenge'ıyla açılır; ekran sıradakilere kendisi geçer, bu yüzden o an
+    // bekleyenlerin hepsi gösterilmiş sayılır (kapatınca Bugün aynı kurtarmaları yeniden açmaz)
+    const pendingRescues = rescues.data ?? [];
+    const rescueKey = (r: (typeof pendingRescues)[number]) => `${r.challengeId}|${r.missedDate}`;
+    const rescue = pendingRescues.find((r) => !rescueShown.current.has(rescueKey(r)));
+    if (rescue) {
+      pendingRescues.forEach((r) => rescueShown.current.add(rescueKey(r)));
+      router.push({ pathname: '/streak-lost/[challengeId]', params: { challengeId: rescue.challengeId } });
       return;
     }
     const done = finished.data?.find((f) => !finishShown.current.has(f.challengeId));
@@ -120,10 +123,9 @@ export default function TodayScreen() {
       if (task.taskType === 'check') {
         if (task.done) undo.mutate(target, { onError: showError });
         else checkin.mutate(target, { onError: showError });
-      } else if (task.taskType === 'number') {
-        router.push({ pathname: '/checkin/number/[id]', params: { id: task.challengeId, date: task.localDate } });
       } else {
-        router.push({ pathname: '/checkin/photo/[id]', params: { id: task.challengeId, date: task.localDate } });
+        const params = { challengeId: task.challengeId, date: task.localDate };
+        router.push({ pathname: task.taskType === 'number' ? '/checkin/number' : '/checkin/photo', params });
       }
     },
     [findTask, checkin, undo, router, showError],
@@ -134,11 +136,11 @@ export default function TodayScreen() {
     (rowId: string) => {
       const task = findTask(rowId);
       if (!task) return;
-      const params = { id: task.challengeId, date: task.localDate };
+      const params = { challengeId: task.challengeId, date: task.localDate };
       if (task.taskType === 'number') {
-        router.push({ pathname: '/checkin/number/[id]', params });
+        router.push({ pathname: '/checkin/number', params });
       } else if (task.taskType === 'photo') {
-        router.push({ pathname: '/checkin/photo/[id]', params });
+        router.push({ pathname: '/checkin/photo', params });
       } else {
         router.push({ pathname: '/challenge/[id]', params: { id: task.challengeId } });
       }

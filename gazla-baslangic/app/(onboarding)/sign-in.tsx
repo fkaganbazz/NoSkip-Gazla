@@ -68,7 +68,7 @@ export default function SignInScreen() {
     });
   };
 
-  const goBack = () => (router.canGoBack() ? router.back() : router.replace('/(onboarding)'));
+  const goBack = () => (router.canGoBack() ? router.back() : router.replace('/(onboarding)/welcome'));
 
   return (
     <View style={styles.root}>

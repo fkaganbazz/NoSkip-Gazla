@@ -36,8 +36,8 @@ export default function InviteLandingScreen() {
 
   // Bugün: '/(tabs)' sekmelerin ilk ekranına (Bugün) döner
   const goToday = () => router.dismissTo('/(tabs)');
-  // Oturum varsa Bugün; yoksa '/' onboarding'i (karşılama) açar
-  const goHome = () => (signedIn ? goToday() : router.replace('/'));
+  // Oturum varsa Bugün; yoksa karşılama (onboarding yarımsa onboarding düzeni kaldığı adıma taşır)
+  const goHome = () => (signedIn ? goToday() : router.replace('/welcome'));
 
   const onPrimary = async () => {
     if (join.isPending) return;

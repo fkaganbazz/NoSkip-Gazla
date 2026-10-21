@@ -12,7 +12,8 @@
  *
  * Expo yanıtında `DeviceNotRegistered` dönen token'lar `push_tokens`'tan silinir.
  * Android kanalları (src/notifications/channels.ts): Diken `diken`; dürt, gaz, istek, davet, arkadaşın
- * bitirdi `friends`; diğerleri `default`. `data.url` uygulama içi yoldur (`/challenge/<id>`, `/activity` …).
+ * bitirdi `friends`; diğerleri `default`. `data.url` uygulama içi yoldur: Diken satırlarında SQL'in yazdığı
+ * (`/`, `/challenge/<id>`, `/streak-lost/<challengeId>`), arkadaş bildirimlerinde `/poke/<id>`, `/friends`, `/activity`.
  *
  * Yetki: `x-gazla-secret` başlığı = PUSH_WEBHOOK_SECRET (Vault `gazla_push_secret` ile aynı) ya da
  * `Authorization: Bearer <service role key>`. Dağıtım: `supabase functions deploy push --no-verify-jwt`.

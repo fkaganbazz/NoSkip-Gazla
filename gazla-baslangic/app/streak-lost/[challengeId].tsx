@@ -1,5 +1,5 @@
-import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -33,8 +33,12 @@ type Saved = { item: PendingRescue; via: 'ad' | 'free' };
 // "yüklenemedi" yolu. Kurtarma yalnızca EARNED_REWARD olayında istenir; ödülsüz kapanışta hiçbir şey olmaz.
 // Reklam izni akışı (6.2) hiç tamamlanmadıysa önce ön ekran açılır, dönünce reklam başlar.
 // Koyu tasarımı yok; en yakın koyu rollere bağlandı (src/theme/moments.ts).
-// "Baştan başla" kurtarmadan vazgeçer (decline_rescue); başka bekleyen kurtarma varsa ona geçer, yoksa kapanır.
+// Yol: /streak-lost/<challengeId> — o challenge'ın bekleyen kurtarması (Bugün ilk bekleyenle açar; Diken bildirimi
+// de). "Devam" (kurtarıldı) ve "Baştan başla" (decline_rescue) sonrası sıradaki bekleyen kurtarma varsa onun yoluna
+// geçilir (replace), yoksa ekran kapanır. Bu challenge'da bekleyen yoksa (süresi doldu, başka yerden kurtarıldı)
+// sıradakine geçer; hiç yoksa "Kurtarılacak seri yok".
 export default function StreakLostScreen() {
+  const { challengeId } = useLocalSearchParams<{ challengeId: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors, scheme } = useTheme();
@@ -109,10 +113,24 @@ export default function StreakLostScreen() {
     }, []),
   );
 
-  const current = saved?.item ?? declined ?? rescues.data?.[0];
+  const pending = rescues.data?.find((r) => r.challengeId === challengeId);
+  const current = saved?.item ?? declined ?? pending;
   const board = useChallengeBoard(current?.challengeId);
 
   const close = () => (router.canGoBack() ? router.back() : router.replace('/'));
+  // Sıradaki bekleyen kurtarmanın ekranına geç (yeni ekran: durum sıfırdan); yoksa kapan
+  const goNext = (skip: string) => {
+    const next = (rescues.data ?? []).find((r) => r.challengeId !== skip);
+    if (next) router.replace({ pathname: '/streak-lost/[challengeId]', params: { challengeId: next.challengeId } });
+    else close();
+  };
+
+  // Bu challenge'da bekleyen kurtarma yok ama başkası var: ona geç
+  const fallback = !saved && !declined && !pending ? rescues.data?.[0]?.challengeId : undefined;
+  useEffect(() => {
+    if (fallback) router.replace({ pathname: '/streak-lost/[challengeId]', params: { challengeId: fallback } });
+  }, [fallback, router]);
+
   const top = insets.top + layout.screenTopGap;
   const bottom = Math.max(m.bottomPadding, insets.bottom);
 
@@ -134,6 +152,10 @@ export default function StreakLostScreen() {
         <ErrorState message={rescues.error.message} onRetry={() => rescues.refetch()} />
       </View>
     );
+  }
+
+  if (!current && fallback) {
+    return <View style={[styles.screen, { backgroundColor: c.bgLost }]} />;
   }
 
   // Bekleyen kurtarma yok (süresi doldu ya da başka yerden kurtarıldı)
@@ -191,38 +213,14 @@ export default function StreakLostScreen() {
     decline.mutate(
       { challengeId: item.challengeId, missedDate: item.missedDate },
       {
-        onSuccess: () => {
-          const next = (rescues.data ?? []).filter(
-            (r) => !(r.challengeId === item.challengeId && r.missedDate === item.missedDate),
-          );
-          if (next.length === 0) {
-            close();
-            return;
-          }
-          // Liste yenilendi: sıradaki kurtarma gösterilir
-          setDeclined(null);
-          setAdFailed(false);
-          setVerifyAgain(null);
-          rescue.reset();
-          rescueAd.reset();
-          decline.reset();
-        },
+        onSuccess: () => goNext(item.challengeId),
         onError: () => setDeclined(null),
       },
     );
   };
 
-  const onContinue = () => {
-    // Başka bekleyen kurtarma varsa onu göster
-    const next = (rescues.data ?? []).filter((r) => r.challengeId !== saved?.item.challengeId);
-    if (next.length > 0) {
-      setSaved(null);
-      rescue.reset();
-      rescueAd.reset();
-    } else {
-      close();
-    }
-  };
+  // Başka bekleyen kurtarma varsa onun ekranına geçilir
+  const onContinue = () => goNext(current.challengeId);
 
   return (
     <View style={[styles.screen, { backgroundColor: lost ? c.bgLost : c.bgSaved }]}>

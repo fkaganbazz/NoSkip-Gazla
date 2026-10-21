@@ -1,8 +1,9 @@
 /**
  * Bildirime dokununca açılacak ekran: push verisindeki `url` (`data.url`). Sunucu uygulama içi yolu yazar
- * (`/challenge/<id>`, `/activity`, `/friend/<id>`, `/d/<kod>` …). Uygulamanın şemasıyla (`gazla://…`) ya da
- * web sitesinin adresiyle (`https://<alan>/…`) gelen adres de yola çevrilir. Başka hiçbir adres açılmaz
- * (bildirim dışarıya link açtıramaz).
+ * (`/`, `/challenge/<id>`, `/streak-lost/<challengeId>`, `/poke/<id>`, `/activity`, `/friends`, `/d/<kod>` …).
+ * Uygulamanın şemasıyla (`gazla://…`) ya da web sitesinin adresiyle (`https://<alan>/…`) gelen adres de yola
+ * çevrilir. Başka hiçbir adres açılmaz (bildirim dışarıya link açtıramaz). Eski sürümün yolları yenisine
+ * eşlenir (`legacyPath`).
  */
 
 export type LinkOrigins = {
@@ -12,11 +13,18 @@ export type LinkOrigins = {
   hosts: readonly string[];
 };
 
+/**
+ * Önceki route adlarıyla gönderilmiş (bildirimde kalmış) yollar. Seri koptu ekranı artık challenge'a göre
+ * (`/streak-lost/<challengeId>`): kimliksiz eski `/streak-lost` Bugün'ü açar, Bugün bekleyen kurtarmayı kendisi
+ * gösterir.
+ */
+const legacyPath = (path: string) => (/^\/streak-lost\/?(?:[?#].*)?$/.test(path) ? '/' : path);
+
 const safePath = (path: string): string | null => {
   const value = path.startsWith('/') ? path : `/${path}`;
   // "//başka-alan" ya da "/\…" gibi protokolsüz dış adresler ve boşluklar yok
   if (value.startsWith('//') || value.includes('\\') || /\s/.test(value)) return null;
-  return value;
+  return legacyPath(value);
 };
 
 /** `data.url` → uygulama içi yol; açılmayacaksa null */

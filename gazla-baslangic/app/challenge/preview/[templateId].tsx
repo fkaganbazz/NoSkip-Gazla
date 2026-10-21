@@ -13,19 +13,20 @@ import { doingNowText } from '@/features/explore/logic';
 import { categoryTint, layout, typography, useTheme } from '@/theme';
 import { previewMetrics as m, previewTypography } from '@/theme/explore';
 
-// Challenge önizleme — design/ChallengePreview.dc.html. Veri: challenge_templates + template_stats.
+// Challenge önizleme — design/ChallengePreview.dc.html (/challenge/preview/<şablon id>).
+// Veri: challenge_templates + template_stats.
 // İki buton da seçilen süreyle create_challenge çağırır. "Arkadaşlarla": oluşunca challenge detayı açılır,
 // üstünde davet modalı (/invite-friends); kapatınca detayda kalınır. "Tek başıma başla": → Bugün.
 export default function TemplatePreviewScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { templateId } = useLocalSearchParams<{ templateId: string }>();
   const router = useRouter();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
 
   const templates = useTemplates();
-  const stats = useTemplateStats(id);
+  const stats = useTemplateStats(templateId);
   const create = useCreateChallengeMutation();
-  const template = templates.data?.find((t) => t.id === id);
+  const template = templates.data?.find((t) => t.id === templateId);
 
   // Seçilmediyse şablonun varsayılan süresi
   const [picked, setPicked] = useState<DurationOption | null>(null);

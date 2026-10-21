@@ -6,6 +6,12 @@ import { onboardingRedirect, type OnboardingScreen } from '@/features/onboarding
 import { useOnboarding } from '@/features/onboarding/OnboardingProvider';
 import { useTheme } from '@/theme';
 
+// Grubun ilk ekranı karşılama: derin bağlantıyla (ör. davetten /sign-in) açılan adımın altında da o olur,
+// geri karşılamaya döner.
+export const unstable_settings = {
+  initialRouteName: 'welcome',
+};
+
 // Onboarding: Main → PickChallenge → SignIn → Profile → (Create) → InviteFriends → NotifPermission.
 // Oturum durumu değişince (giriş, profil tamamlandı, çıkış) kullanıcı doğru adıma taşınır:
 // oturum var ama profil yoksa hangi ekrandaysa Profil'e; profil hazırsa bekleyen davet, seçilen şablon
@@ -17,7 +23,7 @@ export default function OnboardingLayout() {
   const { status } = useAuth();
   const { pickedTemplateId, customChallenge, createdChallengeId, joinedViaInvite, inviteChecked } = useOnboarding();
 
-  const screen = ((segments as string[])[1] ?? 'index') as OnboardingScreen;
+  const screen = ((segments as string[])[1] ?? 'welcome') as OnboardingScreen;
   const target = onboardingRedirect({
     status,
     screen,
@@ -34,7 +40,7 @@ export default function OnboardingLayout() {
 
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
-      <Stack.Screen name="index" />
+      <Stack.Screen name="welcome" />
       <Stack.Screen name="pick-challenge" />
       <Stack.Screen name="sign-in" />
       {/* Profil tamamlandıktan sonra geri kaydırma yok; Profil'de geri = oturumu kapat */}

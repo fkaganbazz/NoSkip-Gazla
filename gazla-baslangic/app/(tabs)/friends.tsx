@@ -63,7 +63,7 @@ export default function FriendsScreen() {
     if (result === 'copied') toast.show({ message: 'Davet metni kopyalandı', kind: 'success' });
   };
 
-  const openProfile = (id: string) => router.push({ pathname: '/friend/[id]', params: { id } });
+  const openProfile = (id: string) => router.push({ pathname: '/user/[id]', params: { id } });
   const openPoke = (userId: string, tone?: 'hype') =>
     router.push({ pathname: '/poke/[userId]', params: tone ? { userId, tone } : { userId } });
 

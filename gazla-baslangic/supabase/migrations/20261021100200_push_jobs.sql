@@ -131,6 +131,7 @@ declare
   v_id uuid;
   v_text text;
   v_url text;
+  v_rescue uuid;
 begin
   delete from app.diken_schedule_log l where l.local_date < (p_at at time zone 'UTC')::date - 3;
 
@@ -150,11 +151,18 @@ begin
 
     select count(*) into v_pending from app.diken_pending_challenges(u.user_id, p_at);
 
-    -- Seri koptu: sabah, bekleyen kurtarma varsa
-    if app.in_diken_window(v_time, app.streak_broken_time())
-       and exists (select 1 from app.pending_rescues(u.user_id, p_at)) then
+    -- Seri koptu: sabah, bekleyen kurtarma varsa. Uygulama yolu ilk bekleyen kurtarmanın challenge'ı
+    -- (my_pending_rescues sırası: en uzun seri önce); ekran sıradakilere kendisi geçer. Günde bir bildirim.
+    v_rescue := null;
+    if app.in_diken_window(v_time, app.streak_broken_time()) then
+      select pr.challenge_id into v_rescue
+      from app.pending_rescues(u.user_id, p_at) pr
+      order by pr.streak_before desc, pr.challenge_id
+      limit 1;
+    end if;
+    if v_rescue is not null then
       v_text := app.diken_text('streak_broken');
-      v_url := '/streak-lost';
+      v_url := '/streak-lost/' || v_rescue;
       v_id := app.queue_diken(u.user_id, 'streak_broken', v_today, null,
                               jsonb_build_object('text', v_text, 'url', v_url), p_at);
       if v_id is not null then

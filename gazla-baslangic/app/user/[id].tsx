@@ -134,7 +134,7 @@ export default function FriendProfileScreen() {
       label: 'Şikayet et',
       danger: true,
       icon: FlagIcon,
-      onPress: () => router.push({ pathname: '/report', params: { targetType: 'user', targetId: p.id } }),
+      onPress: () => router.push({ pathname: '/report/[userId]', params: { userId: p.id } }),
     },
   ];
 

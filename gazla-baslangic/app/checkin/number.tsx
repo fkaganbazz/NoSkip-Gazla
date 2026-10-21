@@ -27,22 +27,23 @@ const d = sheetDikenMetrics.numberEntry;
 // Gün zaten kaydedildiyse sayfa o değerle açılır, "Kaydet" değeri değiştirir; altta "Bugünü geri al" (tasarımda yok)
 // kaydı siler (Bugün'deki sağ buton sayı tipinde geri almaz, bu sayfayı açar).
 export default function NumberEntryScreen() {
-  const { id, date } = useLocalSearchParams<{ id: string; date?: string }>();
+  // /checkin/number?challengeId=…&date=YYYY-AA-GG (date: işaretlenecek yerel gün; yoksa my_today'deki ilk satırı)
+  const { challengeId, date } = useLocalSearchParams<{ challengeId: string; date?: string }>();
   const router = useRouter();
   const sheet = useRef<SheetHandle>(null);
   const { colors, scheme } = useTheme();
   const c = numberEntryColors[scheme];
 
   const today = useToday();
-  const challenge = useChallenge(id);
+  const challenge = useChallenge(challengeId);
   const checkin = useCheckinMutation();
   const undo = useUndoCheckinMutation();
 
   const task = useMemo(
-    () => today.data?.find((x) => x.challengeId === id && (!date || x.localDate === date)),
-    [today.data, id, date],
+    () => today.data?.find((x) => x.challengeId === challengeId && (!date || x.localDate === date)),
+    [today.data, challengeId, date],
   );
-  const stats = useNumberStats(id, task?.localDate ?? date);
+  const stats = useNumberStats(challengeId, task?.localDate ?? date);
   const [picked, setPicked] = useState<number | null>(null);
 
   const close = () => sheet.current?.close();

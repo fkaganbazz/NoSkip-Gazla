@@ -40,7 +40,7 @@ export default function PickChallengeScreen() {
       ? router.replace(nextStepAfterProfile(onboarding))
       : router.canGoBack()
         ? router.back()
-        : router.replace('/(onboarding)');
+        : router.replace('/(onboarding)/welcome');
 
   return (
     <StepScreen

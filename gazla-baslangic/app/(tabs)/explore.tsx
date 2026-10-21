@@ -53,7 +53,8 @@ export default function ExploreScreen() {
   const showAll = filtering || expanded;
   const list = filtering ? results : expanded ? popular : popular.slice(0, m.popularPreviewCount);
 
-  const openTemplate = (id: string) => router.push({ pathname: '/template/[id]', params: { id } });
+  const openTemplate = (templateId: string) =>
+    router.push({ pathname: '/challenge/preview/[templateId]', params: { templateId } });
   const openCreate = () => router.push('/create');
 
   if (templates.isPending) {

@@ -102,18 +102,22 @@ function RootNavigator() {
             name="create"
             options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }}
           />
-          <Stack.Screen name="challenge/[id]/index" />
+          {/* Detay `challenge/[id].tsx`, bitti `challenge/[id]/finished.tsx` (klasörde _layout yok: ikisi de bu Stack'te) */}
+          <Stack.Screen name="challenge/[id]" />
           <Stack.Screen name="challenge/[id]/finished" options={{ presentation: 'fullScreenModal' }} />
-          <Stack.Screen name="checkin/number/[id]" options={SHEET} />
-          <Stack.Screen name="checkin/photo/[id]" options={{ presentation: 'fullScreenModal' }} />
+          {/* Statik `preview` segmenti `challenge/[id]`'den önce eşleşir */}
+          <Stack.Screen name="challenge/preview/[templateId]" />
+          {/* İşaretleme: /checkin/number?challengeId=…&date=YYYY-AA-GG (yerel gün; gece toleransında dün) */}
+          <Stack.Screen name="checkin/number" options={SHEET} />
+          <Stack.Screen name="checkin/photo" options={{ presentation: 'fullScreenModal' }} />
           <Stack.Screen name="completion" options={{ presentation: 'fullScreenModal', animation: 'fade' }} />
-          <Stack.Screen name="streak-lost" options={{ presentation: 'fullScreenModal', animation: 'fade' }} />
+          <Stack.Screen name="streak-lost/[challengeId]" options={{ presentation: 'fullScreenModal', animation: 'fade' }} />
           <Stack.Screen name="ad-consent" options={{ presentation: 'modal' }} />
           <Stack.Screen name="poke/[userId]" options={SHEET} />
           <Stack.Screen name="activity" />
-          <Stack.Screen name="friend/[id]" />
-          <Stack.Screen name="report" options={{ presentation: 'modal' }} />
-          <Stack.Screen name="template/[id]" />
+          <Stack.Screen name="user/[id]" />
+          {/* /report/<kişi>?target=user|photo|challenge (&contentId=<check-in> | &challengeId=<challenge>) */}
+          <Stack.Screen name="report/[userId]" options={{ presentation: 'modal' }} />
           <Stack.Screen name="invite-friends" options={{ presentation: 'modal' }} />
           <Stack.Screen name="settings/index" />
           <Stack.Screen name="settings/notifications" />
@@ -122,6 +126,8 @@ function RootNavigator() {
           <Stack.Screen name="dev" />
         </Stack.Protected>
 
+        {/* Uygulama kapalıyken açılış "/" (Bugün) korumalı: Stack ilk açık ekrana, (onboarding)'e düşer; onun ilk
+            ekranı karşılama (`(onboarding)/welcome`, unstable_settings.initialRouteName). Çıkışta da aynısı. */}
         <Stack.Protected guard={!appOpen}>
           <Stack.Screen name="(onboarding)" />
         </Stack.Protected>

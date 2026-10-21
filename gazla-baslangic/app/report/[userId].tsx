@@ -14,21 +14,26 @@ import { socialMetrics as m, socialTypography } from '@/theme/social';
 /** Sunucudaki reports.details sınırı */
 const DETAILS_MAX = 500;
 
+/**
+ * /report/<kişi>?target=… — kişi yolda: kişi şikayetinde şikayet edilen, içerik şikayetinde içeriğin sahibi
+ * (fotoğrafı gönderen, challenge'ın kurucusu). İçerik kimliği sorguda:
+ * - `/report/u-ece` — kişi
+ * - `/report/u-ece?target=photo&contentId=<check-in id>` — fotoğraf
+ * - `/report/u-mert?target=challenge&challengeId=c-phone` — challenge
+ */
 type Params = {
-  /** 'user' | 'photo' | 'challenge' ('checkin' = 'photo') */
-  targetType?: string;
-  /** Kişi, check-in ya da challenge id'si */
-  targetId?: string;
-  /** Fotoğraf/challenge şikayetinde içeriğin sahibi */
-  userId?: string;
-  /** Davet linkinden challenge şikayeti (InviteLanding) */
-  inviteCode?: string;
-  /** Ad biliniyorsa başlıkta kullanılır */
+  userId: string;
+  /** 'user' (varsayılan) | 'photo' | 'challenge' */
+  target?: string;
+  /** Fotoğraf şikayetinde fotoğrafın check-in id'si */
+  contentId?: string;
+  /** Challenge şikayetinde challenge id'si */
+  challengeId?: string;
+  /** Ad biliniyorsa başlıkta kullanılır (profil okunamazsa) */
   name?: string;
 };
 
-const toTarget = (t: string | undefined): ReportTarget =>
-  t === 'photo' || t === 'checkin' ? 'photo' : t === 'challenge' ? 'challenge' : 'user';
+const toTarget = (t: string | undefined): ReportTarget => (t === 'photo' ? 'photo' : t === 'challenge' ? 'challenge' : 'user');
 
 // Şikayet et — design/Report.dc.html (modal). Neden (radio), isteğe bağlı ayrıntı, kişiyi de engelle;
 // submit_report. Gönderilince teşekkür durumu gösterilir.
@@ -37,9 +42,9 @@ export default function ReportScreen() {
   const router = useRouter();
   const { colors } = useTheme();
 
-  const target = toTarget(params.targetType);
-  const userId = target === 'user' ? params.targetId : params.userId;
-  const profile = useFriendProfile(target === 'user' ? params.targetId : params.userId);
+  const target = toTarget(params.target);
+  const userId = params.userId;
+  const profile = useFriendProfile(userId);
   const name = profile.data?.displayName ?? params.name ?? null;
 
   const [reason, setReason] = useState<ReportReason>('harassment');
@@ -74,9 +79,8 @@ export default function ReportScreen() {
       details: details.trim() || undefined,
       alsoBlock: !!userId && alsoBlock,
       userId,
-      checkinId: target === 'photo' ? params.targetId : undefined,
-      challengeId: target === 'challenge' ? params.targetId : undefined,
-      inviteCode: params.inviteCode,
+      checkinId: target === 'photo' ? params.contentId : undefined,
+      challengeId: target === 'challenge' ? params.challengeId : undefined,
     });
   };
 

@@ -21,12 +21,32 @@ const SCREENS: Row[] = [
   { href: '/challenge/g-okuma/finished', title: 'Finished', detail: 'challenge/[id]/finished · Bahçem: 30 gün okuma' },
   { href: '/dev/share-card', title: 'ShareCard', detail: 'Ekran değil: Finished "Story\'de paylaş" görseli · önizleme ve PNG paylaşımı' },
   { href: '/completion', title: 'Completion', detail: 'Günün hepsi bitti anı' },
-  { href: '/streak-lost', title: 'StreakLost', detail: 'Seri koptu, kurtarma' },
+  {
+    href: { pathname: '/checkin/number', params: { challengeId: 'c-plank' } },
+    title: 'NumberEntry',
+    detail: 'checkin/number?challengeId= · Plank, alt sayfa',
+  },
+  {
+    href: { pathname: '/checkin/photo', params: { challengeId: 'c-read' } },
+    title: 'PhotoProof',
+    detail: 'checkin/photo?challengeId= · 20 sayfa oku',
+  },
+  {
+    href: '/streak-lost/c-plank',
+    title: 'StreakLost',
+    detail: 'streak-lost/[challengeId] · Plank; önce "Seri koptu senaryosu"',
+  },
   { href: '/ad-consent', title: 'AdConsent', detail: 'Reklam izni' },
   { href: '/activity', title: 'Activity', detail: 'Bildirimler' },
-  { href: '/friend/u-mert', title: 'FriendProfile', detail: 'friend/[id] · Mert' },
+  { href: '/user/u-mert', title: 'FriendProfile', detail: 'user/[id] · Mert' },
+  { href: '/report/u-mert', title: 'Report', detail: 'report/[userId] · Mert (kişi)' },
+  {
+    href: { pathname: '/report/[userId]', params: { userId: 'u-selin', target: 'challenge', challengeId: 'c-read' } },
+    title: 'Report (challenge)',
+    detail: 'report/[userId]?target=challenge&challengeId= · Selin\'in okuma challenge\'ı',
+  },
   { href: '/poke/u-mert', title: 'Poke', detail: 'poke/[userId] · alt sayfa' },
-  { href: '/template/t-kahvesiz', title: 'ChallengePreview', detail: 'template/[id]' },
+  { href: '/challenge/preview/t-kahvesiz', title: 'ChallengePreview', detail: 'challenge/preview/[templateId]' },
   { href: '/invite/MertKahve1', title: 'InviteLanding', detail: 'invite/[code]' },
   { href: '/invite-friends', title: 'InviteFriends', detail: 'Arkadaş davet et' },
   { href: '/settings', title: 'Settings', detail: 'Ayarlar' },
@@ -41,7 +61,7 @@ export default function DevIndex() {
   const offline = mockDev.isOffline();
 
   const DATA: Row[] = [
-    { title: 'Oturumu kapat', detail: 'Onboarding baştan başlar', onPress: () => signOut.mutate() },
+    { title: 'Oturumu kapat', detail: 'Onboarding karşılamadan (/welcome) baştan başlar', onPress: () => signOut.mutate() },
     {
       title: 'Reklam iznini sıfırla',
       detail: 'UMP izin bilgisini ve "ön ekran gösterildi" bayrağını siler (native)',
@@ -54,7 +74,7 @@ export default function DevIndex() {
       ? [
           {
             title: 'Seri koptu senaryosu',
-            detail: 'Mock: dün kaçırılmış, kurtarma bekliyor',
+            detail: 'Mock: dün plank ve okuma kaçırılmış, iki kurtarma bekliyor (Bugün plank\'la açar, sonra okuma)',
             onPress: () => {
               mockDev.simulateStreakLost();
               queryClient.invalidateQueries();

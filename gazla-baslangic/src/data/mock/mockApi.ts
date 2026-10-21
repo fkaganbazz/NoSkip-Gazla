@@ -471,17 +471,29 @@ function templatesWithPopularity(): Template[] {
 
 /** Geliştirme menüsü için senaryo düğmeleri */
 export const mockDev = {
-  /** Dünü kaçırmış gibi: plank için bekleyen kurtarma */
+  /**
+   * Dünü kaçırmış gibi: plank ve okuma için bekleyen kurtarma (my_pending_rescues sırası: en uzun seri önce).
+   * Seri koptu ekranı plank'la açılır, "Devam" / "Baştan başla" sonrası okumaya geçer.
+   */
   simulateStreakLost() {
     const today = localDate();
+    const expiresAt = new Date(Date.now() + (21 * 60 + 40) * 60000).toISOString();
     store.pendingRescues = [
       {
         challengeId: 'c-plank',
         title: 'Plank: her gün +5 saniye',
         missedDate: addDays(today, -1),
         streakBefore: 12,
-        expiresAt: new Date(Date.now() + (21 * 60 + 40) * 60000).toISOString(),
-        freeRescueAvailable: store.freeRescueUsedMonth !== today.slice(0, 7),
+        expiresAt,
+        freeRescueAvailable: true,
+      },
+      {
+        challengeId: 'c-read',
+        title: 'Her gün 20 sayfa oku',
+        missedDate: addDays(today, -1),
+        streakBefore: 3,
+        expiresAt,
+        freeRescueAvailable: true,
       },
     ];
   },
@@ -698,7 +710,9 @@ export const mockApi: GazlaApi = {
   async getPendingRescues() {
     await wait();
     me();
-    return clone(store.pendingRescues);
+    // Ücretsiz hak ayda bir: bir kurtarmada kullanılınca diğerlerinde de biter
+    const freeRescueAvailable = store.freeRescueUsedMonth !== localDate().slice(0, 7);
+    return store.pendingRescues.map((p) => ({ ...clone(p), freeRescueAvailable }));
   },
   async checkin(input: CheckinInput) {
     await wait();
