@@ -1,49 +1,132 @@
 import { useRouter } from 'expo-router';
-import { useMemo } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FriendList } from '@/components/FriendRow';
-import { Button, ErrorState, LoadingState, ScreenHeader, SectionLabel } from '@/components/ui';
+import { Button, ErrorState, LoadingState, ScreenHeader, SectionLabel, ToastHost, useToast } from '@/components/ui';
+import { CONGRATS_POKE } from '@/content/pokes';
 import {
   ApiError,
   useAcceptFriendRequestMutation,
-  useActivity,
+  useActivityPages,
   useMarkActivityReadMutation,
   useRemoveFriendshipMutation,
+  useSendPokeMutation,
+  useUndoPokeMutation,
+  useUnreadCount,
+  type ActivityItem,
 } from '@/data';
 import ActivityRow, { type ActivityActions } from '@/features/activity/ActivityRow';
 import { groupByDay } from '@/features/activity/logic';
+import { toDative } from '@/features/friends/names';
 import { componentTypography, layout, radius, typography, useTheme } from '@/theme';
 import { socialMetrics as m } from '@/theme/social';
 
-// Aktivite — design/Activity.dc.html. Veri: notifications (useActivity), güne göre gruplu.
-// Satır metni ve aksiyonu bildirimin türüne göre (ActivityRow); "Tümü okundu" hepsini okundu yapar.
+/** Listenin sonuna bu kadar kala sonraki sayfa istenir */
+const LOAD_MORE_THRESHOLD = 400;
+
+// Aktivite — design/Activity.dc.html. Veri: notifications, 30'ar sayfa (useActivityPages), güne göre gruplu;
+// liste sonuna gelince sonraki sayfa yüklenir. Satır metni ve aksiyonu bildirimin türüne göre (ActivityRow).
+// "Tümü okundu" hepsini okundu yapar; "Tebrik et" hazır gaz mesajını sayfa açmadan gönderir.
 export default function ActivityScreen() {
   const { colors } = useTheme();
   const router = useRouter();
+  const toast = useToast();
 
-  const activity = useActivity();
+  const activity = useActivityPages();
+  const unreadCount = useUnreadCount();
   const markRead = useMarkActivityReadMutation();
   const accept = useAcceptFriendRequestMutation();
   const remove = useRemoveFriendshipMutation();
+  const congrats = useSendPokeMutation();
+  const undoCongrats = useUndoPokeMutation();
+  /** Tebrik gönderilen bildirimler → gönderilen dürtme (geri alınca listeden çıkar) */
+  const [congratulated, setCongratulated] = useState<Record<string, string>>({});
+  const [congratsPendingId, setCongratsPendingId] = useState<string | null>(null);
+  const [contentHeight, setContentHeight] = useState(0);
+  const [viewportHeight, setViewportHeight] = useState(0);
 
-  const items = useMemo(() => activity.data ?? [], [activity.data]);
+  const items = useMemo(() => activity.data?.pages.flatMap((p) => p.items) ?? [], [activity.data]);
   // Zaman etiketleri veri her geldiğinde yeniden hesaplanır
   const now = useMemo(() => new Date(activity.dataUpdatedAt || Date.now()), [activity.dataUpdatedAt]);
   const groups = useMemo(() => groupByDay(items, now), [items, now]);
-  const unread = items.filter((a) => !a.readAt).length;
+  // Okunmamış sayısı sunucudan (yüklenmemiş sayfalardakiler de); gelene kadar yüklenenlerden
+  const unread = unreadCount.data ?? items.filter((a) => !a.readAt).length;
+
+  const { hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage } = activity;
+  const loadMore = () => {
+    if (hasNextPage && !isFetchingNextPage && !isFetchNextPageError) fetchNextPage();
+  };
+  const onScroll = ({ nativeEvent: e }: NativeSyntheticEvent<NativeScrollEvent>) => {
+    if (e.layoutMeasurement.height + e.contentOffset.y >= e.contentSize.height - LOAD_MORE_THRESHOLD) loadMore();
+  };
+  // Yüklenen sayfalar ekranı doldurmuyorsa kaydırma olmaz; devamı hemen istenir
+  const fillsScreen = contentHeight > viewportHeight + LOAD_MORE_THRESHOLD;
+  useEffect(() => {
+    if (viewportHeight > 0 && contentHeight > 0 && !fillsScreen && hasNextPage && !isFetchingNextPage && !isFetchNextPageError) {
+      fetchNextPage();
+    }
+  }, [fillsScreen, viewportHeight, contentHeight, hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage]);
+
+  const sendCongrats = (item: ActivityItem) => {
+    const actor = item.actor;
+    if (!actor) return;
+    setCongratsPendingId(item.id);
+    congrats.mutate(
+      {
+        recipientId: actor.id,
+        tone: CONGRATS_POKE.tone,
+        messageKey: CONGRATS_POKE.id,
+        challengeId: item.challengeId ?? undefined,
+      },
+      {
+        onSettled: () => setCongratsPendingId(null),
+        onSuccess: (poke) => {
+          setCongratulated((s) => ({ ...s, [item.id]: poke.id }));
+          toast.show({
+            message: `${toDative(actor.displayName)} tebrik gönderildi`,
+            action: {
+              label: 'Geri al',
+              onPress: () =>
+                undoCongrats.mutate(poke.id, {
+                  onSuccess: () =>
+                    setCongratulated((s) => {
+                      const next = { ...s };
+                      delete next[item.id];
+                      return next;
+                    }),
+                }),
+            },
+          });
+        },
+      },
+    );
+  };
 
   const actions: ActivityActions = {
     onReply: (userId) => router.push({ pathname: '/poke/[userId]', params: { userId } }),
-    onCongrats: (userId) => router.push({ pathname: '/poke/[userId]', params: { userId, tone: 'hype' } }),
+    onCongrats: sendCongrats,
     onAccept: (friendshipId) => accept.mutate(friendshipId),
     onDecline: (userId) => remove.mutate(userId),
     onOpenChallenge: (id) => router.push({ pathname: '/challenge/[id]', params: { id } }),
     busyFriendshipId: accept.isPending ? accept.variables : undefined,
     busyUserId: remove.isPending ? remove.variables : undefined,
+    congratsBusyId: congratsPendingId ?? undefined,
+    congratulatedIds: congratulated,
   };
-  const error = [accept.error, remove.error, markRead.error].find((e) => e instanceof ApiError) as ApiError | undefined;
+  const error = [accept.error, remove.error, markRead.error, congrats.error, undoCongrats.error].find(
+    (e) => e instanceof ApiError,
+  ) as ApiError | undefined;
 
   // Metin buton: 44 yükseklik, 14/800 yeşil (okunmamış yokken pasif gri)
   const markAll = (
@@ -58,6 +141,25 @@ export default function ActivityScreen() {
     />
   );
 
+  const footer = () => {
+    if (isFetchingNextPage) {
+      return (
+        <View style={styles.more} accessibilityLabel="Daha eski bildirimler yükleniyor">
+          <ActivityIndicator color={colors.action} />
+        </View>
+      );
+    }
+    if (isFetchNextPageError) {
+      return (
+        <View style={styles.more}>
+          <Text style={[typography.meta, { color: colors.textBody }]}>Daha eskiler yüklenemedi.</Text>
+          <Button title="Tekrar dene" variant="text" size="sm" onPress={() => fetchNextPage()} />
+        </View>
+      );
+    }
+    return null;
+  };
+
   const body = () => {
     if (activity.isPending) return <LoadingState />;
     if (activity.isError) return <ErrorState onRetry={() => activity.refetch()} />;
@@ -68,32 +170,42 @@ export default function ActivityScreen() {
         </Text>
       );
     }
-    return groups.map((g, gi) => (
-      <View key={g.key}>
-        <SectionLabel style={{ marginTop: gi === 0 ? m.activitySectionMarginTop : m.activityNextSectionMarginTop }}>
-          {g.label}
-        </SectionLabel>
-        <FriendList style={styles.list}>
-          {g.items.map((item, i) => (
-            <ActivityRow
-              key={item.id}
-              item={item}
-              now={now}
-              rich={g.key === 'today'}
-              divider={i < g.items.length - 1}
-              actions={actions}
-            />
-          ))}
-        </FriendList>
-      </View>
-    ));
+    return (
+      <>
+        {groups.map((g, gi) => (
+          <View key={g.key}>
+            <SectionLabel style={{ marginTop: gi === 0 ? m.activitySectionMarginTop : m.activityNextSectionMarginTop }}>
+              {g.label}
+            </SectionLabel>
+            <FriendList style={styles.list}>
+              {g.items.map((item, i) => (
+                <ActivityRow
+                  key={item.id}
+                  item={item}
+                  now={now}
+                  rich={g.key === 'today'}
+                  divider={i < g.items.length - 1}
+                  actions={actions}
+                />
+              ))}
+            </FriendList>
+          </View>
+        ))}
+        {footer()}
+      </>
+    );
   };
 
   return (
     <SafeAreaView edges={['top']} style={styles.screen}>
       <ScrollView
         contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={activity.isRefetching} onRefresh={() => activity.refetch()} />}>
+        onScroll={onScroll}
+        scrollEventThrottle={100}
+        // İlk sayfa ekranı doldurmuyorsa da devamı istenir
+        onContentSizeChange={(_, height) => setContentHeight(height)}
+        onLayout={(e) => setViewportHeight(e.nativeEvent.layout.height)}
+        refreshControl={<RefreshControl refreshing={activity.isRefetching && !isFetchingNextPage} onRefresh={() => activity.refetch()} />}>
         <ScreenHeader title="Aktivite" trailing={markAll} />
         {error && (
           <Text
@@ -104,6 +216,7 @@ export default function ActivityScreen() {
         )}
         {body()}
       </ScrollView>
+      <ToastHost toast={toast} />
     </SafeAreaView>
   );
 }
@@ -125,6 +238,10 @@ const styles = StyleSheet.create({
   list: {
     marginTop: m.sectionListMarginTop,
     borderRadius: radius.card,
+  },
+  more: {
+    paddingVertical: m.activityMorePaddingY,
+    alignItems: 'center',
   },
   error: {
     marginTop: m.sectionListMarginTop,

@@ -35,6 +35,7 @@ export default function ReasonList({ value, onChange }: Props) {
             onPress={() => onChange(r.value)}
             accessibilityRole="radio"
             accessibilityState={{ checked: selected }}
+            aria-checked={selected}
             style={[
               styles.row,
               {

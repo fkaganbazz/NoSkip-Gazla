@@ -5,27 +5,55 @@ import { FriendRowButton } from '@/components/FriendRow';
 import { typography, useTheme } from '@/theme';
 import { socialColors, socialMetrics as m, socialTypography } from '@/theme/social';
 
+type Props = {
+  onShare: () => void;
+  /**
+   * Hiç arkadaş yokken: kart büyür, ortada selam veren Diken ve "Henüz arkadaşın yok" (tasarlanmadı;
+   * aynı yeşil kart, EmptyToday'deki gibi ortalı düzen).
+   */
+  expanded?: boolean;
+};
+
 // "Arkadaşını davet et" yeşil kartı: metin, Paylaş butonu, sağ altta selam veren Diken (Friends.dc.html).
-export default function InviteCard({ onShare }: { onShare: () => void }) {
+export default function InviteCard({ onShare, expanded = false }: Props) {
   const { scheme } = useTheme();
   const c = socialColors[scheme];
 
+  const share = (
+    <FriendRowButton
+      title="Paylaş"
+      variant="ink"
+      onPress={onShare}
+      accessibilityLabel="Arkadaş davetini paylaş"
+      size="lg"
+      style={expanded ? styles.shareExpanded : styles.share}
+    />
+  );
+
+  if (expanded) {
+    return (
+      <View style={[styles.card, styles.expanded, { backgroundColor: c.inviteCardBg }]}>
+        <Diken mood="selam" stage="tam" size={m.inviteEmptyDikenSize} />
+        <Text accessibilityRole="header" style={[typography.title2, styles.emptyTitle, { color: c.inviteTitle }]}>
+          Henüz arkadaşın yok
+        </Text>
+        <Text style={[socialTypography.inviteSub, styles.emptySub, { color: c.inviteSub }]}>
+          Arkadaşını davet et ya da kullanıcı adıyla ara. Linkle gelen, doğrudan grubuna katılır.
+        </Text>
+        {share}
+      </View>
+    );
+  }
+
   return (
-    <View style={[styles.card, { backgroundColor: c.inviteCardBg }]}>
+    <View style={[styles.card, styles.compact, { backgroundColor: c.inviteCardBg }]}>
       <View style={styles.texts}>
         <Text style={[typography.cardTitle, { color: c.inviteTitle }]}>Arkadaşını davet et</Text>
         <Text style={[socialTypography.inviteSub, { color: c.inviteSub }]}>
           Linkle gelen, doğrudan grubuna katılır.
         </Text>
       </View>
-      <FriendRowButton
-        title="Paylaş"
-        variant="ink"
-        onPress={onShare}
-        accessibilityLabel="Davet linkini paylaş"
-        size="lg"
-        style={styles.share}
-      />
+      {share}
       <View style={styles.diken}>
         <Diken mood="selam" stage="tam" size={m.inviteDikenSize} />
       </View>
@@ -36,12 +64,19 @@ export default function InviteCard({ onShare }: { onShare: () => void }) {
 const styles = StyleSheet.create({
   card: {
     marginTop: m.inviteMarginTop,
-    height: m.inviteHeight,
-    paddingVertical: m.invitePaddingY,
     paddingHorizontal: m.invitePaddingX,
     borderRadius: m.inviteRadius,
     overflow: 'hidden',
+  },
+  compact: {
+    height: m.inviteHeight,
+    paddingVertical: m.invitePaddingY,
     flexDirection: 'row',
+    alignItems: 'center',
+  },
+  expanded: {
+    paddingTop: m.inviteEmptyPaddingTop,
+    paddingBottom: m.inviteEmptyPaddingBottom,
     alignItems: 'center',
   },
   texts: {
@@ -52,6 +87,18 @@ const styles = StyleSheet.create({
   share: {
     marginLeft: 'auto',
     marginRight: m.shareMarginRight,
+  },
+  shareExpanded: {
+    marginTop: m.inviteEmptyButtonMarginTop,
+  },
+  emptyTitle: {
+    marginTop: m.inviteEmptyTitleMarginTop,
+    textAlign: 'center',
+  },
+  emptySub: {
+    marginTop: m.inviteEmptySubMarginTop,
+    maxWidth: m.inviteEmptySubMaxWidth,
+    textAlign: 'center',
   },
   diken: {
     position: 'absolute',

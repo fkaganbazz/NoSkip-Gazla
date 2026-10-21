@@ -83,6 +83,17 @@ export const socialMetrics = {
   inviteDikenSize: 76,
   inviteDikenRight: -6,
   inviteDikenBottom: -22,
+  /**
+   * Hiç arkadaş yokken büyüyen davet kartı (tasarlanmadı; EmptyToday'deki gibi ortalı Diken + başlık + metin,
+   * aynı yeşil kart ve "Paylaş"). Ölçüler boşluk ölçeğinden.
+   */
+  inviteEmptyPaddingTop: 16,
+  inviteEmptyPaddingBottom: 20,
+  inviteEmptyDikenSize: 96,
+  inviteEmptyTitleMarginTop: 8,
+  inviteEmptySubMarginTop: 4,
+  inviteEmptySubMaxWidth: 260,
+  inviteEmptyButtonMarginTop: 16,
 
   // Bölümler ve liste kartı
   sectionFirstMarginTop: 18,
@@ -130,6 +141,11 @@ export const socialMetrics = {
   messageBadgeIconStrokeWidth: 4,
   sendMarginTop: 16,
   pokeErrorMarginBottom: 10,
+  /**
+   * Sert mod kapalıyken "Laf sok" sekmesi pasif: ortak Segmented'de pasif seçenek yok; sekmenin üstüne kap
+   * renginde yarı saydam örtü çizilir (kontrollerdeki pasif opaklık .5 ile aynı görünüm).
+   */
+  segmentVeilOpacity: 0.5,
 
   // Aktivite
   activitySectionMarginTop: 16,
@@ -152,6 +168,12 @@ export const socialMetrics = {
   unreadDotLeft: 6,
   unreadDotTop: 30,
   markAllPaddingX: 4,
+  /** Sonraki sayfa yüklenirken liste altındaki gösterge */
+  activityMorePaddingY: 16,
+
+  // Arkadaş profili: katılabileceğin challenge'lar (tasarlanmadı; ortak challenge satırıyla aynı ölçüler)
+  joinableRowMinHeight: 60,
+  joinableRowPaddingY: 10,
 
   // Şikayet (başlık: ortak ScreenHeader compact, ayrıntı alanı: ortak TextField sm)
   reportIntroMarginTop: 20,
@@ -180,8 +202,12 @@ export const socialTypography = {
   pokeTitle: { fontFamily: fonts.extraBold, fontSize: 17 },
   /** Mesaj kartı · Nunito 800 · 15 · 1.3 */
   message: { fontFamily: fonts.extraBold, fontSize: 15, lineHeight: 15 * 1.3 },
-  /** Aktivite satır başlığı · Nunito 800 · 15 · 1.3 */
-  activityTitle: { fontFamily: fonts.extraBold, fontSize: 15, lineHeight: 15 * 1.3 },
+  /**
+   * Aktivite satır başlığı · Nunito 800 · 15 · 1.3. Harf aralığı -0.2: tasarım PNG'si bu başlıkları bizim
+   * Nunito'dan ~%2.5 dar çiziyor ("Kerem arkadaşlık isteği gönderdi" PNG'de 228 px, bizde 234 px; satırda
+   * zamanın yanında 231 px yer var). -0.2 ile genişlik PNG'dekine iner ve başlık tasarımdaki gibi tek satır kalır.
+   */
+  activityTitle: { fontFamily: fonts.extraBold, fontSize: 15, lineHeight: 15 * 1.3, letterSpacing: -0.2 },
   /** Aktivite alt satırı · Nunito 600 · 14 */
   activitySub: { fontFamily: fonts.semiBold, fontSize: 14 },
   /** Şikayet başlığı · Baloo 2 800 · 27 · 1.1 */

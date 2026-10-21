@@ -11,7 +11,8 @@ type Props = {
   onSelect: (key: string) => void;
 };
 
-// Hazır mesajlar: iki sütunlu kartlar, seçilende koyu kenar ve sağ üstte tik (Poke.dc.html).
+// Hazır mesajlar: iki sütunlu kartlar, seçilende koyu kenar ve sağ üstte tik (Poke.dc.html). Kartlar
+// tasarımdaki <button> gibi: aynı satırdaki kısa metin dikeyde ortalı.
 export default function MessageGrid({ messages, selectedKey, onSelect }: Props) {
   const { colors, scheme } = useTheme();
   const c = socialColors[scheme];
@@ -32,6 +33,7 @@ export default function MessageGrid({ messages, selectedKey, onSelect }: Props) 
                 onPress={() => onSelect(msg.key)}
                 accessibilityRole="radio"
                 accessibilityState={{ checked: selected }}
+                aria-checked={selected}
                 style={({ pressed }) => [
                   styles.card,
                   { backgroundColor: colors.surface, borderColor: selected ? c.selectedBorder : colors.border },
@@ -74,6 +76,7 @@ const styles = StyleSheet.create({
     paddingRight: m.messagePaddingRight,
     borderRadius: m.messageRadius,
     borderWidth: m.messageBorder,
+    justifyContent: 'center',
   },
   spacer: {
     flex: 1,

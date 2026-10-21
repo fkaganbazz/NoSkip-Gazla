@@ -5,10 +5,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FriendList, FriendRow, FriendRowButton } from '@/components/FriendRow';
 import SearchField from '@/components/SearchField';
-import { ErrorState, IconButton, SectionLabel, type SectionLabelTone } from '@/components/ui';
+import { ErrorState, IconButton, SectionLabel, ToastHost, useToast, type SectionLabelTone } from '@/components/ui';
 import {
   ApiError,
   useAcceptFriendRequestMutation,
+  useAuth,
   useFriendRequests,
   useFriendsToday,
   useRemoveFriendshipMutation,
@@ -20,16 +21,20 @@ import {
 } from '@/data';
 import { UserPlusIcon } from '@/features/friends/icons';
 import InviteCard from '@/features/friends/InviteCard';
-import { friendSub, groupFriends, searchTerm, useDebounced } from '@/features/friends/logic';
+import { friendSub, groupFriends, personSub, searchTerm, useDebounced } from '@/features/friends/logic';
+import { shareFriendInvite } from '@/features/friends/share';
 import { componentTypography, layout, typography, useTheme } from '@/theme';
 import { socialMetrics as m } from '@/theme/social';
 
 // Arkadaşlar — design/Friends.dc.html. Veri: friends_today, bekleyen istekler, search_profiles.
 // Arama 2 harften sonra (gecikmeli) sonuçları gösterir; boşken istekler ve bugünkü durum listelenir.
+// Hiç arkadaş yokken davet kartı büyür ("Henüz arkadaşın yok"). "Paylaş" sistem paylaşımını açar.
 export default function FriendsScreen() {
   const { colors } = useTheme();
   const router = useRouter();
   const searchRef = useRef<TextInput>(null);
+  const { profile } = useAuth();
+  const toast = useToast();
 
   const [query, setQuery] = useState('');
   const debounced = useDebounced(query);
@@ -53,6 +58,11 @@ export default function FriendsScreen() {
     | ApiError
     | undefined;
 
+  const onShare = async () => {
+    const result = await shareFriendInvite(profile?.username);
+    if (result === 'copied') toast.show({ message: 'Davet metni kopyalandı', kind: 'success' });
+  };
+
   const openProfile = (id: string) => router.push({ pathname: '/friend/[id]', params: { id } });
   const openPoke = (userId: string, tone?: 'hype') =>
     router.push({ pathname: '/poke/[userId]', params: tone ? { userId, tone } : { userId } });
@@ -62,7 +72,7 @@ export default function FriendsScreen() {
       key={r.id}
       divider={i < all.length - 1}
       person={r.person}
-      sub={`@${r.person.username}`}
+      sub={personSub(r.person.username, r.mutualCount)}
       action={{
         type: 'request',
         onAccept: r.direction === 'incoming' ? () => accept.mutate(r.id) : undefined,
@@ -100,7 +110,7 @@ export default function FriendsScreen() {
         divider={i < all.length - 1}
         onPress={p.isFriend ? () => openProfile(p.id) : undefined}
         person={p}
-        sub={`@${p.username}`}
+        sub={personSub(p.username, p.mutualCount)}
         action={
           p.isFriend || incoming
             ? undefined
@@ -165,7 +175,6 @@ export default function FriendsScreen() {
         />
       );
     }
-    const none = requestList.length === 0 && (friends.data ?? []).length === 0;
     // Bölümler: istekler, bekleyenler, tamamlayanlar, bugün görevi olmayanlar (boşlar gösterilmez)
     const all: { key: string; label: string; tone: SectionLabelTone; rows: ReactNode[] }[] = [
       { key: 'requests', label: 'İSTEKLER', tone: 'default', rows: requestList.map(requestRow) },
@@ -187,11 +196,6 @@ export default function FriendsScreen() {
             <FriendList style={styles.list}>{s.rows}</FriendList>
           </View>
         ))}
-        {none && (
-          <Text style={[typography.body, styles.status, { color: colors.textBody }]}>
-            Henüz arkadaşın yok. Kullanıcı adıyla ara ya da davet linkini paylaş.
-          </Text>
-        )}
       </>
     );
   };
@@ -244,7 +248,7 @@ export default function FriendsScreen() {
           <View style={{ marginTop: m.sectionFirstMarginTop }}>{renderSearch()}</View>
         ) : (
           <>
-            <InviteCard onShare={() => router.push('/invite-friends')} />
+            <InviteCard expanded={friends.isSuccess && friends.data.length === 0} onShare={onShare} />
             {renderLists()}
           </>
         )}
@@ -255,6 +259,7 @@ export default function FriendsScreen() {
           </Pressable>
         )}
       </ScrollView>
+      <ToastHost toast={toast} />
     </SafeAreaView>
   );
 }

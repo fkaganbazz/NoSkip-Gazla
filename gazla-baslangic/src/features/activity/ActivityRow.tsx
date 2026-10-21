@@ -13,13 +13,18 @@ import { activityText, isPoke, timeLabel } from './logic';
 
 export type ActivityActions = {
   onReply: (userId: string) => void;
-  onCongrats: (userId: string) => void;
+  /** Challenge bitirme: hazır gaz mesajını doğrudan gönderir (CONGRATS_POKE) */
+  onCongrats: (item: ActivityItem) => void;
   onAccept: (friendshipId: string) => void;
   onDecline: (userId: string) => void;
   onOpenChallenge: (challengeId: string) => void;
   /** Sürmekte olan istek işlemleri (buton dönen gösterge) */
   busyFriendshipId?: string;
   busyUserId?: string;
+  /** Tebriği gönderilmekte olan bildirim */
+  congratsBusyId?: string;
+  /** Tebrik gönderilmiş bildirimler (id → dürtme id); buton "Tebrik edildi" ve pasif */
+  congratulatedIds: Record<string, string>;
 };
 
 type Props = {
@@ -104,12 +109,15 @@ export default function ActivityRow({ item, now, rich, divider, actions }: Props
       />
     );
   } else if (rich && actor && item.kind === 'friend_finished_challenge') {
+    const sent = !!actions.congratulatedIds[item.id];
     action = (
       <FriendRowButton
-        title="Tebrik et"
+        title={sent ? 'Tebrik edildi' : 'Tebrik et'}
         variant="hype"
-        onPress={() => actions.onCongrats(actor.id)}
-        accessibilityLabel={`${actor.displayName} kişisini tebrik et`}
+        onPress={() => actions.onCongrats(item)}
+        loading={actions.congratsBusyId === item.id}
+        disabled={sent}
+        accessibilityLabel={sent ? `${actor.displayName} tebrik edildi` : `${actor.displayName} kişisini tebrik et`}
         wide
         style={styles.alignStart}
       />

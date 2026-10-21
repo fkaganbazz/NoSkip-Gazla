@@ -12,14 +12,15 @@ import {
   useFriendProfile,
   useFriendsToday,
   usePokeMessages,
+  usePokeStatus,
   useSendPokeMutation,
   useUndoPokeMutation,
   type PokeTone,
 } from '@/data';
 import { ShieldIcon } from '@/features/friends/icons';
-import { toDative } from '@/features/friends/names';
+import { toAccusative, toDative } from '@/features/friends/names';
 import MessageGrid from '@/features/poke/MessageGrid';
-import { componentMetrics as cm, componentTypography, typography, useTheme } from '@/theme';
+import { componentColors, componentMetrics as cm, componentTypography, typography, useTheme } from '@/theme';
 import { sheetDikenMetrics } from '@/theme/sheet';
 import { socialColors, socialMetrics as m, socialTypography } from '@/theme/social';
 
@@ -31,9 +32,10 @@ const UNDO_MS = 30_000;
 /** Tasarımdaki ilk seçim: gazda ilk mesaj, lafta ikinci */
 const defaultIndex = (tone: PokeTone) => (tone === 'roast' ? 1 : 0);
 
-// Dürt — design/Poke.dc.html (alt sayfa, `Sheet`; üstünde Diken + balon). Hazır mesaj listesi (poke_messages);
-// "Laf sok" yalnızca alıcının sert modu açıksa. Gönderince 30 sn "Geri al" tostu, süre bitince sayfa kapanır.
-// Parametreler: userId; isteğe bağlı tone ('hype' — "Gaz ver" butonlarından) ve challengeId.
+// Dürt — design/Poke.dc.html (alt sayfa, `Sheet`; üstünde Diken + balon). Hazır mesajlar src/content/pokes.ts
+// (usePokeMessages). "Laf sok" yalnızca alıcının sert modu açıksa seçilebilir; kapalıysa sekme pasif görünür.
+// Günlük sınır (usePokeStatus): hak bitince gönder pasif. Gönderince 30 sn "Geri al" tostu, süre bitince
+// sayfa kapanır. Parametreler: userId; isteğe bağlı tone ('hype' — "Gaz ver" butonlarından) ve challengeId.
 export default function PokeSheet() {
   const params = useLocalSearchParams<{ userId: string; tone?: PokeTone; challengeId?: string }>();
   const userId = params.userId;
@@ -45,12 +47,15 @@ export default function PokeSheet() {
   const friends = useFriendsToday();
   const profile = useFriendProfile(userId);
   const messages = usePokeMessages();
+  const status = usePokeStatus(userId);
   const send = useSendPokeMutation();
   const undo = useUndoPokeMutation();
 
   const friend = friends.data?.find((f) => f.id === userId);
   const person = friend ?? profile.data ?? null;
-  const harsh = friend?.harshMode ?? profile.data?.harshMode ?? false;
+  const harsh = status.data?.harshMode ?? friend?.harshMode ?? profile.data?.harshMode ?? false;
+  /** Bugünkü dürtme hakkı bitti (geri alınanlar da sayılır); gönderip geri alınca da yenilenir */
+  const limitReached = status.data?.remaining === 0;
 
   const [tone, setTone] = useState<PokeTone | null>(params.tone ?? null);
   const [pickedKey, setPickedKey] = useState<string | null>(null);
@@ -98,11 +103,13 @@ export default function PokeSheet() {
         ? `${profile.data.streak} gün seri`
         : '';
     const note = !harsh
-      ? `${name} sert modu kapalı; sadece gaz verebilirsin.`
+      ? `${name} sert modu açmamış, sadece gaz verebilirsin.`
       : activeTone === 'roast'
         ? `${name} sert modu açtı, laf sokabilirsin.`
         : 'Gaz mesajları herkese her zaman açık.';
     const error = [send.error, undo.error].find((e) => e instanceof ApiError) as ApiError | undefined;
+    const limitNote =
+      status.data?.remaining === 0 ? `Bugün ${toAccusative(name)} ${status.data.dailyLimit} kez dürttün, yarın yine dene.` : null;
 
     return (
       <>
@@ -124,26 +131,36 @@ export default function PokeSheet() {
           <IconButton icon="close" accessibilityLabel="Kapat" onPress={close} />
         </View>
 
-        {harsh && (
-          <View style={styles.segment}>
-            <Segmented<PokeTone>
-              size="lg"
-              textSize="lg"
-              role="tabs"
-              accessibilityLabel="Mesaj türü"
-              options={[
-                { value: 'hype', label: 'Gaz ver' },
-                { value: 'roast', label: 'Laf sok' },
-              ]}
-              value={activeTone}
-              onChange={(t) => {
-                setTone(t);
-                setPickedKey(null);
-              }}
-              selectedColor={(t) => (t === 'roast' ? c.roastText : colors.actionText)}
+        <View style={styles.segment}>
+          <Segmented<PokeTone>
+            size="lg"
+            textSize="lg"
+            role="tabs"
+            accessibilityLabel="Mesaj türü"
+            options={[
+              { value: 'hype', label: 'Gaz ver' },
+              { value: 'roast', label: 'Laf sok' },
+            ]}
+            value={activeTone}
+            onChange={(t) => {
+              // Sert mod kapalıyken "Laf sok" seçilemez
+              if (t === 'roast' && !harsh) return;
+              setTone(t);
+              setPickedKey(null);
+            }}
+            selectedColor={(t) => (t === 'roast' ? c.roastText : colors.actionText)}
+          />
+          {/* Ortak Segmented'de pasif seçenek yok: "Laf sok" hücresini kap rengindeki yarı saydam örtü soluklaştırır
+              ve dokunmayı tutar (açıklama altındaki satırda) */}
+          {!harsh && (
+            <View
+              accessible
+              accessibilityLabel={`Laf sok kapalı. ${name} sert modu açmamış.`}
+              aria-disabled
+              style={[styles.veil, { backgroundColor: componentColors[scheme].segmentTrack }]}
             />
-          </View>
-        )}
+          )}
+        </View>
 
         <View style={styles.note}>
           <ShieldIcon color={colors.textSecondary} size={m.noteIconSize} strokeWidth={m.noteIconStrokeWidth} />
@@ -160,6 +177,11 @@ export default function PokeSheet() {
               {error.message}
             </Text>
           )}
+          {!!limitNote && !sentId && !error && (
+            <Text accessibilityLiveRegion="polite" style={[typography.meta, styles.error, { color: colors.textBody }]}>
+              {limitNote}
+            </Text>
+          )}
           {sentId ? (
             <Toast
               message={`${toDative(name)} gönderildi`}
@@ -173,7 +195,7 @@ export default function PokeSheet() {
               title={`${toDative(name)} gönder`}
               icon={(color) => <SendIcon color={color} size={cm.buttonIconSize} strokeWidth={cm.buttonIconStroke} />}
               loading={send.isPending}
-              disabled={!selectedKey}
+              disabled={!selectedKey || limitReached}
               onPress={() => {
                 if (!selectedKey) return;
                 undo.reset();
@@ -194,14 +216,14 @@ export default function PokeSheet() {
     );
   };
 
-  // Diken'in sözü (tasarımda sert mod açık hali; kapalı hali tasarlanmadı, aynı kalıpta)
+  // Diken'in sözü (tasarımda sert mod açık hali; kapalı hali tasarlanmadı, aynı kalıpta: gaz vermeye çağırır)
   const top = person ? (
     <View style={styles.top}>
       <View style={styles.diken}>
         <Diken mood="laf" stage="tam" size={sheetDikenMetrics.dikenSize} />
       </View>
       <SpeechBubble size="sm" tail="left" tailOffset={d.tailTop} shadow="none" style={styles.bubble}>
-        {harsh ? `${person.displayName} sert modu açmış. Acıma.` : `${person.displayName} sert modu kapatmış. Kibar ol.`}
+        {harsh ? `${person.displayName} sert modu açmış. Acıma.` : `${person.displayName} sert modu açmamış. Gazla bari.`}
       </SpeechBubble>
     </View>
   ) : null;
@@ -245,6 +267,17 @@ const styles = StyleSheet.create({
   },
   segment: {
     marginTop: m.segmentMarginTop,
+  },
+  // Sağ yarı ("Laf sok" hücresi + kap kenarı); köşeler kapla aynı
+  veil: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    width: '50%',
+    opacity: m.segmentVeilOpacity,
+    borderTopRightRadius: cm.segmentTrackRadius,
+    borderBottomRightRadius: cm.segmentTrackRadius,
   },
   note: {
     marginTop: m.noteMarginTop,

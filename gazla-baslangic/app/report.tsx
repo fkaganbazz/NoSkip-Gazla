@@ -139,6 +139,7 @@ export default function ReportScreen() {
               onPress={() => setAlsoBlock((v) => !v)}
               accessibilityRole="checkbox"
               accessibilityState={{ checked: alsoBlock }}
+              aria-checked={alsoBlock}
               style={styles.block}>
               <Checkbox checked={alsoBlock} />
               <Text style={[socialTypography.blockLabel, { color: colors.text }]}>

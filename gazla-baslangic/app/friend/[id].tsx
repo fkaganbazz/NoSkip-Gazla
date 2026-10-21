@@ -5,16 +5,25 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import ActionSheet, { type ActionSheetItem } from '@/components/ActionSheet';
 import { HandIcon } from '@/components/icons';
-import { Avatar, ErrorState, IconButton, LoadingState, SectionLabel } from '@/components/ui';
-import { useBlockUserMutation, useFriendProfile, useRemoveFriendshipMutation, type FriendProfile } from '@/data';
+import { Avatar, ErrorState, IconButton, LoadingState, SectionLabel, ToastHost, useToast } from '@/components/ui';
+import {
+  useBlockUserMutation,
+  useFriendProfile,
+  useJoinFriendChallengeMutation,
+  useRemoveFriendshipMutation,
+  type FriendProfile,
+  type JoinableChallenge,
+} from '@/data';
 import { BlockIcon, FlagIcon, UserMinusIcon } from '@/features/friends/icons';
 import { toAccusative } from '@/features/friends/names';
+import JoinableChallenges from '@/features/friends/JoinableChallenges';
 import SharedChallenges from '@/features/friends/SharedChallenges';
-import { borderWidth, layout, typography, useTheme } from '@/theme';
+import { borderWidth, componentTypography, layout, typography, useTheme } from '@/theme';
 import { socialMetrics as m, socialTypography } from '@/theme/social';
 
 // Arkadaş profili — design/FriendProfile.dc.html. Veri: friend_profile. Sağ üstteki "Seçenekler"
 // işlem sayfasını açar: dürt, arkadaşlıktan çıkar ve engelle (sayfa içi onayla), şikayet et.
+// Arkadaşın "Arkadaşlarım" görünürlüklü challenge'ları ortak listenin altında "Katıl" ile (tasarlanmadı).
 export default function FriendProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -23,6 +32,8 @@ export default function FriendProfileScreen() {
   const profile = useFriendProfile(id);
   const remove = useRemoveFriendshipMutation();
   const block = useBlockUserMutation();
+  const join = useJoinFriendChallengeMutation();
+  const toast = useToast();
 
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -68,6 +79,12 @@ export default function FriendProfileScreen() {
     closeMenu();
     router.back();
   };
+
+  // Katılınca profil yenilenir: challenge bu listeden düşer, ortak challenge'lara geçer
+  const joinChallenge = (c: JoinableChallenge) =>
+    join.mutate(c.challengeId, {
+      onSuccess: () => toast.show({ message: `"${c.title}" challenge'ına katıldın`, kind: 'success' }),
+    });
 
   // Onaysız satırlar sayfa kapandıktan sonra çalışır; onaylı satırlar işlem bitince ekranı kapatır
   const items: ActionSheetItem[] = [
@@ -149,7 +166,29 @@ export default function FriendProfileScreen() {
             />
           </>
         )}
+
+        {p.joinableChallenges.length > 0 && (
+          <>
+            <SectionLabel style={styles.section}>
+              KATILABİLECEĞİN CHALLENGE&apos;LAR
+            </SectionLabel>
+            <JoinableChallenges
+              items={p.joinableChallenges}
+              onJoin={joinChallenge}
+              joiningId={join.isPending ? join.variables : undefined}
+            />
+            {join.error && (
+              <Text
+                accessibilityLiveRegion="polite"
+                style={[componentTypography.inputError, styles.joinError, { color: colors.dangerText }]}>
+                {join.error.message}
+              </Text>
+            )}
+          </>
+        )}
       </ScrollView>
+
+      <ToastHost toast={toast} />
 
       <ActionSheet
         visible={menuOpen}
@@ -213,5 +252,8 @@ const styles = StyleSheet.create({
   },
   section: {
     marginTop: m.statsMarginTop,
+  },
+  joinError: {
+    marginTop: m.sectionListMarginTop,
   },
 });
