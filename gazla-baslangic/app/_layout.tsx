@@ -5,6 +5,8 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
 import { useEffect } from 'react';
+import { StyleSheet } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { DataProvider, useAuth } from '@/data';
 import { OnboardingProvider, useOnboarding } from '@/features/onboarding/OnboardingProvider';
@@ -21,13 +23,22 @@ export const unstable_settings = {
 
 export default function RootLayout() {
   return (
-    <DataProvider>
-      <OnboardingProvider>
-        <RootNavigator />
-      </OnboardingProvider>
-    </DataProvider>
+    // Alt sayfalar (@gorhom/bottom-sheet) için jest kökü
+    <GestureHandlerRootView style={styles.root}>
+      <DataProvider>
+        <OnboardingProvider>
+          <RootNavigator />
+        </OnboardingProvider>
+      </DataProvider>
+    </GestureHandlerRootView>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
+});
 
 /** Alt sayfa (sheet) sunumu: NumberEntry, Poke */
 const SHEET = {
