@@ -3,8 +3,8 @@ import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } fr
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Diken from '@/components/Diken';
-import { ChevronRightIcon } from '@/components/icons';
-import { ErrorState, IconButton, LoadingState } from '@/components/ui';
+import { ChevronRightIcon, ShareIcon } from '@/components/icons';
+import { Button, Card, ErrorState, IconButton, LoadingState } from '@/components/ui';
 import {
   useAuth,
   useChallenge,
@@ -14,10 +14,8 @@ import {
   useMyMembership,
 } from '@/data';
 import Confetti from '@/features/moments/Confetti';
-import { ShareIcon } from '@/features/moments/icons';
-import { CloseButton, SolidButton, TextButton } from '@/features/moments/parts';
 import { finishedColors, momentsMetrics as m, momentsTypography as t } from '@/theme/moments';
-import { borderWidth, layout, radius, useTheme } from '@/theme';
+import { componentMetrics as cm, layout, radius, useTheme } from '@/theme';
 
 const DESIGN_WIDTH = 390;
 const DESIGN_TOP = 56;
@@ -96,7 +94,7 @@ export default function FinishedScreen() {
         </View>
 
         <View style={styles.closeRow}>
-          <CloseButton onPress={close} bg={colors.surface} color={colors.text} borderColor={colors.border} />
+          <IconButton icon="close" accessibilityLabel="Kapat" onPress={close} />
         </View>
 
         <View style={styles.diken}>
@@ -136,15 +134,12 @@ export default function FinishedScreen() {
         </Pressable>
 
         <View style={styles.footer}>
-          <SolidButton
+          <Button
             title="Story'de paylaş"
-            icon={<ShareIcon color={colors.onAction} size={m.shareIconSize} strokeWidth={m.shareIconStroke} />}
+            icon={(color) => <ShareIcon color={color} size={cm.buttonIconSize} strokeWidth={cm.buttonIconStroke} />}
             onPress={() => router.push({ pathname: '/challenge/[id]/share', params: { id: ch.id } })}
-            bg={colors.action}
-            text={colors.onAction}
-            shadow={colors.actionShadow}
           />
-          <TextButton title="Yeni challenge seç" color={colors.text} onPress={() => router.navigate('/explore')} />
+          <Button title="Yeni challenge seç" variant="text" onPress={() => router.navigate('/explore')} />
         </View>
       </ScrollView>
     </View>
@@ -155,10 +150,12 @@ function Stat({ value, label }: { value: string; label: string }) {
   const { colors, scheme } = useTheme();
   const c = finishedColors[scheme];
   return (
-    <View accessible accessibilityLabel={`${value} ${label}`} style={[styles.stat, { backgroundColor: c.statBg, borderColor: c.statBorder }]}>
-      <Text style={[t.statValue, { color: colors.text }]}>{value}</Text>
-      <Text style={[t.statLabel, { color: c.statLabel }]}>{label}</Text>
-    </View>
+    <Card style={styles.stat}>
+      <View accessible accessibilityLabel={`${value} ${label}`} style={styles.statInner}>
+        <Text style={[t.statValue, { color: colors.text }]}>{value}</Text>
+        <Text style={[t.statLabel, { color: c.statLabel }]}>{label}</Text>
+      </View>
+    </Card>
   );
 }
 
@@ -210,7 +207,8 @@ const styles = StyleSheet.create({
     paddingVertical: m.statPaddingY,
     paddingHorizontal: m.statPaddingX,
     borderRadius: m.statRadius,
-    borderWidth: borderWidth.thin,
+  },
+  statInner: {
     alignItems: 'center',
     gap: m.statGap,
   },

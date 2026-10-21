@@ -1,10 +1,9 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
-import { flatShadowStyle } from '@/components/FlatShadow';
-import { upperTr } from '@/components/ui';
+import { Avatar, Button, Card } from '@/components/ui';
 import type { BoardMember } from '@/data';
 import { challengeColors, challengeMetrics as m, challengeTypography as t } from '@/theme/challenge';
-import { avatarTints, borderWidth, useTheme } from '@/theme';
+import { borderWidth, useTheme } from '@/theme';
 
 import { accusative, boardRowInfo } from './logic';
 
@@ -19,7 +18,7 @@ type Props = {
 export default function BoardCard({ members, meId, onPoke }: Props) {
   const { colors } = useTheme();
   return (
-    <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+    <Card style={styles.card}>
       <View style={styles.header}>
         <Text accessibilityRole="header" style={[t.boardTitle, { color: colors.text }]}>
           Grup
@@ -35,7 +34,7 @@ export default function BoardCard({ members, meId, onPoke }: Props) {
           onPoke={onPoke}
         />
       ))}
-    </View>
+    </Card>
   );
 }
 
@@ -52,7 +51,6 @@ function Row({
 }) {
   const { colors, scheme } = useTheme();
   const c = challengeColors[scheme];
-  const tint = avatarTints[member.avatarTint][scheme];
   const info = boardRowInfo(member);
   const name = isMe ? 'Sen' : member.displayName;
   const canPoke = !isMe && info.tone === 'waiting';
@@ -66,9 +64,7 @@ function Row({
       <Text style={[t.rowStrong, styles.rank, { color: member.rank === 1 ? c.rankFirst : colors.textSecondary }]}>
         {member.rank}
       </Text>
-      <View style={[styles.avatar, { backgroundColor: tint.bg }]}>
-        <Text style={[t.avatar, { color: tint.ink }]}>{upperTr(member.displayName.charAt(0))}</Text>
-      </View>
+      <Avatar name={member.displayName} tint={member.avatarTint} url={member.avatarUrl} size={m.avatar} decorative />
       <View style={styles.names}>
         <Text numberOfLines={1} style={[t.name, { color: colors.text }]}>
           {name}
@@ -82,18 +78,14 @@ function Row({
         )}
       </View>
       {canPoke ? (
-        <Pressable
-          onPress={() => onPoke(member.id)}
-          accessibilityRole="button"
+        <Button
+          title="Dürt"
+          variant="orange"
+          size="sm"
           accessibilityLabel={`${accusative(member.displayName)} dürt`}
-          hitSlop={4}
-          style={({ pressed }) => [
-            styles.poke,
-            { backgroundColor: colors.accent },
-            pressed ? { transform: [{ translateY: m.pokeShadow }] } : flatShadowStyle(m.pokeShadow, c.pokeShadow),
-          ]}>
-          <Text style={[t.rowStrong, { color: colors.onAccent }]}>Dürt</Text>
-        </Pressable>
+          onPress={() => onPoke(member.id)}
+          style={styles.poke}
+        />
       ) : (
         <Text style={[t.rowStrong, { color: info.tone === 'broken' ? colors.textSecondary : c.streakText }]}>
           {`${member.streak} gün`}
@@ -107,7 +99,6 @@ const styles = StyleSheet.create({
   card: {
     marginTop: m.boardMarginTop,
     borderRadius: m.cardRadius,
-    borderWidth: borderWidth.thin,
     overflow: 'hidden',
   },
   header: {
@@ -128,21 +119,12 @@ const styles = StyleSheet.create({
   rank: {
     width: m.rankWidth,
   },
-  avatar: {
-    width: m.avatar,
-    height: m.avatar,
-    borderRadius: m.avatar / 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   names: {
     flex: 1,
     minWidth: 0,
   },
+  // Detail.dc.html "Dürt": 0 14 iç boşluk (ortak hap butonu 0 16)
   poke: {
-    height: m.pokeHeight,
     paddingHorizontal: m.pokePaddingX,
-    borderRadius: m.pokeHeight / 2,
-    justifyContent: 'center',
   },
 });

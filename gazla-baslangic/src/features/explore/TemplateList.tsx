@@ -1,9 +1,11 @@
 import { Fragment } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { AddIcon, challengeIcons } from '@/components/icons';
+import { CategoryTile } from '@/components/CategoryTile';
+import { AddIcon } from '@/components/icons';
+import { Card } from '@/components/ui';
 import type { Template } from '@/data';
-import { borderWidth, challengeTints, radius, typography, useTheme } from '@/theme';
+import { borderWidth, cardMetrics, typography, useTheme } from '@/theme';
 import { exploreColors, exploreMetrics as m, exploreTypography } from '@/theme/explore';
 
 import { CATEGORY_NAMES, DIFFICULTY_NAMES } from './labels';
@@ -15,16 +17,17 @@ type Props = {
   onCreate?: () => void;
 };
 
+/** "Kendin oluştur" karosu: satırdaki kategori karosuyla aynı ölçü (ikonu challenge ikonu değil) */
+const ADD_TILE = cardMetrics.categoryTile[m.rowIconTile];
+
 // Popüler listesi: tek kartta ayraçlı satırlar (Explore.dc.html).
 export default function TemplateList({ templates, onOpen, onCreate }: Props) {
   const { colors, scheme } = useTheme();
   const c = exploreColors[scheme];
 
   return (
-    <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+    <Card style={styles.card}>
       {templates.map((t, i) => {
-        const tint = challengeTints[t.tint][scheme];
-        const Icon = challengeIcons[t.icon];
         const meta = `${CATEGORY_NAMES[t.category]} · ${DIFFICULTY_NAMES[t.difficulty]}`;
         const last = i === templates.length - 1 && !onCreate;
         return (
@@ -34,9 +37,7 @@ export default function TemplateList({ templates, onOpen, onCreate }: Props) {
               accessibilityRole="button"
               accessibilityLabel={`${t.title}, ${meta}, ${t.defaultDurationDays} gün`}
               style={({ pressed }) => [styles.row, pressed && { backgroundColor: colors.surfaceMuted }]}>
-              <View style={[styles.iconTile, { backgroundColor: tint.bg }]}>
-                <Icon color={tint.ink} size={m.rowIconSize} strokeWidth={m.rowIconStrokeWidth} />
-              </View>
+              <CategoryTile icon={t.icon} category={t.category} size={m.rowIconTile} />
               <View style={styles.texts}>
                 <Text numberOfLines={1} style={[exploreTypography.rowTitle, { color: colors.text }]}>
                   {t.title}
@@ -58,23 +59,21 @@ export default function TemplateList({ templates, onOpen, onCreate }: Props) {
           onPress={onCreate}
           accessibilityRole="button"
           style={({ pressed }) => [styles.row, pressed && { backgroundColor: colors.surfaceMuted }]}>
-          <View style={[styles.iconTile, { backgroundColor: colors.actionTint }]}>
-            <AddIcon color={colors.actionText} size={m.rowIconSize} strokeWidth={m.rowIconStrokeWidth} />
+          <View style={[styles.addTile, { backgroundColor: colors.actionTint }]}>
+            <AddIcon color={colors.actionText} size={ADD_TILE.iconSize} strokeWidth={cardMetrics.categoryTileStrokeWidth} />
           </View>
           <View style={styles.texts}>
             <Text style={[exploreTypography.rowTitle, { color: colors.actionText }]}>Kendin oluştur</Text>
           </View>
         </Pressable>
       )}
-    </View>
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
     marginTop: m.listMarginTop,
-    borderRadius: radius.card,
-    borderWidth: borderWidth.thin,
     overflow: 'hidden',
   },
   row: {
@@ -84,10 +83,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: m.rowGap,
   },
-  iconTile: {
+  addTile: {
     width: m.rowIconTile,
     height: m.rowIconTile,
-    borderRadius: m.rowIconRadius,
+    borderRadius: ADD_TILE.radius,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -1,9 +1,11 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useMemo, useState, type ReactNode } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useMemo, useState, type ComponentType, type ReactNode } from 'react';
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AddIcon, CameraIcon, CheckIcon, challengeIcons } from '@/components/icons';
+import ActionSheet, { type ActionSheetItem } from '@/components/ActionSheet';
+import { CategoryTile } from '@/components/CategoryTile';
+import { AddIcon, CameraIcon, CheckIcon, HandIcon, type IconProps } from '@/components/icons';
 import { Button, ErrorState, IconButton, LoadingState, Toast } from '@/components/ui';
 import {
   useAuth,
@@ -16,7 +18,6 @@ import {
   useToday,
 } from '@/data';
 import BoardCard from '@/features/challenge/BoardCard';
-import { DotsIcon } from '@/features/challenge/icons';
 import {
   CATEGORY_LABELS,
   accusative,
@@ -26,12 +27,10 @@ import {
   isoDate,
   addDays,
 } from '@/features/challenge/logic';
-import OptionsMenu from '@/features/challenge/OptionsMenu';
-import PokeCta from '@/features/challenge/PokeCta';
 import ProgressCard from '@/features/challenge/ProgressCard';
 import { useNow } from '@/features/today/useNow';
 import { challengeColors, challengeMetrics as m, challengeTypography as t } from '@/theme/challenge';
-import { borderWidth, challengeTints, layout, radius, useTheme } from '@/theme';
+import { challengeTints, componentMetrics as cm, layout, radius, useTheme } from '@/theme';
 
 // Challenge detayı — design/Detail.dc.html (açık) ve design/DetailDark.dc.html (koyu).
 // Veri: challenges, challenge_members (kendi satırı), challenge_board, takvim; gün numarası my_today'den.
@@ -116,7 +115,6 @@ export default function ChallengeDetailScreen() {
   const ch = challenge.data;
   const members = board.data ?? [];
   const tint = challengeTints[ch.tint][scheme];
-  const Icon = challengeIcons[ch.icon];
   const active = membership.data?.status === 'active';
   const phase = challengePhase(ch, membership.data, task, todayIso);
 
@@ -143,24 +141,71 @@ export default function ChallengeDetailScreen() {
   if (phase.kind === 'finished' && membership.data && membership.data.status !== 'left') {
     cta = <Button title="Özeti gör" onPress={() => router.push({ pathname: '/challenge/[id]/finished', params: { id: ch.id } })} />;
   } else if (active && openTask) {
-    const markIcon =
-      openTask.taskType === 'photo' ? (
-        <CameraIcon color={colors.onAction} size={m.ctaIconSize} strokeWidth={m.ctaIconStroke} />
-      ) : openTask.taskType === 'number' ? (
-        <AddIcon color={colors.onAction} size={m.ctaIconSize} strokeWidth={m.ctaIconStroke} />
-      ) : (
-        <CheckIcon color={colors.onAction} size={m.ctaIconSize} strokeWidth={m.ctaIconStroke} />
-      );
+    const markIcon = openTask.taskType === 'photo' ? CameraIcon : openTask.taskType === 'number' ? AddIcon : CheckIcon;
     const markTitle =
       openTask.taskType === 'photo' ? 'Fotoğrafla tamamla' : openTask.taskType === 'number' ? 'Bugünkü değeri gir' : 'Bugünü tamamla';
-    cta = <Button title={markTitle} icon={markIcon} loading={checkin.isPending} onPress={onMark} />;
+    cta = <Button title={markTitle} icon={ctaIcon(markIcon)} loading={checkin.isPending} onPress={onMark} />;
   } else if (waitingFriend) {
-    cta = <PokeCta title={`${accusative(waitingFriend.displayName)} dürt`} onPress={() => goPoke(waitingFriend.id)} />;
+    cta = (
+      <Button
+        title={`${accusative(waitingFriend.displayName)} dürt`}
+        variant="orange"
+        icon={ctaIcon(HandIcon)}
+        onPress={() => goPoke(waitingFriend.id)}
+      />
+    );
   } else if (active && phase.kind !== 'finished') {
     cta = <Button title="Arkadaş davet et" variant="secondary" onPress={() => router.push({ pathname: '/invite-friends', params: { challengeId: ch.id } })} />;
   }
 
   const ctaBottom = Math.max(m.ctaBottom, insets.bottom);
+
+  // "…" menüsü: davet ve ayrılma yalnızca süren challenge'ın aktif üyesine
+  const canChange = active && phase.kind !== 'finished';
+  const menuItems: ActionSheetItem[] = [
+    ...(canChange
+      ? [
+          {
+            key: 'invite',
+            label: 'Arkadaş davet et',
+            onPress: () => router.push({ pathname: '/invite-friends', params: { challengeId: ch.id } }),
+          },
+        ]
+      : []),
+    {
+      key: 'report',
+      label: 'Şikayet et',
+      // Challenge şikayeti, oluşturan kişiye yazılır (submit_report)
+      onPress: () =>
+        router.push({
+          pathname: '/report',
+          params: { targetType: 'challenge', targetId: ch.id, ...(ch.createdBy ? { userId: ch.createdBy } : {}) },
+        }),
+    },
+    ...(canChange
+      ? [
+          {
+            key: 'leave',
+            label: "Challenge'dan ayrıl",
+            danger: true,
+            confirm: {
+              title: "Challenge'dan ayrıl?",
+              message: 'Bu challenge artık Bugün listende görünmez ve grup sıralamasından çıkarsın.',
+              confirmLabel: 'Ayrıl',
+              loading: leave.isPending,
+              error: leave.error?.message ?? null,
+            },
+            onPress: () =>
+              leave.mutate(ch.id, {
+                onSuccess: () => {
+                  setMenuOpen(false);
+                  router.canGoBack() ? router.back() : router.replace('/');
+                },
+              }),
+          },
+        ]
+      : []),
+  ];
 
   return (
     <View style={styles.screen}>
@@ -172,23 +217,11 @@ export default function ChallengeDetailScreen() {
         refreshControl={<RefreshControl refreshing={challenge.isRefetching || board.isRefetching} onRefresh={refetchAll} />}>
         <View style={styles.headerRow}>
           <IconButton icon="back" accessibilityLabel="Geri" />
-          <Pressable
-            onPress={() => setMenuOpen(true)}
-            accessibilityRole="button"
-            accessibilityLabel="Challenge seçenekleri"
-            hitSlop={4}
-            style={({ pressed }) => [
-              styles.iconButton,
-              { backgroundColor: pressed ? colors.surfaceMuted : colors.surface, borderColor: colors.border },
-            ]}>
-            <DotsIcon color={colors.text} size={m.iconSize} />
-          </Pressable>
+          <IconButton icon="options" accessibilityLabel="Challenge seçenekleri" onPress={() => setMenuOpen(true)} />
         </View>
 
         <View style={styles.titleRow}>
-          <View style={[styles.tile, { backgroundColor: tint.bg }]}>
-            <Icon color={tint.ink} size={m.tileIconSize} strokeWidth={m.tileIconStroke} />
-          </View>
+          <CategoryTile icon={ch.icon} tint={ch.tint} size={56} />
           <Text accessibilityRole="header" style={[t.title, styles.title, { color: colors.text }]}>
             {ch.title}
           </Text>
@@ -224,44 +257,23 @@ export default function ChallengeDetailScreen() {
         </View>
       )}
 
-      <OptionsMenu
+      <ActionSheet
         visible={menuOpen}
         onClose={() => {
           setMenuOpen(false);
           leave.reset();
         }}
-        onInvite={
-          active && phase.kind !== 'finished'
-            ? () => {
-                setMenuOpen(false);
-                router.push({ pathname: '/invite-friends', params: { challengeId: ch.id } });
-              }
-            : undefined
-        }
-        onReport={() => {
-          setMenuOpen(false);
-          // Challenge şikayeti, oluşturan kişiye yazılır (submit_report)
-          router.push({
-            pathname: '/report',
-            params: { targetType: 'challenge', targetId: ch.id, ...(ch.createdBy ? { userId: ch.createdBy } : {}) },
-          });
-        }}
-        onLeave={
-          active && phase.kind !== 'finished'
-            ? () =>
-                leave.mutate(ch.id, {
-                  onSuccess: () => {
-                    setMenuOpen(false);
-                    router.canGoBack() ? router.back() : router.replace('/');
-                  },
-                })
-            : undefined
-        }
-        leaving={leave.isPending}
-        leaveError={leave.error?.message ?? null}
+        title={ch.title}
+        accessibilityLabel="Challenge seçenekleri"
+        items={menuItems}
       />
     </View>
   );
+}
+
+/** Alt butonun ikonu: buton metninin renginde, 20 / 2.6 (Detail.dc.html) */
+function ctaIcon(Icon: ComponentType<IconProps>) {
+  return (color: string) => <Icon color={color} size={cm.buttonIconSize} strokeWidth={cm.buttonIconStroke} />;
 }
 
 function ChipTag({ label, bg, fg }: { label: string; bg: string; fg: string }) {
@@ -284,26 +296,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  iconButton: {
-    width: m.iconButton,
-    height: m.iconButton,
-    borderRadius: m.iconButton / 2,
-    borderWidth: borderWidth.thin,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   titleRow: {
     marginTop: m.titleMarginTop,
     flexDirection: 'row',
     alignItems: 'center',
     gap: m.titleGap,
-  },
-  tile: {
-    width: m.tile,
-    height: m.tile,
-    borderRadius: m.tileRadius,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   title: {
     flex: 1,

@@ -79,9 +79,6 @@ export const exploreMetrics = {
 
   chipsMarginTop: 12,
   chipGap: 8,
-  chipHeight: 40,
-  chipPaddingX: 16,
-  chipRadius: 20,
 
   featuredMarginTop: 14,
   featuredHeight: 150,
@@ -105,10 +102,8 @@ export const exploreMetrics = {
   rowHeight: 64,
   rowPaddingX: 14,
   rowGap: 12,
+  /** Satırdaki kategori karosu (CategoryTile 42) */
   rowIconTile: 42,
-  rowIconRadius: 14,
-  rowIconSize: 22,
-  rowIconStrokeWidth: 2,
   durationPillPaddingY: 4,
   durationPillPaddingX: 9,
   durationPillRadius: 10,
@@ -128,8 +123,6 @@ export const exploreMetrics = {
 export const exploreTypography = {
   /** Arama alanı · Nunito 600 · 16 */
   search: { fontFamily: fonts.semiBold, fontSize: 16 },
-  /** Kategori çipi · Nunito 800 · 14 */
-  chip: { fontFamily: fonts.extraBold, fontSize: 14 },
   /** "HAFTANIN CHALLENGE'I" · Nunito 800 · 12 · aralık 1 */
   featuredLabel: { fontFamily: fonts.extraBold, fontSize: 12, letterSpacing: 1 },
   /** Öne çıkan başlık · Baloo 2 800 · 27 · 1.05 */
@@ -148,21 +141,17 @@ export type PreviewColors = {
   /** Kaçırırsan Diken solar satırının ikon karosu */
   rescueTileBg: string;
   rescueTileInk: string;
-  /** Üst alandaki yuvarlak butonlar (beyaz, kenarsız) */
-  headerButtonBg: string;
 };
 
 export const previewColors: Record<Scheme, PreviewColors> = {
   light: {
     rescueTileBg: palette.rescue,
     rescueTileInk: palette.orange700,
-    headerButtonBg: palette.card,
   },
   dark: {
     // koyu: şeftali tonunun koyu avatar karşılığı (accents.ts peach)
     rescueTileBg: '#5A2E1C',
     rescueTileInk: '#FFD8C2',
-    headerButtonBg: darkColors.surface,
   },
 };
 
@@ -181,9 +170,8 @@ export const previewMetrics = {
   /** Üst alanın butonlardan aşağısı · 206 (tasarımda 262 − üst boşluk 56); üstüne güvenli alan + 9 eklenir */
   heroBelowTop: 206,
   heroRadius: 32,
-  headerButton: 44,
-  headerIconSize: 20,
-  backIconStrokeWidth: 2.6,
+  /** Paylaş ikonu (geri ikonu IconButton'dan) */
+  shareIconSize: 20,
   shareIconStrokeWidth: 2.4,
   illustrationWidth: 170,
   illustrationHeight: 150,
@@ -215,9 +203,8 @@ export const previewMetrics = {
   segmentedMarginTop: 8,
   friendsMarginTop: 14,
   friendsGap: 10,
+  /** Yapanlar yüz yığını (AvatarStack; kenar 2, binme -8 varsayılan) */
   friendAvatar: 28,
-  friendAvatarBorder: 2,
-  friendOverlap: -8,
 
   footerGap: 10,
   footerPaddingTop: 12,
@@ -234,8 +221,6 @@ export const previewTypography = {
   description: { fontFamily: fonts.semiBold, fontSize: 15, lineHeight: 15 * 1.5 },
   /** Özellik satırı · Nunito 700 · 15 */
   feature: { fontFamily: fonts.bold, fontSize: 15 },
-  /** Yüz yığınındaki harf · Nunito 800 · 12 */
-  faceInitial: { fontFamily: fonts.extraBold, fontSize: 12 },
 } as const satisfies Record<string, TextStyle>;
 
 // Davet karşılama (InviteLanding.dc.html) ------------------------------------------------------------
@@ -243,8 +228,6 @@ export const previewTypography = {
 export type InviteColors = {
   background: string;
   logoBg: string;
-  bubbleBg: string;
-  bubbleShadow: string | undefined;
   avatarRing: string;
   cardBorder: string;
   cardDivider: string;
@@ -254,8 +237,6 @@ export const inviteColors: Record<Scheme, InviteColors> = {
   light: {
     background: palette.green50,
     logoBg: palette.nightPurple,
-    bubbleBg: palette.card,
-    bubbleShadow: '#CFE6D7',
     avatarRing: palette.white,
     cardBorder: '#D5EBDD',
     cardDivider: '#F4EDE5',
@@ -263,8 +244,6 @@ export const inviteColors: Record<Scheme, InviteColors> = {
   dark: {
     background: darkColors.background, // koyu: ekran zemini
     logoBg: palette.nightPurple,
-    bubbleBg: darkColors.surface,
-    bubbleShadow: undefined, // koyu modda kart gölgeleri yok (TodayDark)
     avatarRing: darkColors.surface,
     cardBorder: darkColors.border,
     cardDivider: darkColors.border,
@@ -281,34 +260,23 @@ export const inviteMetrics = {
   messageGap: 10,
   inviterAvatar: 56,
   inviterAvatarBorder: 3,
-  bubblePaddingY: 12,
-  bubblePaddingX: 14,
-  bubbleRadius: 18,
-  bubbleTailRadius: 4,
-  bubbleShadow: 4,
   titleMarginTop: 22,
   cardMarginTop: 16,
   cardPadding: 16,
   cardRadius: 24,
   cardGap: 14,
   cardInnerGap: 12,
+  /** Kategori karosu (CategoryTile 52) */
   cardIconTile: 52,
-  cardIconRadius: 16,
-  cardIconSize: 28,
-  cardIconStrokeWidth: 2,
   cardTextGap: 2,
   membersPaddingTop: 12,
   membersGap: 10,
+  /** Katılanlar yüz yığını (AvatarStack; kenar 2, binme -8 varsayılan) */
   memberAvatar: 30,
-  memberAvatarBorder: 2,
-  memberOverlap: -8,
   dikenRowMarginTop: 10,
   dikenRowGap: 4,
   dikenSize: 132,
   dikenBubbleMarginBottom: 70,
-  dikenBubblePaddingY: 10,
-  dikenBubblePaddingX: 12,
-  dikenBubbleRadius: 16,
   actionsGap: 4,
   invalidGap: 12,
   invalidDikenSize: 150,
@@ -319,12 +287,8 @@ export const inviteTypography = {
   logo: { fontFamily: fonts.heading, fontSize: 24, lineHeight: 24 },
   /** Davet edenin baş harfi · Baloo 2 800 · 24 */
   inviterInitial: { fontFamily: fonts.heading, fontSize: 24 },
-  /** Davet mesajı · Nunito 700 · 15 · 1.4 */
-  message: { fontFamily: fonts.bold, fontSize: 15, lineHeight: 15 * 1.4 },
   /** Başlık · Baloo 2 800 · 30 · 1.08 */
   title: { fontFamily: fonts.heading, fontSize: 30, lineHeight: 30 * 1.08 },
   /** Challenge adı · Nunito 800 · 18 */
   challengeTitle: { fontFamily: fonts.extraBold, fontSize: 18 },
-  /** Diken balonu · Nunito 800 · 13 · 1.3 */
-  dikenBubble: { fontFamily: fonts.extraBold, fontSize: 13, lineHeight: 13 * 1.3 },
 } as const satisfies Record<string, TextStyle>;

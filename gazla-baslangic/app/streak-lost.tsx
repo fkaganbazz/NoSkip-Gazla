@@ -3,10 +3,11 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AvatarStack } from '@/components/Avatar';
 import Diken from '@/components/Diken';
 import { flatShadowStyle } from '@/components/FlatShadow';
-import { CheckIcon, ClockIcon } from '@/components/icons';
-import { Button, ErrorState, LoadingState, Toast } from '@/components/ui';
+import { CheckIcon, ClockIcon, SolidDropIcon } from '@/components/icons';
+import { Button, ErrorState, IconButton, LoadingState, Toast } from '@/components/ui';
 import {
   useAuth,
   useChallengeBoard,
@@ -14,13 +15,11 @@ import {
   useRescueWithFreeRightMutation,
   type PendingRescue,
 } from '@/data';
-import { SolidDropIcon } from '@/features/challenge/icons';
 import { addDays, formatShortDate, isoDate, joinNames } from '@/features/challenge/logic';
 import { formatRemaining } from '@/features/moments/logic';
-import { CloseButton, FaceStack, SolidButton, TextButton } from '@/features/moments/parts';
 import { useNow } from '@/features/today/useNow';
 import { momentsMetrics as m, momentsTypography as t, streakLostColors } from '@/theme/moments';
-import { borderWidth, layout, radius, useTheme } from '@/theme';
+import { borderWidth, componentMetrics as cm, layout, radius, useTheme } from '@/theme';
 
 type Saved = { item: PendingRescue; via: 'ad' | 'free' };
 
@@ -60,7 +59,7 @@ export default function StreakLostScreen() {
       <View style={[styles.screen, { paddingTop: top, paddingHorizontal: layout.screenPadding, backgroundColor: c.bgLost }]}>
         <View style={styles.topRow}>
           <View />
-          <CloseButton onPress={close} bg={c.pillBg} color={colors.text} />
+          <IconButton icon="close" tone="onColor" accessibilityLabel="Kapat" onPress={close} />
         </View>
         <ErrorState message={rescues.error.message} onRetry={() => rescues.refetch()} />
       </View>
@@ -142,7 +141,7 @@ export default function StreakLostScreen() {
               {lost ? `Kurtarmak için ${remaining}` : 'Seri kurtarıldı'}
             </Text>
           </View>
-          <CloseButton onPress={close} bg={c.pillBg} color={colors.text} />
+          <IconButton icon="close" tone="onColor" accessibilityLabel="Kapat" onPress={close} />
         </View>
 
         <View style={styles.diken}>
@@ -162,11 +161,10 @@ export default function StreakLostScreen() {
 
         {lost && continuing.length > 0 && (
           <View style={[styles.friendsPill, { backgroundColor: c.pillBg }]}>
-            <FaceStack
-              faces={continuing.slice(0, 2).map((f) => ({ id: f.id, name: f.displayName, tint: f.avatarTint }))}
+            <AvatarStack
+              people={continuing.slice(0, 2).map((f) => ({ id: f.id, name: f.displayName, tint: f.avatarTint, url: f.avatarUrl }))}
               size={m.lostStackAvatar}
-              borderColor={c.stackBorder}
-              small
+              outlineColor={c.stackBorder}
             />
             <Text style={[t.friendsPill, styles.friendsText, { color: c.body }]}>
               {`${joinNames(continuing.map((f) => f.displayName))} hâlâ devam ediyor`}
@@ -188,14 +186,10 @@ export default function StreakLostScreen() {
                   }
                 />
               )}
-              <SolidButton
+              <Button
                 title="Reklam izle, Diken'i sula"
                 accessibilityLabel="Reklam izle, Diken'i sula, 30 saniye"
                 onPress={onWatchAd}
-                bg={colors.action}
-                text={colors.onAction}
-                shadow={colors.actionShadow}
-                height={m.adButtonHeight}
                 style={styles.adButton}
                 icon={<SolidDropIcon color={c.adDrop} size={m.adDropSize} />}
                 trailing={
@@ -210,17 +204,10 @@ export default function StreakLostScreen() {
                 highlighted={adFailed}
                 onPress={onFree}
               />
-              <TextButton title="Baştan başla" color={colors.text} height={m.restartHeight} onPress={close} />
+              <Button title="Baştan başla" variant="text" size="md" onPress={close} />
             </>
           ) : (
-            <SolidButton
-              title="Devam"
-              onPress={onContinue}
-              bg={colors.action}
-              text={colors.onAction}
-              shadow={colors.actionShadow}
-              height={m.adButtonHeight}
-            />
+            <Button title="Devam" onPress={onContinue} style={styles.tallButton} />
           )}
         </View>
       </ScrollView>
@@ -254,7 +241,7 @@ function FreeButton({
       style={({ pressed }) => [
         styles.free,
         { backgroundColor: c.freeBg, borderColor: border, opacity: available ? 1 : 0.6 },
-        pressed ? { transform: [{ translateY: m.buttonShadow }] } : flatShadowStyle(m.buttonShadow, border),
+        pressed ? { transform: [{ translateY: cm.buttonShadow }] } : flatShadowStyle(cm.buttonShadow, border),
       ]}>
       <Text style={[t.freeTitle, { color: colors.text }]}>{loading ? 'Kurtarılıyor…' : 'Ücretsiz hakkımı kullan'}</Text>
       <Text style={[t.freeSub, { color: colors.textSecondary }]}>
@@ -319,7 +306,12 @@ const styles = StyleSheet.create({
     paddingTop: m.friendsPillTop,
     gap: m.actionsGap,
   },
+  // StreakLost.dc.html: alt butonlar 58 (ortak tok buton 56); reklam butonunda ikon–metin 10
+  tallButton: {
+    height: m.adButtonHeight,
+  },
   adButton: {
+    height: m.adButtonHeight,
     gap: m.adButtonGap,
   },
   adBadge: {
@@ -331,7 +323,7 @@ const styles = StyleSheet.create({
     minHeight: m.freeButtonMinHeight,
     paddingVertical: m.freeButtonPaddingY,
     paddingHorizontal: m.freeButtonPaddingX,
-    borderRadius: m.buttonRadius,
+    borderRadius: radius.button,
     borderWidth: borderWidth.thick,
     alignItems: 'center',
     justifyContent: 'center',

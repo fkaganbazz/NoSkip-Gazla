@@ -4,7 +4,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Diken from '@/components/Diken';
-import { flatShadowStyle } from '@/components/FlatShadow';
+import SpeechBubble from '@/components/SpeechBubble';
 import { Button, ErrorState, LoadingState } from '@/components/ui';
 import { useAuth, useInvitePreview, useJoinByInviteMutation } from '@/data';
 import GazlaLogo from '@/features/invite-landing/GazlaLogo';
@@ -106,9 +106,9 @@ export default function InviteLandingScreen() {
       <View style={styles.dikenRow}>
         <Diken mood="cosku" stage="tam" size={m.dikenSize} />
         {/* Tasarımdaki satır davet mesajına özeldi ("Baklavayı sen ısmarlama da."); genel hali */}
-        <View style={[styles.dikenBubble, { backgroundColor: c.bubbleBg }, flatShadowStyle(m.bubbleShadow, c.bubbleShadow)]}>
-          <Text style={[inviteTypography.dikenBubble, { color: colors.text }]}>Kaçıran sen olma da.</Text>
-        </View>
+        <SpeechBubble size="sm" style={styles.dikenBubble}>
+          Kaçıran sen olma da.
+        </SpeechBubble>
       </View>
 
       <View style={styles.actions}>
@@ -145,9 +145,6 @@ const styles = StyleSheet.create({
   dikenBubble: {
     flexShrink: 1,
     marginBottom: m.dikenBubbleMarginBottom,
-    paddingVertical: m.dikenBubblePaddingY,
-    paddingHorizontal: m.dikenBubblePaddingX,
-    borderRadius: m.dikenBubbleRadius,
   },
   actions: {
     marginTop: 'auto',

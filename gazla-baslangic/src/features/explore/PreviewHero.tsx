@@ -1,27 +1,27 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Diken from '@/components/Diken';
-import { BackIcon, challengeIcons } from '@/components/icons';
-import type { ChallengeIconKey, ChallengeTintKey } from '@/data';
-import { challengeTints, layout, useTheme } from '@/theme';
-import { previewColors, previewMetrics as m } from '@/theme/explore';
+import { challengeIcons, ShareIcon } from '@/components/icons';
+import { IconButton } from '@/components/ui';
+import type { ChallengeCategory, ChallengeIconKey } from '@/data';
+import { categoryTint, challengeTints, layout, useTheme } from '@/theme';
+import { previewMetrics as m } from '@/theme/explore';
 
 import CoffeeIllustration from './CoffeeIllustration';
-import { ShareIcon } from './icons';
 
 type Props = {
   icon: ChallengeIconKey;
-  tint: ChallengeTintKey;
+  category: ChallengeCategory;
   onBack: () => void;
   onShare: () => void;
 };
 
-// Önizleme üst alanı: şablon renginde zemin, geri/paylaş, illüstrasyon ve Diken (ChallengePreview.dc.html).
-export default function PreviewHero({ icon, tint, onBack, onShare }: Props) {
-  const { colors, scheme } = useTheme();
+// Önizleme üst alanı: kategori renginde zemin, geri/paylaş, illüstrasyon ve Diken (ChallengePreview.dc.html).
+export default function PreviewHero({ icon, category, onBack, onShare }: Props) {
+  const { scheme } = useTheme();
   const insets = useSafeAreaInsets();
-  const t = challengeTints[tint][scheme];
+  const t = challengeTints[categoryTint(category)][scheme];
   const top = insets.top + layout.screenTopGap;
   const Icon = challengeIcons[icon];
 
@@ -40,20 +40,15 @@ export default function PreviewHero({ icon, tint, onBack, onShare }: Props) {
       </View>
 
       <View style={[styles.buttons, { top }]}>
-        <Pressable
-          onPress={onBack}
-          accessibilityRole="button"
-          accessibilityLabel="Geri"
-          style={[styles.button, { backgroundColor: previewColors[scheme].headerButtonBg }]}>
-          <BackIcon color={colors.text} size={m.headerIconSize} strokeWidth={m.backIconStrokeWidth} />
-        </Pressable>
-        <Pressable
-          onPress={onShare}
-          accessibilityRole="button"
+        <IconButton icon="back" tone="onColor" accessibilityLabel="Geri" onPress={onBack} />
+        <IconButton
+          icon={ShareIcon}
+          tone="onColor"
           accessibilityLabel="Paylaş"
-          style={[styles.button, { backgroundColor: previewColors[scheme].headerButtonBg }]}>
-          <ShareIcon color={colors.text} size={m.headerIconSize} strokeWidth={m.shareIconStrokeWidth} />
-        </Pressable>
+          onPress={onShare}
+          iconSize={m.shareIconSize}
+          iconStrokeWidth={m.shareIconStrokeWidth}
+        />
       </View>
     </View>
   );
@@ -71,13 +66,6 @@ const styles = StyleSheet.create({
     right: layout.screenPadding,
     flexDirection: 'row',
     justifyContent: 'space-between',
-  },
-  button: {
-    width: m.headerButton,
-    height: m.headerButton,
-    borderRadius: m.headerButton / 2,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   illustration: {
     position: 'absolute',

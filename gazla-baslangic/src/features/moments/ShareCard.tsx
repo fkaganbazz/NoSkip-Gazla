@@ -1,11 +1,11 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import Diken, { type DikenStage } from '@/components/Diken';
+import { DikenFaceIcon } from '@/components/icons';
 import { celebrationColors as c, momentsMetrics as m, momentsTypography as t } from '@/theme/moments';
 import { radius } from '@/theme';
 
 import Confetti from './Confetti';
-import { GazlaMark } from './icons';
 
 type Props = {
   durationDays: number;
@@ -27,8 +27,8 @@ export default function ShareCard({ durationDays, title, name, username, stage }
       <Confetti variant="share" />
 
       <View style={styles.logoRow}>
-        <View style={styles.logo}>
-          <GazlaMark size={m.logoSize} />
+        <View style={[styles.logo, { backgroundColor: c.logoBg }]}>
+          <DikenFaceIcon size={m.logoSize} />
         </View>
         <Text style={[t.logo, { color: c.text }]}>Gazla</Text>
       </View>

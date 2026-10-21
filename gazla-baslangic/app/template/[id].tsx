@@ -3,9 +3,9 @@ import { useState } from 'react';
 import { ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AvatarStack } from '@/components/Avatar';
 import { Button, ErrorState, LoadingState, Segmented } from '@/components/ui';
 import { useCreateChallengeMutation, useTemplates, useTemplateStats } from '@/data';
-import FaceStack from '@/features/explore/FaceStack';
 import PreviewFeatures from '@/features/explore/PreviewFeatures';
 import PreviewHero from '@/features/explore/PreviewHero';
 import {
@@ -16,7 +16,7 @@ import {
   type DurationOption,
 } from '@/features/explore/labels';
 import { doingNowText } from '@/features/explore/logic';
-import { challengeTints, layout, radius, typography, useTheme } from '@/theme';
+import { categoryTint, challengeTints, layout, radius, typography, useTheme } from '@/theme';
 import { previewMetrics as m, previewTypography } from '@/theme/explore';
 
 const DURATION_SEGMENTS = DURATION_OPTIONS.map((d) => ({ value: String(d), label: `${d} gün` }));
@@ -58,10 +58,10 @@ export default function TemplatePreviewScreen() {
     );
   }
 
-  const tint = challengeTints[template.tint][scheme];
+  const tint = challengeTints[categoryTint(template.category)][scheme];
   const duration = picked ?? template.defaultDurationDays;
   const doing = stats.data ? doingNowText(stats.data) : null;
-  const faces = (stats.data?.friends ?? []).map((f) => ({ name: f.displayName, tint: f.avatarTint }));
+  const faces = (stats.data?.friends ?? []).map((f) => ({ name: f.displayName, tint: f.avatarTint, url: f.avatarUrl }));
 
   const share = () => {
     Share.share({ message: [template.title, template.description].filter(Boolean).join('\n\n') }).catch(() => {});
@@ -80,7 +80,7 @@ export default function TemplatePreviewScreen() {
   return (
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={styles.scroll} bounces={false}>
-        <PreviewHero icon={template.icon} tint={template.tint} onBack={goBack} onShare={share} />
+        <PreviewHero icon={template.icon} category={template.category} onBack={goBack} onShare={share} />
 
         <View style={styles.content}>
           <Text accessibilityRole="header" style={[previewTypography.title, { color: colors.text }]}>
@@ -104,25 +104,19 @@ export default function TemplatePreviewScreen() {
           <Text style={[typography.captionStrong, styles.durationLabel, { color: colors.text }]}>
             Süre
           </Text>
-          <View style={styles.segmented} accessibilityLabel="Süre">
-            <Segmented
-              options={DURATION_SEGMENTS}
-              value={String(duration)}
-              onChange={(v) => setPicked(Number(v) as DurationOption)}
-            />
-          </View>
+          <Segmented
+            options={DURATION_SEGMENTS}
+            value={String(duration)}
+            onChange={(v) => setPicked(Number(v) as DurationOption)}
+            role="radio"
+            accessibilityLabel="Süre"
+            style={styles.segmented}
+          />
 
           {doing && (
             <View style={styles.friends}>
               {faces.length > 0 && (
-                <FaceStack
-                  faces={faces}
-                  size={m.friendAvatar}
-                  border={m.friendAvatarBorder}
-                  ringColor={colors.background}
-                  overlap={m.friendOverlap}
-                  textStyle={previewTypography.faceInitial}
-                />
+                <AvatarStack people={faces} size={m.friendAvatar} outlineColor={colors.background} />
               )}
               <Text style={[typography.caption, styles.friendsText, { color: colors.textBody }]}>{doing}</Text>
             </View>

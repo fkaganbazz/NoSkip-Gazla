@@ -1,7 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { CheckIcon } from '@/components/icons';
-import { SolidDropIcon } from '@/features/challenge/icons';
+import { CheckIcon, SolidDropIcon } from '@/components/icons';
 import { celebrationColors as c, momentsMetrics as m, momentsTypography as t } from '@/theme/moments';
 
 import type { WeekCell } from './logic';

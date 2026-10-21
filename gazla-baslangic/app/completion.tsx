@@ -3,12 +3,13 @@ import { useMemo } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AvatarStack } from '@/components/Avatar';
 import Diken from '@/components/Diken';
+import { Button, IconButton } from '@/components/ui';
 import { useFriendsToday, useRecentDays, useStreak } from '@/data';
 import { accusative, joinNames } from '@/features/challenge/logic';
 import Confetti from '@/features/moments/Confetti';
 import { alsoParticle, weekCells } from '@/features/moments/logic';
-import { CloseButton, FaceStack, SolidButton, TextButton } from '@/features/moments/parts';
 import StreakCard from '@/features/moments/StreakCard';
 import { celebrationColors as c, momentsMetrics as m, momentsTypography as t } from '@/theme/moments';
 import { layout } from '@/theme';
@@ -75,7 +76,7 @@ export default function CompletionScreen() {
         </View>
 
         <View style={styles.closeRow}>
-          <CloseButton onPress={close} bg={c.closeBg} color={c.text} />
+          <IconButton icon="close" tone="onBrand" accessibilityLabel="Kapat" onPress={close} />
         </View>
 
         <View style={styles.diken}>
@@ -99,20 +100,22 @@ export default function CompletionScreen() {
 
         {doneText && (
           <View style={styles.friends}>
-            <FaceStack
-              faces={done.slice(0, 2).map((f) => ({ id: f.id, name: f.displayName, tint: f.avatarTint }))}
+            <AvatarStack
+              people={done.slice(0, 2).map((f) => ({ id: f.id, name: f.displayName, tint: f.avatarTint, url: f.avatarUrl }))}
               size={m.stackAvatar}
-              borderColor={c.stackBorder}
+              outlineColor={c.stackBorder}
+              initialStyle={t.stackInitial}
             />
             <Text style={[t.friends, styles.friendsText, { color: c.sub }]}>{doneText}</Text>
           </View>
         )}
 
         <View style={styles.footer}>
-          <SolidButton title="Süper" onPress={close} bg={c.buttonBg} text={c.buttonText} shadow={c.buttonShadow} />
+          <Button title="Süper" variant="onGreen" onPress={close} />
           {pokeText && (
-            <TextButton
+            <Button
               title={pokeText}
+              variant="text"
               color={c.linkText}
               onPress={() => router.push({ pathname: '/poke/[userId]', params: { userId: pending[0].id } })}
             />

@@ -1,12 +1,11 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { CheckIcon } from '@/components/icons';
+import { CheckIcon, SolidDropIcon, StarIcon } from '@/components/icons';
 import type { TaskType } from '@/data';
 import { challengeTints, useTheme } from '@/theme';
 import { previewColors, previewMetrics as m, previewTypography } from '@/theme/explore';
 
-import { SolidDropIcon, StarIcon } from './icons';
 import { TASK_TYPE_FEATURE } from './labels';
 
 // "Nasıl işler" satırları: işaretleme, kurtarma, bahçe (ChallengePreview.dc.html).

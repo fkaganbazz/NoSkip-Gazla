@@ -7,7 +7,7 @@ import { Button, ErrorState, IconButton, LoadingState, Toast } from '@/component
 import { useAuth, useChallenge, useGarden } from '@/data';
 import ShareCard from '@/features/moments/ShareCard';
 import { momentsMetrics as m } from '@/theme/moments';
-import { layout } from '@/theme';
+import { componentMetrics as cm, layout } from '@/theme';
 
 // Paylaşım kartı — design/ShareCard.dc.html. Tasarım yalnızca kartın kendisi; ekran kartı ortalar,
 // altta "Paylaş" butonu. Şimdilik metin paylaşılır: kartı görsel olarak paylaşmak için
@@ -52,7 +52,7 @@ export default function ShareScreen() {
   const stage = garden.data?.find((g) => g.challengeId === ch.id)?.stage ?? 'cicek';
 
   // Kart 360×640; ekrana sığacak kadar küçültülür (büyütülmez)
-  const availableHeight = height - top - bottom - m.closeButton - m.buttonHeight - m.buttonShadow - 2 * m.previewGap;
+  const availableHeight = height - top - bottom - cm.iconButton - cm.buttonHeight.lg - cm.buttonShadow - 2 * m.previewGap;
   const scale = Math.min(1, (width - 2 * layout.screenPadding) / m.cardWidth, availableHeight / m.cardHeight);
 
   const onShare = async () => {

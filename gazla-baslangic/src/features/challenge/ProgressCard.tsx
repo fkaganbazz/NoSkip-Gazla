@@ -1,10 +1,10 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { CheckIcon } from '@/components/icons';
+import { CheckIcon, SolidDropIcon } from '@/components/icons';
+import { Card } from '@/components/ui';
 import { challengeColors, challengeMetrics as m, challengeTypography as t } from '@/theme/challenge';
-import { borderWidth, radius, useTheme } from '@/theme';
+import { radius, useTheme } from '@/theme';
 
-import { SolidDropIcon } from './icons';
 import type { DayCell } from './logic';
 
 type Props = {
@@ -31,7 +31,7 @@ export default function ProgressCard({ title, detail, doneToday, days }: Props) 
   }
 
   return (
-    <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+    <Card style={styles.card}>
       <View style={styles.top}>
         <View style={styles.dayRow}>
           <Text style={[t.day, { color: colors.text }]}>{title}</Text>
@@ -58,7 +58,7 @@ export default function ProgressCard({ title, detail, doneToday, days }: Props) 
         <LegendItem color={c.cellSavedDrop} label="Reklamla kurtarıldı" />
         <LegendItem color={c.cellToday} ring={c.cellTodayRing} label="Bugün" />
       </View>
-    </View>
+    </Card>
   );
 }
 
@@ -118,7 +118,6 @@ const styles = StyleSheet.create({
     marginTop: m.progressMarginTop,
     padding: m.cardPadding,
     borderRadius: m.cardRadius,
-    borderWidth: borderWidth.thin,
     gap: m.cardGap,
   },
   top: {

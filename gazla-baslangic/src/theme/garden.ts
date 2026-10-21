@@ -40,8 +40,7 @@ export const gardenColors: Record<Scheme, GardenColors> = {
 export const gardenMetrics = {
   headerGap: 14,
   avatarSize: 56,
-  settingsButton: 44,
-  settingsIconSize: 22,
+  /** Ayarlar dişlisi çizgisi (IconButton ikonu 22) */
   settingsIconStrokeWidth: 2.1,
 
   statsMarginTop: 16,
@@ -69,14 +68,9 @@ export const gardenMetrics = {
   addTileBorder: 2,
   addIconSize: 22,
   addIconStrokeWidth: 2.8,
-
-  emptyGap: 12,
-  emptyDikenSize: 120,
 } as const;
 
 export const gardenTypography = {
-  /** Avatar harfi · Baloo 2 800 · 26 */
-  avatarInitial: { fontFamily: fonts.heading, fontSize: 26 },
   /** İstatistik sayısı · Baloo 2 800 · 28 · 1 */
   statValue: { fontFamily: fonts.heading, fontSize: 28, lineHeight: 28 },
   /** Raf etiketi · Nunito 800 · 12 · 1.3 */

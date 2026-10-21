@@ -32,9 +32,6 @@ export type ChallengeColors = {
   rankFirst: string;
   waitingText: string;
   streakText: string;
-  pokeShadow: string;
-  /** Seçenekler menüsünün arkasındaki karartma — tasarımda yok; gece moru %40 */
-  scrim: string;
 };
 
 export const challengeColors: Record<'light' | 'dark', ChallengeColors> = {
@@ -60,8 +57,6 @@ export const challengeColors: Record<'light' | 'dark', ChallengeColors> = {
     rankFirst: '#8A5A00',
     waitingText: palette.orange700,
     streakText: lightColors.actionText,
-    pokeShadow: palette.orange700,
-    scrim: 'rgba(36, 22, 63, 0.4)',
   },
   dark: {
     durationChipBg: palette.sand,
@@ -85,22 +80,13 @@ export const challengeColors: Record<'light' | 'dark', ChallengeColors> = {
     rankFirst: palette.flowerYellow,
     waitingText: '#FF9A6B',
     streakText: palette.darkActionText,
-    pokeShadow: palette.orange700,
-    scrim: 'rgba(0, 0, 0, 0.55)',
   },
 };
 
 export const challengeMetrics = {
-  // Üst satır
-  iconButton: 44,
-  iconSize: 20,
-  backIconStroke: 2.6,
+  // Üst satır (geri/seçenekler: ortak IconButton, karo: ortak CategoryTile 56)
   titleMarginTop: 14,
   titleGap: 14,
-  tile: 56,
-  tileRadius: 18,
-  tileIconSize: 28,
-  tileIconStroke: 2,
   chipsMarginTop: 12,
   chipsGap: 8,
   chipPaddingY: 5,
@@ -142,28 +128,13 @@ export const challengeMetrics = {
   rowGap: 12,
   rankWidth: 18,
   avatar: 36,
-  pokeHeight: 36,
+  /** "Dürt" hapı (ortak Button sm) yatay iç boşluğu · 0 14 */
   pokePaddingX: 14,
-  pokeShadow: 2,
 
-  // Alt buton
+  // Alt buton (ortak Button lg)
   ctaBottom: 30,
-  ctaHeight: 56,
-  ctaRadius: 18,
-  ctaShadow: 4,
-  ctaGap: 8,
-  ctaIconSize: 20,
-  ctaIconStroke: 2.6,
   /** Kaydırılan içeriğin alt butonun altında kalmaması için boşluk (56 + 4 gölge + 16) */
   ctaReserve: 76,
-
-  // Seçenekler menüsü (tasarımda yok; Components kart/buton ölçüleri)
-  menuRadius: 22,
-  menuPadding: 8,
-  menuRowHeight: 52,
-  menuRowPaddingX: 14,
-  menuTop: 56,
-  menuMinWidth: 220,
 } as const;
 
 /** Bu ekrana özgü metin stilleri */
@@ -188,8 +159,4 @@ export const challengeTypography = {
   rowSub: { fontFamily: fonts.bold, fontSize: 12 },
   /** Sıra ve seri · Nunito 800 · 14 */
   rowStrong: { fontFamily: fonts.extraBold, fontSize: 14 },
-  /** Avatar harfi · Nunito 800 · 16 */
-  avatar: { fontFamily: fonts.extraBold, fontSize: 16 },
-  /** Alt buton · Nunito 800 · 17 */
-  cta: { fontFamily: fonts.extraBold, fontSize: 17 },
 } as const satisfies Record<string, TextStyle>;

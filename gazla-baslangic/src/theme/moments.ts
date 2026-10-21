@@ -30,10 +30,8 @@ export const celebrationColors = {
   ringInner: '#2A9156',
   text: palette.sand,
   sub: palette.green100,
-  closeBg: 'rgba(255, 248, 242, 0.16)',
   // Seri kartı
   cardBg: palette.sand,
-  cardText: palette.nightPurple,
   streakNumber: palette.actionGreen,
   streakLabel: palette.ink700,
   dayLabel: palette.ink500,
@@ -44,26 +42,18 @@ export const celebrationColors = {
   dayCheck: palette.white,
   /** Kaçırılan / görevsiz gün — tasarımda yok; Detail'in gelecek gün hücresi */
   dayEmpty: '#F4EDE5',
-  dayEmptyText: palette.ink400,
   daySaved: palette.rescue,
   daySavedDrop: palette.potOrange,
   // Arkadaş yığını
   stackBorder: palette.actionGreen,
-  // Butonlar
-  buttonBg: palette.sand,
-  buttonText: palette.actionGreen,
-  buttonShadow: palette.pressedGreen,
+  // "… gazla" metin butonu ("Süper": ortak Button onGreen)
   linkText: palette.sand,
   // ShareCard
   bigNumber: palette.flowerYellow,
   handleBg: palette.sand,
   handleText: palette.nightPurple,
-  // ShareCard logo (AppIcon)
+  /** ShareCard logosu (AppIcon): DikenFaceIcon'un zemini */
   logoBg: palette.nightPurple,
-  logoBody: palette.dikenGreen,
-  logoShade: '#2C9459',
-  logoEye: palette.white,
-  logoInk: palette.nightPurple,
 } as const;
 
 // Finished --------------------------------------------------------------------------------------------
@@ -74,8 +64,6 @@ export type FinishedColors = {
   badgeBg: string;
   badgeText: string;
   body: string;
-  statBg: string;
-  statBorder: string;
   statLabel: string;
   gardenBg: string;
   gardenText: string;
@@ -88,8 +76,6 @@ export const finishedColors: Record<Scheme, FinishedColors> = {
     badgeBg: palette.flowerYellow,
     badgeText: palette.nightPurple,
     body: lightColors.textBody,
-    statBg: lightColors.surface,
-    statBorder: lightColors.border,
     statLabel: lightColors.textSecondary,
     gardenBg: palette.green100,
     gardenText: '#0E3B22',
@@ -100,8 +86,6 @@ export const finishedColors: Record<Scheme, FinishedColors> = {
     badgeBg: palette.flowerYellow,
     badgeText: palette.nightPurple,
     body: darkColors.textBody,
-    statBg: darkColors.surface,
-    statBorder: darkColors.border,
     statLabel: darkColors.textSecondary,
     gardenBg: '#16392A', // TodayDark kahraman kartı
     gardenText: palette.green50,
@@ -156,17 +140,7 @@ export const streakLostColors: Record<Scheme, StreakLostColors> = {
 // Ölçüler ---------------------------------------------------------------------------------------------
 
 export const momentsMetrics = {
-  // Ortak
-  closeButton: 44,
-  closeIconSize: 18,
-  closeIconStroke: 2.8,
-  buttonHeight: 56,
-  buttonRadius: 18,
-  buttonShadow: 4,
-  buttonGap: 8,
-  /** Uzun metinde kenara yapışmasın diye (tasarımda tam genişlik, ortalı) */
-  buttonPaddingX: 16,
-  linkHeight: 48,
+  // Ortak (kapat, butonlar: ortak IconButton / Button)
   footerGap: 4,
   bottomPadding: 30,
 
@@ -177,8 +151,6 @@ export const momentsMetrics = {
   ringInner: 240,
   ringInnerLeft: 75,
   ringInnerTop: 136,
-  confettiWidth: 390,
-  confettiHeight: 460,
   completionDikenTop: 8,
   completionDiken: 232,
   completionTextTop: 6,
@@ -199,15 +171,13 @@ export const momentsMetrics = {
   dayLabelWidth: 44,
   friendsTop: 14,
   friendsGap: 10,
+  /** Arkadaş yığını (ortak AvatarStack; kenar 2, binme -8 ortak) */
   stackAvatar: 30,
-  stackBorder: 2,
-  stackOverlap: -8,
 
   // Finished
   glow: 280,
   glowLeft: 55,
   glowTop: 84,
-  finishedConfettiHeight: 420,
   finishedDikenTop: -8,
   finishedDiken: 192,
   finishedTextTop: 10,
@@ -231,8 +201,6 @@ export const momentsMetrics = {
   gardenDikenLarge: 44,
   chevronSize: 20,
   chevronStroke: 2.4,
-  shareIconSize: 20,
-  shareIconStroke: 2.6,
 
   // ShareCard
   cardWidth: 360,
@@ -289,7 +257,6 @@ export const momentsMetrics = {
   freeButtonPaddingY: 8,
   freeButtonPaddingX: 16,
   freeButtonGap: 1,
-  restartHeight: 44,
 } as const;
 
 // Yazı ------------------------------------------------------------------------------------------------
@@ -307,12 +274,8 @@ export const momentsTypography = {
   dayLabel: { fontFamily: fonts.extraBold, fontSize: 11 },
   /** Arkadaş satırı · Nunito 700 · 14 */
   friends: { fontFamily: fonts.bold, fontSize: 14 },
-  /** Yığındaki avatar harfi · Nunito 800 · 13 */
+  /** Yığındaki avatar harfi · Nunito 800 · 13 (ortak AvatarStack 30'da 12) */
   stackInitial: { fontFamily: fonts.extraBold, fontSize: 13 },
-  /** Ana buton · Nunito 800 · 17 */
-  button: { fontFamily: fonts.extraBold, fontSize: 17 },
-  /** Metin buton · Nunito 800 · 16 */
-  link: { fontFamily: fonts.extraBold, fontSize: 16 },
 
   /** "30/30 GÜN" · Nunito 800 · 13 · aralık 0.6 */
   badge: { fontFamily: fonts.extraBold, fontSize: 13, letterSpacing: 0.6 },
@@ -346,14 +309,10 @@ export const momentsTypography = {
   lostSub: { fontFamily: fonts.semiBold, fontSize: 16, lineHeight: 16 * 1.45 },
   /** Arkadaş hapı · Nunito 700 · 14 */
   friendsPill: { fontFamily: fonts.bold, fontSize: 14 },
-  /** Yığındaki küçük avatar harfi · Nunito 800 · 11 */
-  stackInitialSmall: { fontFamily: fonts.extraBold, fontSize: 11 },
   /** "30 sn" rozeti · Nunito 800 · 12 */
   adBadge: { fontFamily: fonts.extraBold, fontSize: 12 },
   /** Ücretsiz hak başlığı · Nunito 800 · 16 */
   freeTitle: { fontFamily: fonts.extraBold, fontSize: 16 },
   /** Ücretsiz hak alt satırı · Nunito 700 · 12 */
   freeSub: { fontFamily: fonts.bold, fontSize: 12 },
-  /** "Önceki hali" metin butonu · Nunito 800 · 15 */
-  linkSmall: { fontFamily: fonts.extraBold, fontSize: 15 },
 } as const satisfies Record<string, TextStyle>;
