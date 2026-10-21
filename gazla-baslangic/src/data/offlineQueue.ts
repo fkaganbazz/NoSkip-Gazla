@@ -9,13 +9,16 @@
  * - Aynı gün için checkin + undo birbirini iptal eder: gün başına en fazla bir bekleyen işlem
  *   kalır ve sunucudaki duruma (`baseDone`) göre gereksizse hiç gönderilmez. Gönderilmekte olan
  *   işlem iptal edilemez; yeni işlem onun arkasına eklenir.
- * - Fotoğraflı işaretleme dosya URI'siyle saklanır; yükleme gönderim sırasında yapılır.
+ * - Fotoğraflı işaretlemede dosya uygulamanın kalıcı dizinine kopyalanır (`proofFiles.ts`; web'de
+ *   blob URI kalır), kuyrukta o URI tutulur; yükleme gönderim sırasında yapılır, gönderim bitince ya
+ *   da işlem atılınca kopya silinir.
  * - Bağlantı gelince, uygulama açılınca ve ön plana dönünce kuyruk sırayla boşaltılır. Ağ hatasında
  *   durur, bekleyip yeniden dener. Sunucu iş kuralıyla reddederse (ApiError: gün kapandı,
  *   challenge'dan çıkıldı…) işlem atılır ve ilgili sorgular yenilenir (ekran sunucudaki duruma
  *   döner). Bitince günlük sorgular yenilenir.
- * - Sunucudan gelen Bugün, seri özeti ve takvim verisine kuyruk yansıtılır (`reflect*`):
- *   uygulama yeniden açılınca da bekleyen işaretlemeler ekranda kalır.
+ * - Sunucudan gelen Bugün, seri özeti, son günler ve takvim verisine kuyruk yansıtılır
+ *   (`reflect*`); kalıcı önbellekten açılışta da (`reapplyCheckinQueue`) bekleyen işaretlemeler
+ *   ekranda kalır.
  * - Öğeler oturumdaki kullanıcıya aittir; başka hesapla girilince gönderilmez, sayılmaz.
  */
 import { onlineManager, useQueryClient, type QueryClient } from '@tanstack/react-query';
@@ -23,9 +26,10 @@ import { useEffect, useSyncExternalStore } from 'react';
 import { AppState } from 'react-native';
 
 import { ApiError, isNetworkError, type GazlaApi } from './api';
+import { deleteProofFile, persistProofFile, sweepProofFiles } from './proofFiles';
 import { DAILY_KEYS, queryKeys } from './queryKeys';
 import { readJson, writeJson } from './storage';
-import type { ChallengeCalendar, Checkin, LocalDate, StreakSummary, TodayTask } from './types';
+import type { ChallengeCalendar, Checkin, LocalDate, RecentDay, StreakSummary, TodayTask } from './types';
 
 const STORAGE_KEY = 'offlineQueue.checkins.v1';
 /** Ağ dışı, tanınmayan hatada (ör. oturum belirteci) en fazla deneme; sonra atılır */
@@ -113,9 +117,11 @@ export function isCheckinQueued(challengeId: string, localDate: LocalDate): bool
   return getCheckinQueue().some((op) => sameDay(op, challengeId, localDate));
 }
 
-/** Kuyruğu boşalt (geliştirme menüsü "sıfırla"; gönderilmeden atılır) */
+/** Kuyruğu boşalt (geliştirme menüsü "sıfırla"; gönderilmeden atılır, fotoğraf kopyaları silinir) */
 export function clearCheckinQueue(): void {
+  const dropped = all();
   commit([]);
+  dropped.forEach((o) => deleteProofFile(o.photoFileUri));
 }
 
 const pendingCount = () => getCheckinQueue().length;
@@ -141,10 +147,15 @@ export function enqueueCheckinOp(op: CheckinOp, wasDone: boolean, reason: 'offli
   // Net etki yoksa gönderme: geri alınan işaretleme sunucuya hiç gitmez; tekrar işaretlenen
   // (değersiz) gün sunucuda zaten tamam
   const cancels = op.kind === 'undo' ? !baseDone : baseDone && pending?.kind === 'undo' && !hasPayload(op);
+  const photoFileUri = !cancels && op.kind === 'checkin' && op.photoFileUri ? persistProofFile(op.photoFileUri) : op.photoFileUri;
   const next = cancels
     ? rest
-    : [...rest, { ...op, id: newId(), userId: currentUserId, baseDone, queuedAt: new Date().toISOString(), attempts: 0 }];
+    : [
+        ...rest,
+        { ...op, photoFileUri, id: newId(), userId: currentUserId, baseDone, queuedAt: new Date().toISOString(), attempts: 0 },
+      ];
   commit(next);
+  if (pending?.photoFileUri && pending.photoFileUri !== photoFileUri) deleteProofFile(pending.photoFileUri);
 
   if (reason === 'network') scheduleRetry();
   else flushCheckinQueue();
@@ -231,11 +242,53 @@ export function reflectStreak(summary: StreakSummary, today: LocalDate = deviceL
   return adjustStreak(summary, delta);
 }
 
+/** Son günler (Completion haftası): o günün kapsanan görev sayısına değişimi uygula */
+export function adjustRecentDays(days: RecentDay[], localDate: LocalDate, delta: number): RecentDay[] {
+  if (!delta) return days;
+  return days.map((d) =>
+    d.day === localDate ? { ...d, covered: Math.max(0, Math.min(d.required, d.covered + delta)) } : d,
+  );
+}
+
+/** Sunucudan gelen son günlere bekleyen işlemleri uygula (gün başına sunucu durumuna göre fark) */
+export function reflectRecentDays(days: RecentDay[]): RecentDay[] {
+  const net = new Map<string, { localDate: LocalDate; base: boolean; final: boolean }>();
+  for (const op of getCheckinQueue()) {
+    const key = `${op.challengeId}|${op.localDate}`;
+    const prev = net.get(key);
+    net.set(key, { localDate: op.localDate, base: prev ? prev.base : op.baseDone, final: op.kind === 'checkin' });
+  }
+  let result = days;
+  net.forEach(({ localDate, base, final }) => {
+    result = adjustRecentDays(result, localDate, Number(final) - Number(base));
+  });
+  return result;
+}
+
 /** Sunucudan gelen challenge takvimine bekleyen işlemleri uygula */
 export function reflectCalendar(challengeId: string, calendar: ChallengeCalendar): ChallengeCalendar {
   const ops = getCheckinQueue().filter((op) => op.challengeId === challengeId);
   if (!ops.length) return calendar;
   return { ...calendar, checkins: ops.reduce(patchCalendarCheckins, calendar.checkins) };
+}
+
+/**
+ * Kalıcı önbellekten geri yüklenen veriye kuyruğu yeniden uygula (önbellek yazımı birkaç yüz ms
+ * geride kalabilir; kuyruk her işlemde hemen yazılır). Yalnızca tekrar uygulanabilir olanlar:
+ * Bugün satırı ve takvim (sayılar, yani seri özeti ve son günler, iyimser güncellemeyle zaten gelir).
+ */
+export function reapplyCheckinQueue(client: QueryClient, ownerId: string | null): void {
+  // Geri yükleme oturum hazır olmadan biter: kuyruk önbelleğin sahibine göre süzülür
+  if (ownerId && !currentUserId) {
+    currentUserId = ownerId;
+    listeners.forEach((l) => l());
+  }
+  const ops = getCheckinQueue();
+  if (!ops.length) return;
+  client.setQueryData<TodayTask[]>(queryKeys.today, (tasks) => tasks && reflectToday(tasks));
+  new Set(ops.map((o) => o.challengeId)).forEach((id) =>
+    client.setQueryData<ChallengeCalendar>(queryKeys.calendar(id), (c) => c && reflectCalendar(id, c)),
+  );
 }
 
 // Boşaltma ------------------------------------------------------------------------------------------
@@ -271,6 +324,8 @@ const invalidate = (client: QueryClient, keys: readonly (readonly unknown[])[]) 
 
 async function drain(api: GazlaApi, client: QueryClient) {
   let changed = false;
+  // Gönderilen/atılan fotoğraf kopyaları: ekranlar sunucu verisine dönünce silinir
+  const sentFiles: string[] = [];
   try {
     while (onlineManager.isOnline()) {
       const op = getCheckinQueue()[0];
@@ -290,6 +345,7 @@ async function drain(api: GazlaApi, client: QueryClient) {
         }
         inFlightId = null;
         remove(op.id);
+        if (op.photoFileUri) sentFiles.push(op.photoFileUri);
         changed = true;
         retryDelay = 0;
       } catch (error) {
@@ -306,6 +362,7 @@ async function drain(api: GazlaApi, client: QueryClient) {
         }
         // Sunucu kabul etmedi: işlem atılır, ekran sunucudaki duruma döner
         remove(op.id);
+        if (op.photoFileUri) sentFiles.push(op.photoFileUri);
         changed = true;
         await invalidate(client, [queryKeys.today, queryKeys.streak, queryKeys.challenge(op.challengeId)]);
       }
@@ -313,6 +370,7 @@ async function drain(api: GazlaApi, client: QueryClient) {
   } finally {
     inFlightId = null;
     if (changed) await invalidate(client, DAILY_KEYS);
+    sentFiles.forEach(deleteProofFile);
   }
 }
 
@@ -351,6 +409,7 @@ export function useCheckinQueueSync(api: GazlaApi, userId: string | null): void 
       listeners.forEach((l) => l());
     }
     if (!userId) return undefined;
+    sweepProofFiles(new Set(all().flatMap((o) => (o.photoFileUri ? [o.photoFileUri] : []))));
     flushCheckinQueue();
     const unsubscribeOnline = onlineManager.subscribe((online) => {
       if (online) flushCheckinQueue();

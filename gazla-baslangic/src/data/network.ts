@@ -17,10 +17,18 @@ let simulatedOffline = false;
 
 const effective = () => deviceOnline && !simulatedOffline;
 
+/** Cihazın ilk bağlantı bildirimi (NetInfo ilk olayı zaman uyumsuz gelir; web'de hemen) */
+let markKnown: () => void = () => {};
+const known = new Promise<void>((resolve) => {
+  markKnown = resolve;
+});
+const KNOWN_TIMEOUT_MS = 1500;
+
 onlineManager.setEventListener((setOnline) => {
   const update = (online: boolean) => {
     deviceOnline = online;
     setOnline(effective());
+    markKnown();
   };
 
   if (Platform.OS === 'web') {
@@ -43,6 +51,14 @@ onlineManager.setEventListener((setOnline) => {
 
 /** Şu an çevrimiçi mi (cihaz bağlı ve çevrimdışı benzetimi kapalı) */
 export const isOnline = () => onlineManager.isOnline();
+
+/**
+ * Açılışta bağlantı durumu belli olunca (en geç 1,5 sn) çözülür. Çevrimdışı açılışta "bağlı"
+ * varsayımıyla karar verilmesin diye: kayıtlı oturumu koruma, mock önbelleğini geri yükleme.
+ */
+export function connectivityKnown(): Promise<boolean> {
+  return Promise.race([known, new Promise<void>((resolve) => setTimeout(resolve, KNOWN_TIMEOUT_MS))]).then(isOnline);
+}
 
 /** Geliştirme: cihaz bağlıyken çevrimdışıymış gibi davran (sorgular duraklar, işaretleme kuyruğa) */
 export function setSimulatedOffline(offline: boolean) {

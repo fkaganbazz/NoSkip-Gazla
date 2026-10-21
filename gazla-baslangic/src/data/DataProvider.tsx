@@ -1,15 +1,27 @@
 /**
  * Veri sağlayıcı: TanStack Query istemcisi ve oturum durumu. Kök düzende (`app/_layout.tsx`)
- * tüm uygulamayı sarar. Oturum değişince önbellek temizlenir (başka kullanıcının verisi kalmasın).
- * Bağlantı durumu `network.ts` ile onlineManager'a bağlıdır; oturum hazırken çevrimdışı
- * işaretleme kuyruğu (`offlineQueue.ts`) açılışta ve bağlantı gelince boşaltılır.
+ * tüm uygulamayı sarar.
+ *
+ * - Sorgu önbelleği MMKV'de kalıcıdır (`queryPersist.ts`): çevrimdışı açılışta profil, Bugün,
+ *   seri, son günler, arkadaşlar önbellekten gelir ve uygulama `ready` açılır. Geri yüklenen veriye
+ *   bekleyen işaretlemeler yeniden uygulanır.
+ * - Kullanıcı değişince (çıkış, başka hesapla giriş) önbellek temizlenir; aynı kullanıcının oturum
+ *   olayları (belirteç yenileme, ilk oturum) önbelleği silmez.
+ * - Çevrimdışı açılışta oturum yenilenemezse son bilinen oturumla devam edilir (`lastSession.ts`),
+ *   bağlantı gelince oturum yeniden sorulur.
+ * - Bağlantı durumu `network.ts` ile onlineManager'a bağlıdır; oturum hazırken çevrimdışı
+ *   işaretleme kuyruğu (`offlineQueue.ts`) açılışta ve bağlantı gelince boşaltılır.
  */
-import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from '@tanstack/react-query';
+import { onlineManager, QueryClient, useQuery, useQueryClient } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { api } from './client';
-import './network';
-import { useCheckinQueueSync } from './offlineQueue';
+import { recentDaysQuery } from './hooks';
+import { forgetSession, lastSession, rememberSession } from './lastSession';
+import { connectivityKnown } from './network';
+import { reapplyCheckinQueue, useCheckinQueueSync } from './offlineQueue';
+import { configurePersistedQueries, getCacheOwner, persistOptions, setCacheOwner } from './queryPersist';
 import type { Profile, Session } from './types';
 
 export type AuthStatus =
@@ -35,6 +47,9 @@ const queryClient = new QueryClient({
     queries: { staleTime: 30_000, retry: 1 },
   },
 });
+configurePersistedQueries(queryClient);
+
+const PERSIST_OPTIONS = persistOptions(api);
 
 function AuthGate({ children }: { children: ReactNode }) {
   const client = useQueryClient();
@@ -42,14 +57,48 @@ function AuthGate({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let active = true;
-    api.getSession().then((s) => active && setSession(s));
-    const unsubscribe = api.onSessionChange((s) => {
-      setSession(s);
-      client.clear();
+    let seq = 0;
+    /** undefined: açılışta henüz bilinmiyor (önbellek geri yüklenen kullanıcınındır) */
+    let userId: string | null | undefined;
+    /** Oturum yenilenemedi, son bilinen oturumla çevrimdışı devam ediliyor */
+    let offlineFallback = false;
+
+    const apply = async (next: Session | null) => {
+      const call = ++seq;
+      let resolved = next;
+      if (next) {
+        rememberSession(next);
+        offlineFallback = false;
+      } else {
+        // Çevrimdışıysa belirteç yenilenemediği için null gelmiş olabilir: bilerek çıkış
+        // yapılmadıysa (forgetSession) son oturumla devam
+        const online = await connectivityKnown();
+        if (!active || call !== seq) return;
+        resolved = online ? null : lastSession();
+        offlineFallback = !!resolved;
+        if (online) forgetSession();
+      }
+      const nextId = resolved?.userId ?? null;
+      if (userId !== undefined && userId !== nextId) client.clear();
+      userId = nextId;
+      setCacheOwner(nextId);
+      setSession(resolved);
+    };
+
+    const recheck = () =>
+      api.getSession().then((s) => {
+        if (active) void apply(s);
+      });
+
+    void recheck();
+    const unsubscribe = api.onSessionChange((s) => void apply(s));
+    const unsubscribeOnline = onlineManager.subscribe((online) => {
+      if (online && offlineFallback) void recheck();
     });
     return () => {
       active = false;
       unsubscribe();
+      unsubscribeOnline();
     };
   }, [client]);
 
@@ -68,16 +117,25 @@ function AuthGate({ children }: { children: ReactNode }) {
     return { status: 'ready', session, profile: profileQuery.data };
   }, [session, profileQuery.isPending, profileQuery.data]);
 
-  useCheckinQueueSync(api, state.status === 'ready' ? state.session!.userId : null);
+  const ready = state.status === 'ready';
+  useCheckinQueueSync(api, ready ? state.session!.userId : null);
+
+  // Completion haftası çevrimdışı da açılsın: son günler önden çekilir (kalıcı önbelleğe girer)
+  useEffect(() => {
+    if (ready) void client.prefetchQuery(recentDaysQuery(7));
+  }, [ready, client]);
 
   return <AuthContext.Provider value={state}>{children}</AuthContext.Provider>;
 }
 
 export function DataProvider({ children }: { children: ReactNode }) {
   return (
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={PERSIST_OPTIONS}
+      onSuccess={() => reapplyCheckinQueue(queryClient, getCacheOwner())}>
       <AuthGate>{children}</AuthGate>
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   );
 }
 

@@ -5,6 +5,7 @@
  * alma kuyruğa girer (`offlineQueue.ts`), bağlantı gelince gönderilir.
  */
 import {
+  queryOptions,
   useInfiniteQuery,
   useMutation,
   useQuery,
@@ -16,8 +17,10 @@ import {
 import { POKE_MESSAGES } from '../content/pokes';
 import { isNetworkError, type OAuthProvider } from './api';
 import { api } from './client';
+import { forgetSession } from './lastSession';
 import { isOnline } from './network';
 import {
+  adjustRecentDays,
   adjustStreak,
   deviceLocalDate,
   enqueueCheckinOp,
@@ -26,6 +29,7 @@ import {
   patchTask,
   queuedCheckin,
   reflectCalendar,
+  reflectRecentDays,
   reflectStreak,
   reflectToday,
   type CheckinOp,
@@ -40,6 +44,7 @@ import type {
   LocalDate,
   PokeMessage,
   ProfileUpdate,
+  RecentDay,
   ReportInput,
   SendPokeInput,
   SettingsUpdate,
@@ -93,9 +98,22 @@ export const useSignInWithProviderMutation = () =>
 
 export const useSignInWithEmailMutation = () => useMutation({ mutationFn: (email: string) => api.signInWithEmail(email) });
 
-export const useSignOutMutation = () => useMutation({ mutationFn: () => api.signOut() });
+// Bilerek çıkış: kayıtlı oturum önce unutulur (yoksa çevrimdışı çıkış yok sayılırdı, lastSession.ts)
+export const useSignOutMutation = () =>
+  useMutation({
+    mutationFn: () => {
+      forgetSession();
+      return api.signOut();
+    },
+  });
 
-export const useDeleteAccountMutation = () => useMutation({ mutationFn: () => api.deleteAccount() });
+export const useDeleteAccountMutation = () =>
+  useMutation({
+    mutationFn: () => {
+      forgetSession();
+      return api.deleteAccount();
+    },
+  });
 
 // Bugün ve seri -------------------------------------------------------------------------------------
 
@@ -107,11 +125,19 @@ export const useToday = () =>
 export const useStreak = () =>
   useQuery({ queryKey: queryKeys.streak, queryFn: async () => reflectStreak(await api.getStreak()) });
 
-export const useRecentDays = (days = 7) =>
-  useQuery({ queryKey: queryKeys.recentDays(days), queryFn: () => api.getRecentDays(days) });
+/** Son günler sorgusu (Completion haftası); DataProvider açılışta önden çeker ki çevrimdışı da açılsın */
+export const recentDaysQuery = (days = 7) =>
+  queryOptions({
+    queryKey: queryKeys.recentDays(days),
+    queryFn: async () => reflectRecentDays(await api.getRecentDays(days)),
+  });
+
+export const useRecentDays = (days = 7) => useQuery(recentDaysQuery(days));
 
 export const usePendingRescues = () =>
   useQuery({ queryKey: queryKeys.pendingRescues, queryFn: () => api.getPendingRescues() });
+
+const RECENT_DAYS = ['me', 'recentDays'];
 
 type UndoCheckinInput = { challengeId: string; localDate?: LocalDate };
 
@@ -119,6 +145,7 @@ type CheckinSnapshot = {
   today: TodayTask[] | undefined;
   streak: StreakSummary | undefined;
   calendar: ChallengeCalendar | undefined;
+  recentDays: [QueryKey, RecentDay[] | undefined][];
 };
 
 /** onMutate → mutationFn: sabitlenen gün ve işlemden önceki durum (değişken nesnesine bağlı) */
@@ -141,20 +168,23 @@ async function applyCheckinOptimistic(client: QueryClient, op: CheckinOp) {
     client.cancelQueries({ queryKey: queryKeys.today }),
     client.cancelQueries({ queryKey: queryKeys.streak }),
     client.cancelQueries({ queryKey: calendarKey, exact: true }),
+    client.cancelQueries({ queryKey: RECENT_DAYS }),
   ]);
   const previous: CheckinSnapshot = {
     today: client.getQueryData<TodayTask[]>(queryKeys.today),
     streak: client.getQueryData<StreakSummary>(queryKeys.streak),
     calendar: client.getQueryData<ChallengeCalendar>(calendarKey),
+    recentDays: client.getQueriesData<RecentDay[]>({ queryKey: RECENT_DAYS }),
   };
   const isDay = (t: TodayTask) => t.challengeId === op.challengeId && t.localDate === op.localDate;
   const task = previous.today?.find(isDay);
   const wasDone = task ? task.done : op.kind === 'undo';
+  const delta = Number(op.kind === 'checkin') - Number(wasDone);
   client.setQueryData<TodayTask[]>(queryKeys.today, (tasks) => tasks?.map((t) => (isDay(t) ? patchTask(t, op) : t)));
   if (op.localDate === deviceLocalDate()) {
-    const delta = Number(op.kind === 'checkin') - Number(wasDone);
     client.setQueryData<StreakSummary>(queryKeys.streak, (s) => s && adjustStreak(s, delta));
   }
+  client.setQueriesData<RecentDay[]>({ queryKey: RECENT_DAYS }, (days) => days && adjustRecentDays(days, op.localDate, delta));
   client.setQueryData<ChallengeCalendar>(calendarKey, (c) => c && { ...c, checkins: patchCalendarCheckins(c.checkins, op) });
   return { previous, wasDone };
 }
@@ -164,6 +194,7 @@ function rollback(client: QueryClient, challengeId: string, previous: CheckinSna
   client.setQueryData(queryKeys.today, previous.today);
   client.setQueryData(queryKeys.streak, previous.streak);
   client.setQueryData(queryKeys.calendar(challengeId), previous.calendar);
+  previous.recentDays.forEach(([key, days]) => client.setQueryData(key, days));
 }
 
 /**
