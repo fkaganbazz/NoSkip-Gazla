@@ -12,10 +12,12 @@ import Diken, {
   type DikenPose,
   type DikenStage,
 } from '@/components/Diken';
+import { Segmented } from '@/components/ui';
 import { borderWidth, layout, palette, radius, spacing, typography, useTheme } from '@/theme';
 
 // Geliştirme ekranı: design/Diken.dc.html, Moods.dc.html ve Evolution.dc.html'in mobil karşılığı.
-// Tüm ifade, aşama, aksesuar ve duruşları simülatörde kontrol etmek için.
+// Üstte aksesuar seçici; altında her aşama için 9 ifadenin ızgarası (4 × 9 = 36 hücre, seçili aksesuarla).
+// Sonra tek tek prop denemesi, ifade açıklamaları ve seri evrimi.
 
 const MOOD_INFO: Record<DikenMood, { name: string; use: string }> = {
   mutlu: { name: 'Mutlu', use: 'Günlük görev tamamlanınca, ana ekranda' },
@@ -68,8 +70,9 @@ const EVOLUTION: {
 
 // Tasarımlarda kullanılan boyutlardan bir seçki (en küçük 40, en büyük 420).
 const SIZES = [40, 80, 138, 176, 240] as const;
-const MATRIX_SIZE = 64;
 const GRID_DIKEN_SIZE = 120;
+/** Matris: satırda 3 ifade */
+const MATRIX_COLUMNS = 3;
 const AUTO_POSE = 'auto';
 const POSE_OPTIONS = [AUTO_POSE, ...DIKEN_POSES] as const;
 
@@ -148,13 +151,50 @@ export default function DikenScreen() {
     GRID_DIKEN_SIZE,
     columnWidth - spacing.md * 2 - borderWidth.thin * 2,
   );
+  // Matris hücresi: ekran genişliğinden 3 sütun
+  const cellWidth = (width - layout.screenPadding * 2 - spacing.xs * (MATRIX_COLUMNS - 1)) / MATRIX_COLUMNS;
+  const cellDikenSize = Math.floor(cellWidth - spacing.xs * 2);
   const card = [styles.card, { backgroundColor: colors.surface, borderColor: colors.border }];
   const sectionTitle = [typography.title2, { color: colors.text }];
 
   return (
     <ScrollView
+      stickyHeaderIndices={[0]}
       contentContainerStyle={[styles.content, { paddingBottom: layout.screenPadding + insets.bottom }]}>
+      {/* Üstte sabit aksesuar seçici: matris ve oyun alanı bu aksesuarla çizilir */}
+      <View style={[styles.gearBar, { backgroundColor: colors.background }]}>
+        <Segmented<DikenGear>
+          role="radio"
+          accessibilityLabel="Aksesuar"
+          options={DIKEN_GEARS.map((g) => ({ value: g, label: GEAR_NAMES[g] }))}
+          value={gear}
+          onChange={setGear}
+        />
+      </View>
+
+      {/* 9 ifade × 4 aşama (seçili aksesuarla) */}
+      {DIKEN_STAGES.map((s) => (
+        <View key={s} style={styles.matrixBlock}>
+          <Text style={sectionTitle}>{`${STAGE_NAMES[s]} · ${GEAR_NAMES[gear]}`}</Text>
+          <View style={styles.matrixGrid}>
+            {DIKEN_MOODS.map((m) => (
+              <View
+                key={m}
+                accessible
+                accessibilityLabel={`${MOOD_INFO[m].name}, ${STAGE_NAMES[s]}, aksesuar ${GEAR_NAMES[gear]}`}
+                style={[styles.matrixCell, { width: cellWidth, backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <Diken mood={m} stage={s} gear={gear} size={cellDikenSize} />
+                <Text numberOfLines={1} style={[typography.smallStrong, { color: colors.text }]}>
+                  {MOOD_INFO[m].name}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      ))}
+
       {/* Oyun alanı: her prop tek tek */}
+      <Text style={sectionTitle}>Deneme</Text>
       <View style={card}>
         <View style={[styles.stage, { backgroundColor: colors.surfaceMuted }]}>
           <Diken
@@ -182,13 +222,6 @@ export default function DikenScreen() {
           value={stage}
           labelOf={(s) => STAGE_NAMES[s]}
           onChange={setStage}
-        />
-        <ChipRow
-          title="AKSESUAR"
-          options={DIKEN_GEARS}
-          value={gear}
-          labelOf={(g) => GEAR_NAMES[g]}
-          onChange={setGear}
         />
         <ChipRow
           title="DURUŞ"
@@ -228,23 +261,6 @@ export default function DikenScreen() {
         ))}
       </View>
 
-      {/* Tüm ifade × aşama kombinasyonları; aksesuar yukarıdaki seçimden */}
-      <Text style={sectionTitle}>Matris · aksesuar: {GEAR_NAMES[gear]}</Text>
-      {DIKEN_STAGES.map((s) => (
-        <View key={s} style={styles.matrixBlock}>
-          <Text style={[typography.cardTitle, { color: colors.text }]}>{STAGE_NAMES[s]}</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={styles.matrixRow}>
-              {DIKEN_MOODS.map((m) => (
-                <View key={m} style={styles.matrixCell}>
-                  <Diken mood={m} stage={s} gear={gear} size={MATRIX_SIZE} />
-                  <Text style={[typography.label, { color: colors.text }]}>{m}</Text>
-                </View>
-              ))}
-            </View>
-          </ScrollView>
-        </View>
-      ))}
     </ScrollView>
   );
 }
@@ -295,15 +311,23 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
     borderRadius: radius.button,
   },
+  gearBar: {
+    paddingBottom: spacing.xs,
+  },
   matrixBlock: {
     gap: spacing.xs,
   },
-  matrixRow: {
+  matrixGrid: {
     flexDirection: 'row',
-    gap: spacing.sm,
+    flexWrap: 'wrap',
+    gap: spacing.xs,
   },
   matrixCell: {
     alignItems: 'center',
     gap: spacing.xxs,
+    paddingTop: spacing.xs,
+    paddingBottom: spacing.xs,
+    borderRadius: radius.button,
+    borderWidth: borderWidth.thin,
   },
 });

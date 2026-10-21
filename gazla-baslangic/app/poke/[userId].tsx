@@ -1,8 +1,10 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 
+import Diken from '@/components/Diken';
+import Sheet, { type SheetHandle } from '@/components/Sheet';
+import SpeechBubble from '@/components/SpeechBubble';
 import { Button, ErrorState, IconButton, LoadingState, Segmented, Toast } from '@/components/ui';
 import {
   ApiError,
@@ -18,7 +20,10 @@ import { toDative } from '@/features/friends/names';
 import PersonAvatar from '@/features/friends/PersonAvatar';
 import MessageGrid from '@/features/poke/MessageGrid';
 import { componentTypography, todayTypography, typography, useTheme } from '@/theme';
+import { sheetDikenMetrics } from '@/theme/sheet';
 import { socialColors, socialMetrics as m, socialTypography } from '@/theme/social';
+
+const d = sheetDikenMetrics.poke;
 
 /** Geri alma süresi (sunucudaki pokes delete politikasıyla aynı) */
 const UNDO_MS = 30_000;
@@ -26,14 +31,14 @@ const UNDO_MS = 30_000;
 /** Tasarımdaki ilk seçim: gazda ilk mesaj, lafta ikinci */
 const defaultIndex = (tone: PokeTone) => (tone === 'roast' ? 1 : 0);
 
-// Dürt — design/Poke.dc.html (alt sayfa). Hazır mesaj listesi (poke_messages); "Laf sok" yalnızca
-// alıcının sert modu açıksa. Gönderince 30 sn "Geri al" tostu, süre bitince sayfa kapanır.
+// Dürt — design/Poke.dc.html (alt sayfa, `Sheet`; üstünde Diken + balon). Hazır mesaj listesi (poke_messages);
+// "Laf sok" yalnızca alıcının sert modu açıksa. Gönderince 30 sn "Geri al" tostu, süre bitince sayfa kapanır.
 // Parametreler: userId; isteğe bağlı tone ('hype' — "Gaz ver" butonlarından) ve challengeId.
 export default function PokeSheet() {
   const params = useLocalSearchParams<{ userId: string; tone?: PokeTone; challengeId?: string }>();
   const userId = params.userId;
   const router = useRouter();
-  const insets = useSafeAreaInsets();
+  const sheet = useRef<SheetHandle>(null);
   const { colors, scheme } = useTheme();
   const c = socialColors[scheme];
 
@@ -65,14 +70,16 @@ export default function PokeSheet() {
       ? pickedKey
       : ((list[defaultIndex(activeTone)] ?? list[0])?.key ?? null);
 
-  const close = () => (router.canGoBack() ? router.back() : router.replace('/friends'));
+  // Sayfa kapanınca (kaydırma, karartma, kapat butonu) route'tan çık
+  const leave = () => (router.canGoBack() ? router.back() : router.replace('/friends'));
+  const close = () => sheet.current?.close();
 
   // Geri alma süresi bitince sayfa kendiliğinden kapanır
   useEffect(() => {
     if (!sentId) return;
-    const id = setTimeout(() => (router.canGoBack() ? router.back() : router.replace('/friends')), UNDO_MS);
+    const id = setTimeout(() => sheet.current?.close(), UNDO_MS);
     return () => clearTimeout(id);
-  }, [sentId, router]);
+  }, [sentId]);
 
   const loading = messages.isPending || (friends.isPending && profile.isPending);
 
@@ -119,6 +126,9 @@ export default function PokeSheet() {
         {harsh && (
           <View style={styles.segment}>
             <Segmented<PokeTone>
+              size="lg"
+              role="tabs"
+              accessibilityLabel="Mesaj türü"
               options={[
                 { value: 'hype', label: 'Gaz ver' },
                 { value: 'roast', label: 'Laf sok' },
@@ -182,33 +192,47 @@ export default function PokeSheet() {
     );
   };
 
-  return (
-    <View
-      style={[
-        styles.sheet,
-        { backgroundColor: colors.background, paddingBottom: m.sheetPaddingBottom + insets.bottom },
-      ]}>
-      {/* Tutamak: iOS/Android'de sistem çiziyor (sheetGrabberVisible); webde burada */}
-      <View style={[styles.grabber, Platform.OS === 'web' && { backgroundColor: c.grabber }]} />
-      {body()}
+  // Diken'in sözü (tasarımda sert mod açık hali; kapalı hali tasarlanmadı, aynı kalıpta)
+  const top = person ? (
+    <View style={styles.top}>
+      <View style={styles.diken}>
+        <Diken mood="laf" stage="tam" size={sheetDikenMetrics.dikenSize} />
+      </View>
+      <SpeechBubble size="sm" tail="left" tailOffset={d.tailTop} shadow="none" style={styles.bubble}>
+        {harsh ? `${person.displayName} sert modu açmış. Acıma.` : `${person.displayName} sert modu kapatmış. Kibar ol.`}
+      </SpeechBubble>
     </View>
+  ) : null;
+
+  return (
+    <Sheet
+      ref={sheet}
+      onClose={leave}
+      top={top}
+      minHeight={m.sheetMinHeight}
+      accessibilityLabel={person ? `${person.displayName} için dürt` : 'Dürt'}>
+      {body()}
+    </Sheet>
   );
 }
 
 const styles = StyleSheet.create({
-  sheet: {
-    minHeight: m.sheetMinHeight,
-    paddingTop: m.sheetPaddingTop,
-    paddingHorizontal: m.sheetPaddingX,
+  top: {
+    height: sheetDikenMetrics.dikenHeight,
+    marginBottom: -d.overlap,
   },
-  grabber: {
-    alignSelf: 'center',
-    width: m.grabberWidth,
-    height: m.grabberHeight,
-    borderRadius: m.grabberRadius,
+  diken: {
+    position: 'absolute',
+    left: d.dikenLeft,
+    top: 0,
+  },
+  bubble: {
+    position: 'absolute',
+    left: d.bubbleLeft,
+    top: d.bubbleTop,
+    width: d.bubbleWidth,
   },
   header: {
-    marginTop: m.pokeHeaderMarginTop,
     flexDirection: 'row',
     alignItems: 'center',
     gap: m.pokeHeaderGap,

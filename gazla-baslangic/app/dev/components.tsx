@@ -24,6 +24,7 @@ import {
   Toggle,
   useToast,
 } from '@/components/ui';
+import SheetBubbleDemos from '@/features/dev/SheetBubbleDemos';
 import {
   borderWidth,
   challengeTints,
@@ -411,7 +412,8 @@ export default function ComponentsScreen() {
           </View>
         </Swatch>
 
-        {/* SAYFA VE BALON */}
+        {/* SAYFA VE BALON: Sheet, ActionSheet (onaylı satır), SpeechBubble (tüm kuyruklar) */}
+        <SheetBubbleDemos />
       </ScrollView>
       <ToastHost toast={toast} />
     </View>

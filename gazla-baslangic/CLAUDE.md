@@ -52,7 +52,7 @@ profiles, friendships, blocks, reports, challenge_templates, challenges, challen
 - Expo SDK 57, route'lar kökteki `app/` altında (`src/app` açma; açılırsa Expo Router onu kök sayar). Diğer kod `src/`, import kısayolu `@/` → `src/`.
 - Uygulama sekmelerle açılır: `app/(tabs)/` (Bugün `index`, Keşfet `explore`, Arkadaşlar `friends`, Bahçem `garden`); ortadaki + `app/create.tsx`'i tam ekran modal açar. Alt menü `src/components/TabBar.tsx` (TabBar.dc.html), `Tabs` `expo-router/js-tabs`'tan.
 - Geliştirme ekranları `app/dev/` (token önizleme, Diken, tüm ekranlara bağlantı, mock kontrolleri: oturumu kapat, seri koptu senaryosu, sıfırla). Geliştirme sürümünde Keşfet/Arkadaşlar/Bahçem altındaki "Geliştirme ekranları" bağlantısıyla açılır.
-- Route korumaları `app/_layout.tsx`: `Stack.Protected` ile oturum + profil hazır ve onboarding bitmişse uygulama, değilse `(onboarding)`; `invite/[code]` herkese açık. Alt sayfa (NumberEntry, Poke) `formSheet`.
+- Route korumaları `app/_layout.tsx`: `Stack.Protected` ile oturum + profil hazır ve onboarding bitmişse uygulama, değilse `(onboarding)`; `invite/[code]` herkese açık. Alt sayfa route'ları (NumberEntry, Poke) `transparentModal`; karartma ve sayfa ekranın içinde ortak `Sheet` ile çizilir.
 - Klasörler: `src/components` (ortak bileşenler, `icons`, `ui`), `src/features/<ekran>` (ekrana özel bileşenler, mantık, tipler; ör. `src/features/today`), `src/data` (veri katmanı), `src/theme` (ekrana özel token dosyaları `src/theme/<ekran>.ts`, doğrudan import edilir).
 - `npm run android` / `npm run ios`: development build'i derleyip kurar (`expo run:*`). Sonraki açılışlarda `npm start` (dev client).
 - Bulut derleme: `npx eas-cli build --profile development` (iOS simülatör için `development-simulator`).
@@ -75,8 +75,11 @@ profiles, friendships, blocks, reports, challenge_templates, challenges, challen
 - Hata: `ApiError.message` kullanıcıya gösterilecek Türkçe metindir.
 - Yeni alan/RPC gerekirse: önce migration, sonra `types.ts` → `api.ts` → iki uygulama → kanca.
 
-## Ortak UI (`src/components/ui`)
-- Components.dc.html: `Button` (primary, secondary, poke, danger, text; loading/disabled), `IconButton`, `ScreenHeader`, `Chip`, `Segmented`, `Toggle`, `Radio`, `Checkbox`, `SectionLabel`, `Card`, `ProgressBar`, `TextField`, `Avatar`, `Toast`, `CountBadge`, `LoadingState`, `ErrorState`. Token'ları `componentColors[scheme]`, `componentMetrics`, `componentTypography`.
+## Ortak bileşenler (`src/components`)
+Spesifikasyon `docs/EKRANLAR.md` "0. Ortak bileşenler"; ilerleme `docs/ILERLEME.md`. Ekranlar bunların kopyasını yazmaz; eksik bir parça önce ortak bileşen olarak eklenir. Hepsi `/dev/components` geliştirme ekranında.
+- `ui/` (Components.dc.html): `Button` (`primary | secondary | orange | danger | text | ink | onGreen`, `lg | md | sm`; basılınca 2 px iner), `IconButton` (`back | close | options` ya da ikon bileşeni; `accessibilityLabel` zorunlu; tonlar), `ScreenHeader`, `Chip`, `Segmented`, `Toggle`, `Radio`, `Checkbox`, `SectionLabel` (tonlar, sayı), `Card`, `TextField`, `Toast` + `useToast()`/`<ToastHost />`, `CountBadge`, `LoadingState`, `ErrorState`. Token'lar `componentColors[scheme]`, `componentMetrics`, `componentTypography`.
+- `OnboardingHeader` (geri + 4 segment + n/4), `CategoryTile` (kategori → renk `categoryTint`), `TaskCard`, `Avatar` (halka `done | pending | invite`, rozet) + `AvatarStack` + `AddAvatar`, `FriendRow` + `FriendList` + `FriendBubble` + `InviteBubble`, `ProgressBar`, `StreakChip`, `DropMeter` (token'lar `cardColors`, `cardMetrics`), `Sheet` (@gorhom/bottom-sheet; route alt sayfası ya da `visible`/`onClose`; `top` slotu sayfanın üstündeki Diken için), `ActionSheet` (onaylı satırlar), `SpeechBubble` (kuyruk yönleri, `message`/`quote`), `Diken`, `TabBar`.
+- Karartma `componentColors[scheme].scrim`, alt sayfa köşesi/tutamaç `componentMetrics.sheet*`.
 
 ## Supabase
 - Şema `supabase/migrations/` (10 dosya), testler `supabase/tests/` (pgTAP). Ayrıntı, kararlar ve açık sorular: `supabase/README.md`.

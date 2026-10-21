@@ -11,7 +11,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { DataProvider, useAuth } from '@/data';
 import { OnboardingProvider, useOnboarding } from '@/features/onboarding/OnboardingProvider';
 import { restoreThemePreference } from '@/features/settings/themePreference';
-import { fontAssets, radius, useTheme } from '@/theme';
+import { fontAssets, useTheme } from '@/theme';
 
 // Fontlar ve oturum bilgisi gelene kadar açılış ekranı açık kalsın.
 SplashScreen.preventAutoHideAsync();
@@ -40,12 +40,14 @@ const styles = StyleSheet.create({
   },
 });
 
-/** Alt sayfa (sheet) sunumu: NumberEntry, Poke */
+/**
+ * Alt sayfa route'ları (NumberEntry, Poke): ekran şeffaf modal olarak açılır, karartmayı ve sayfayı
+ * `src/components/Sheet` (@gorhom/bottom-sheet) kendisi çizer ve canlandırır; altta önceki ekran görünür.
+ */
 const SHEET = {
-  presentation: 'formSheet',
-  sheetAllowedDetents: 'fitToContents',
-  sheetCornerRadius: radius.sheet,
-  sheetGrabberVisible: true,
+  presentation: 'transparentModal',
+  animation: 'none',
+  contentStyle: { backgroundColor: 'transparent' },
 } as const;
 
 function RootNavigator() {

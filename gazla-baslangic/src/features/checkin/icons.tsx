@@ -29,12 +29,3 @@ export function SendIcon({ color, size, strokeWidth }: IconProps) {
     </Svg>
   );
 }
-
-/** Konuşma balonunun kuyruğu (NumberEntry.dc.html, 16×22) */
-export function BubbleTail({ color, width, height }: { color: string; width: number; height: number }) {
-  return (
-    <Svg width={width} height={height} viewBox="0 0 16 22">
-      <Path d="M16 0 V22 L0 16 Z" fill={color} />
-    </Svg>
-  );
-}

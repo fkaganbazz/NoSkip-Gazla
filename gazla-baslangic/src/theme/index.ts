@@ -13,6 +13,8 @@ export { avatarInitialStyle, cardColors, cardMetrics, cardTypography, categoryTi
 export { darkColors, lightColors, palette, type ColorRoles } from './colors';
 export { componentColors, componentMetrics, componentTypography, type ComponentColors } from './components';
 export { dikenColors } from './diken';
+export { actionSheetMetrics, actionSheetTypography, sheetColors, sheetDikenMetrics, sheetMetrics, type SheetColors } from './sheet';
+export { speechBubbleColors, speechBubbleMetrics, speechBubbleTypography, type SpeechBubbleColors } from './speechBubble';
 export { borderWidth, iconMetrics, layout, radius, spacing } from './spacing';
 export { tabBarColors, tabBarMetrics, type TabBarColors } from './tabBar';
 export { todayColors, todayMetrics, todayTypography, type TodayColors } from './today';
