@@ -22,7 +22,6 @@ import {
   VISIBILITY_OPTIONS,
   formFromTemplate,
   inviteSummary,
-  shiftTime,
   startLabel,
   startOptions,
   titleError,
@@ -32,6 +31,7 @@ import {
   type DurationChoice,
 } from '@/features/create/logic';
 import { ChoiceSheet, DurationCell, SettingRow, TaskOption } from '@/features/create/parts';
+import { REMINDER_STEP_MINUTES, REMINDER_TIMES, stepReminder } from '@/features/settings/logic';
 import { componentTypography, layout, typography, useTheme } from '@/theme';
 import { createColors, createMetrics as m, createTypography as t } from '@/theme/create';
 
@@ -236,12 +236,14 @@ export default function CreateScreen({ onCreated, onClose, initialTemplateId, in
               <View style={styles.panel}>
                 {form.reminder ? (
                   <View style={styles.panelSteps}>
+                    {/* Ayarlar ve Detail'deki saatlerle aynı adımlar (08:00–23:00, 30 dk); uçta buton pasif */}
                     <IconButton
                       icon={MinusIcon}
                       iconSize={m.stepIconSize}
                       iconStrokeWidth={m.stepIconStrokeWidth}
-                      accessibilityLabel={`${m.reminderStepMinutes} dakika erken`}
-                      onPress={() => form.reminder && update({ reminder: shiftTime(form.reminder, -m.reminderStepMinutes) })}
+                      accessibilityLabel={`${REMINDER_STEP_MINUTES} dakika erken`}
+                      disabled={form.reminder <= REMINDER_TIMES[0]}
+                      onPress={() => form.reminder && update({ reminder: stepReminder(form.reminder, -1) })}
                     />
                     <Text accessibilityLiveRegion="polite" style={[t.panelValue, styles.panelValueText, { color: colors.text }]}>
                       {form.reminder}
@@ -250,8 +252,9 @@ export default function CreateScreen({ onCreated, onClose, initialTemplateId, in
                       icon={AddIcon}
                       iconSize={m.stepIconSize}
                       iconStrokeWidth={m.stepIconStrokeWidth}
-                      accessibilityLabel={`${m.reminderStepMinutes} dakika geç`}
-                      onPress={() => form.reminder && update({ reminder: shiftTime(form.reminder, m.reminderStepMinutes) })}
+                      accessibilityLabel={`${REMINDER_STEP_MINUTES} dakika geç`}
+                      disabled={form.reminder >= REMINDER_TIMES[REMINDER_TIMES.length - 1]}
+                      onPress={() => form.reminder && update({ reminder: stepReminder(form.reminder, 1) })}
                     />
                   </View>
                 ) : (

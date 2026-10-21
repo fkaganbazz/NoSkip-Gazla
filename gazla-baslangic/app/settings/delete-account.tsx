@@ -76,6 +76,7 @@ export default function DeleteAccountScreen() {
           onChangeText={setConfirm}
           autoCapitalize="characters"
           autoCorrect={false}
+          inputStyle={t.deleteConfirmInput}
           style={styles.confirm}
         />
 

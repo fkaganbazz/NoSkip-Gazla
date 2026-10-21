@@ -65,10 +65,11 @@ import {
   seedActivity,
   seedBadges,
   seedChallenges,
+  seedBlocks,
   seedEarnedBadges,
+  seedFinished,
   seedFriendIds,
   seedFriendRequests,
-  seedGarden,
   seedHistory,
   seedInviteCodes,
   seedLongestStreak,
@@ -152,10 +153,9 @@ class MockStore {
   checkins = new Map<string, Checkin>();
   rescues: (StreakRescue & { userId: string })[] = [];
   friendships: Friendship[] = [];
-  blocks: { blockerId: string; blockedId: string; createdAt: string }[] = [];
+  blocks: { blockerId: string; blockedId: string; createdAt: string }[] = clone(seedBlocks);
   pokes: Poke[] = [];
   activity: ActivityItem[] = [];
-  garden: GardenItem[] = clone(seedGarden);
   inviteCodes = clone(seedInviteCodes);
   pendingRescues: PendingRescue[] = [];
   rescueDeclines: { challengeId: string; missedDate: LocalDate }[] = [];
@@ -170,19 +170,26 @@ class MockStore {
     for (const m of seedMembers) {
       const c = this.challenges.get(m.challengeId)!;
       const joinedOn = c.startDate <= today ? c.startDate : today;
+      // Katılma sırası seed sırası (eşit gün sayısında sıralamayı belirler): her üye bir saniye sonra
+      const order = this.members.filter((x) => x.challengeId === m.challengeId).length;
       this.members.push(
         newMember({
           challengeId: m.challengeId,
           userId: m.userId,
           role: m.role,
           joinedOn,
-          joinedAt: `${joinedOn}T08:00:00.000Z`,
+          joinedAt: `${joinedOn}T08:00:${String(order).padStart(2, '0')}.000Z`,
           personalReminderTime:
             seedPersonalReminders.find((r) => r.challengeId === m.challengeId && r.userId === m.userId)?.time ?? null,
         }),
       );
     }
     this.seedHistoryOf(() => true);
+    // Bitmiş challenge'lar çoktan sonuçlanmış ve "bitti" ekranı görülmüş (Bugün açılışında gelmez)
+    for (const f of seedFinished) {
+      const at = minutesAgo(60 * 24 * f.daysAgo);
+      this.finalize(this.challenges.get(f.challengeId)!, at, at);
+    }
     seedFriendIds.forEach((id, i) =>
       this.friendships.push({ id: `f-${id}`, requesterId: i % 2 ? ME_ID : id, addresseeId: i % 2 ? id : ME_ID, status: 'accepted', createdAt: minutesAgo(60 * 24 * 60) }),
     );
@@ -216,6 +223,27 @@ class MockStore {
         this.putCheckin(h.userId, c.id, today, c.taskType === 'number' ? (h.todayValue ?? 70) : null, null, null);
       }
     }
+  }
+
+  /**
+   * app.finalize_member (bütün aktif üyeler birlikte): kapsanan gün, sorumlu olunan gün (katıldığı günden
+   * son güne), kurtarma sayısı ve sıra (gün sayısı, eşitlikte önce katılan).
+   */
+  finalize(c: SeedChallenge, finishedAt: string, seenAt: string | null) {
+    this.activeMembers(c.id)
+      .map((m) => ({ m, days: this.daysDone(m.userId, c) }))
+      .sort((a, b) => b.days - a.days || a.m.joinedAt.localeCompare(b.m.joinedAt))
+      .forEach(({ m, days }, i) => {
+        const from = m.joinedOn && m.joinedOn > c.startDate ? m.joinedOn : c.startDate;
+        m.finishedAt = finishedAt;
+        m.finalDaysDone = days;
+        m.finalRequiredDays = daysBetween(from, c.endDate) + 1;
+        m.finalRescues = this.rescues.filter(
+          (r) => r.challengeId === c.id && r.userId === m.userId && r.rescuedDate >= from && r.rescuedDate <= c.endDate,
+        ).length;
+        m.finalRank = i + 1;
+        m.finishSeenAt = seenAt;
+      });
   }
 
   key = (userId: string, challengeId: string, date: LocalDate) => `${challengeId}|${userId}|${date}`;
@@ -337,15 +365,31 @@ class MockStore {
     return (seedStreakBase[userId] ?? 0) + (this.doneTodayAll(userId) ? 1 : 0);
   }
 
+  /** app.challenge_streak: bugünden (bittiyse son günden) geriye kesintisiz kapsanan günler; bugün henüz açık */
   challengeStreak(userId: string, c: SeedChallenge) {
     const today = localDate();
-    let date = this.covered(userId, c.id, today) ? today : addDays(today, -1);
+    const anchor = c.endDate < today ? c.endDate : today;
+    let date = anchor === today && !this.covered(userId, c.id, today) ? addDays(today, -1) : anchor;
     let run = 0;
     while (date >= c.startDate && this.covered(userId, c.id, date)) {
       run += 1;
       date = addDays(date, -1);
     }
     return run;
+  }
+
+  /** app.longest_covered_run: üyenin aralığında en uzun ardışık kapsanan gün dizisi */
+  longestRun(userId: string, c: SeedChallenge) {
+    const joinedOn = this.membership(c.id, userId)?.joinedOn;
+    const from = joinedOn && joinedOn > c.startDate ? joinedOn : c.startDate;
+    const today = localDate();
+    let best = 0;
+    let run = 0;
+    for (let d = from; d <= c.endDate && d <= today; d = addDays(d, 1)) {
+      run = this.covered(userId, c.id, d) ? run + 1 : 0;
+      best = Math.max(best, run);
+    }
+    return best;
   }
 
   daysDone(userId: string, c: SeedChallenge) {
@@ -452,37 +496,13 @@ export const mockDev = {
     for (const k of [...store.checkins.keys()]) if (k.startsWith(`${c.id}|`)) store.checkins.delete(k);
     store.rescues = store.rescues.filter((r) => r.challengeId !== c.id);
     const members = store.activeMembers(c.id);
-    members.forEach((m) => {
+    members.forEach((m, order) => {
       m.joinedOn = c.startDate;
-      m.joinedAt = `${c.startDate}T08:00:00.000Z`;
+      m.joinedAt = `${c.startDate}T08:00:${String(order).padStart(2, '0')}.000Z`;
     });
     store.seedHistoryOf((h) => h.challengeId === c.id);
-    const finishedAt = new Date().toISOString();
-    members
-      .map((m, order) => ({ m, order, days: store.daysDone(m.userId, c) }))
-      .sort((a, b) => b.days - a.days || a.order - b.order)
-      .forEach(({ m, days }, i) => {
-        m.finishedAt = finishedAt;
-        m.finalDaysDone = days;
-        m.finalRequiredDays = c.durationDays;
-        m.finalRescues = store.rescues.filter((r) => r.challengeId === c.id && r.userId === m.userId).length;
-        m.finalRank = i + 1;
-        m.finishSeenAt = null;
-      });
-    const mine = store.membership(c.id, ME_ID)!;
-    if (!store.garden.some((g) => g.challengeId === c.id) && (mine.finalDaysDone ?? 0) >= (mine.finalRequiredDays ?? 0)) {
-      store.garden.push({
-        challengeId: c.id,
-        title: c.title,
-        shortTitle: c.shortTitle,
-        durationDays: c.durationDays,
-        requiredDays: mine.finalRequiredDays!,
-        stage: stageFor(mine.finalRequiredDays!),
-        finishedAt,
-        finalRescues: mine.finalRescues!,
-        finalRank: mine.finalRank!,
-      });
-    }
+    // Bahçe üyelikten okunur (getGarden): bitirdiyse kaktüs kendiliğinden eklenir
+    store.finalize(c, new Date().toISOString(), null);
   },
   /**
    * Çevrimdışı benzetimi: açıkken onlineManager çevrimdışı olur (sorgular duraklar) ve her mock
@@ -762,9 +782,15 @@ export const mockApi: GazlaApi = {
   },
   async getTemplateStats(templateId): Promise<TemplateStats> {
     await wait();
+    const today = localDate();
+    // template_running: bitmemiş challenge'lardaki aktif üyeler (bitmiş grupların üyeleri sayılmaz)
+    const running = (challengeId: string) => {
+      const c = store.challenges.get(challengeId);
+      return c?.templateId === templateId && c.endDate >= today;
+    };
     const friends = store.signedIn
       ? store.members
-          .filter((m) => m.status === 'active' && store.challenges.get(m.challengeId)?.templateId === templateId)
+          .filter((m) => m.status === 'active' && !m.finishedAt && running(m.challengeId))
           .map((m) => m.userId)
           .filter((id, i, all) => id !== ME_ID && all.indexOf(id) === i && store.areFriends(ME_ID, id))
           .map((id) => store.profiles.get(id)!)
@@ -866,6 +892,9 @@ export const mockApi: GazlaApi = {
     const taskType = t ? t.taskType : input.taskType;
     const duration = input.durationDays ?? t?.defaultDurationDays;
     if (!title || !taskType || !duration) throw new ApiError('Ad, süre ve tamamlama şekli gerekli', '22023');
+    if (t && input.durationDays !== undefined && !(t.allowedDurations as number[]).includes(input.durationDays)) {
+      throw new ApiError('Bu challenge için bu süre seçilemez', '23514');
+    }
     if (duration < 3 || duration > 60) throw new ApiError('Süre 3 ile 60 gün arasında olmalı', '23514');
     const id = `c-${Date.now().toString(36)}`;
     const c: SeedChallenge = {
@@ -1038,10 +1067,38 @@ export const mockApi: GazlaApi = {
     if (!m) store.members.push(row);
     return store.membershipView(row);
   },
-  async getGarden() {
+  /**
+   * app.completed_challenges: sorumlu olduğu bütün günleri kapsayarak bitirdikleri, yeniden eskiye; en uzun seri
+   * olan tek bitki işaretli (eşitlikte en az kurtarma, sonra en yeni)
+   */
+  async getGarden(): Promise<GardenItem[]> {
     await wait();
-    me();
-    return clone(store.garden);
+    const uid = me();
+    const items = store.members
+      .filter((m) => m.userId === uid && m.finishedAt && (m.finalDaysDone ?? 0) >= (m.finalRequiredDays ?? Infinity))
+      .sort((a, b) => b.finishedAt!.localeCompare(a.finishedAt!))
+      .map((m): GardenItem => {
+        const c = store.challenges.get(m.challengeId)!;
+        return {
+          challengeId: c.id,
+          title: c.title,
+          shortTitle: c.shortTitle,
+          durationDays: c.durationDays,
+          requiredDays: m.finalRequiredDays!,
+          stage: stageFor(m.finalRequiredDays!),
+          finishedAt: m.finishedAt!,
+          finalRescues: m.finalRescues ?? 0,
+          finalRank: m.finalRank ?? 1,
+          longestStreak: store.longestRun(uid, c),
+          isLongest: false,
+        };
+      });
+    const best = [...items].sort(
+      (a, b) =>
+        b.longestStreak - a.longestStreak || a.finalRescues - b.finalRescues || b.finishedAt.localeCompare(a.finishedAt),
+    )[0];
+    if (best) best.isLongest = true;
+    return items;
   },
   async getBadges(): Promise<Badge[]> {
     await wait();

@@ -12,6 +12,7 @@ import {
   View,
   type StyleProp,
   type TextInputProps,
+  type TextStyle,
   type ViewStyle,
 } from 'react-native';
 
@@ -47,10 +48,27 @@ type TextFieldProps = Omit<TextInputProps, 'style'> & {
   size?: 'md' | 'sm';
   /** Temadan bağımsız sabit ekran (PhotoProof iki modda koyu: `scheme="dark"`) */
   scheme?: ColorScheme;
+  /**
+   * Giriş metninin yazı stili (yer tutucu dahil); varsayılan yazının üstüne eklenir. Ör. DeleteAccount "SİL"
+   * alanı 16 / 800, harf aralığı 1 (`settingsTypography.deleteConfirmInput`). Renk ve kutu ölçüsü için değil.
+   */
+  inputStyle?: StyleProp<TextStyle>;
+  /** Dış kap (etiket + alan): kenar boşluğu, konum */
   style?: StyleProp<ViewStyle>;
 };
 
-export function TextField({ label, error, hint, size = 'md', scheme: schemeOverride, style, onFocus, onBlur, ...input }: TextFieldProps) {
+export function TextField({
+  label,
+  error,
+  hint,
+  size = 'md',
+  scheme: schemeOverride,
+  inputStyle,
+  style,
+  onFocus,
+  onBlur,
+  ...input
+}: TextFieldProps) {
   const theme = useTheme();
   const scheme = schemeOverride ?? theme.scheme;
   const colors = schemeOverride ? colorsFor(schemeOverride) : theme.colors;
@@ -88,6 +106,7 @@ export function TextField({ label, error, hint, size = 'md', scheme: schemeOverr
           },
           sm && styles.inputSm,
           multiline && (sm ? styles.multilineSm : styles.multiline),
+          inputStyle,
         ]}
       />
       {error ? (

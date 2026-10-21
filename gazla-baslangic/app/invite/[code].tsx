@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Diken from '@/components/Diken';
 import SpeechBubble from '@/components/SpeechBubble';
 import { Button, ErrorState, LoadingState } from '@/components/ui';
-import { isOnline, NetworkError, savePendingInvite, useAuth, useInvitePreview, useJoinByInviteMutation } from '@/data';
+import { savePendingInvite, useAuth, useInvitePreview, useJoinByInviteMutation } from '@/data';
 import GazlaLogo from '@/features/invite-landing/GazlaLogo';
 import { InviteChallengeCard, InviterMessage } from '@/features/invite-landing/InviteCard';
 import { useOnboarding } from '@/features/onboarding/OnboardingProvider';
@@ -30,9 +30,8 @@ export default function InviteLandingScreen() {
   const signedIn = status === 'ready' && !onboarding.inProgress;
 
   const preview = useInvitePreview(code);
+  // Çevrimdışıyken hemen NetworkError ile düşer (yazmalar beklemeye alınmaz; DataProvider)
   const join = useJoinByInviteMutation();
-  // Çevrimdışıyken katılma isteği beklemeye alınır (sonsuz yükleniyor); bunun yerine mesaj
-  const [offline, setOffline] = useState(false);
   const today = useMemo(() => deviceLocalDate(), []);
 
   // Bugün: '/(tabs)' sekmelerin ilk ekranına (Bugün) döner
@@ -53,11 +52,6 @@ export default function InviteLandingScreen() {
       goToday();
       return;
     }
-    if (!isOnline()) {
-      setOffline(true);
-      return;
-    }
-    setOffline(false);
     join.mutate(code, { onSuccess: goToday });
   };
 
@@ -129,9 +123,9 @@ export default function InviteLandingScreen() {
       </View>
 
       <View style={styles.actions}>
-        {(offline || join.isError) && (
+        {join.isError && (
           <Text accessibilityLiveRegion="polite" style={[typography.meta, styles.center, { color: colors.dangerText }]}>
-            {offline ? new NetworkError().message : join.error?.message}
+            {join.error.message}
           </Text>
         )}
         <Button title="Katıl ve başla" onPress={onPrimary} loading={join.isPending} />

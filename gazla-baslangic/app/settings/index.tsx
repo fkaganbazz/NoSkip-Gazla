@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import OptionSheet from '@/components/OptionSheet';
 import {
   ErrorState,
   LoadingState,
@@ -33,7 +34,6 @@ import {
   formatTime,
   labelOf,
 } from '@/features/settings/logic';
-import OptionSheet from '@/features/settings/OptionSheet';
 import { useOptimisticPatch } from '@/features/settings/optimistic';
 import ProfileCard from '@/features/settings/ProfileCard';
 import ProfileEditSheet from '@/features/settings/ProfileEditSheet';

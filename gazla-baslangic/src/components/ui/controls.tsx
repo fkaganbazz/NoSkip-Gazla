@@ -294,8 +294,11 @@ export function Chip({
 
 export type SegmentedSize = 'md' | 'lg';
 
+/** Seçim kutusu seçeneği; `disabled`: soluk (opaklık .5), basılamaz, ekran okuyucuda pasif (Poke "Laf sok") */
+export type SegmentedOption<T extends string> = { value: T; label: string; disabled?: boolean };
+
 type SegmentedProps<T extends string> = {
-  options: { value: T; label: string }[];
+  options: SegmentedOption<T>[];
   value: T;
   onChange: (value: T) => void;
   /** Seçili hücrenin metin rengi (ör. "Laf sok" turuncu) */
@@ -336,17 +339,22 @@ export function Segmented<T extends string>({
       style={[styles.segmentTrack, { backgroundColor: c.segmentTrack }, style]}>
       {options.map((o) => {
         const active = o.value === value;
+        const disabled = !!o.disabled;
         return (
           <Pressable
             key={o.value}
             onPress={() => onChange(o.value)}
+            disabled={disabled}
             role={tabs ? 'tab' : 'radio'}
             aria-selected={tabs ? active : undefined}
             aria-checked={tabs ? undefined : active}
+            // Pasif hücre: iOS/Android accessibilityState.disabled, web aria-disabled
+            aria-disabled={disabled || undefined}
             style={[
               styles.segment,
               { height: size === 'lg' ? cm.segmentHeightLg : cm.segmentHeight },
               active && { backgroundColor: c.segmentThumb, boxShadow: `0 1px 3px ${shadow}` },
+              disabled && { opacity: cm.disabledOpacity },
             ]}>
             <Text
               numberOfLines={1}
@@ -384,7 +392,7 @@ export function Toggle({ value, onChange, accessibilityLabel, disabled }: Toggle
       aria-checked={value}
       aria-disabled={disabled || undefined}
       hitSlop={6}
-      style={[styles.toggle, { backgroundColor: value ? colors.action : c.toggleOff, opacity: disabled ? 0.5 : 1 }]}>
+      style={[styles.toggle, { backgroundColor: value ? colors.action : c.toggleOff, opacity: disabled ? cm.disabledOpacity : 1 }]}>
       <View
         style={[
           styles.knob,
@@ -495,7 +503,7 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   disabled: {
-    opacity: 0.5,
+    opacity: cm.disabledOpacity,
   },
   header: {
     flexDirection: 'row',

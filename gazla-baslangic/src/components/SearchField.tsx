@@ -10,6 +10,8 @@ type Props = {
   /** Yer tutucu; ekran okuyucu etiketi de bu (ör. "Kullanıcı adıyla ara", "Challenge ara") */
   placeholder: string;
   autoCapitalize?: TextInputProps['autoCapitalize'];
+  /** Çizilince odaklanır, klavye açılır (ör. "Kullanıcı adıyla ara" alt sayfası açılınca) */
+  autoFocus?: boolean;
   /** Kenar boşluğu, konum */
   style?: StyleProp<ViewStyle>;
 };
@@ -19,7 +21,7 @@ type Props = {
  * Explore.dc.html ("Challenge ara").
  */
 const SearchField = forwardRef<TextInput, Props>(function SearchField(
-  { value, onChangeText, placeholder, autoCapitalize, style },
+  { value, onChangeText, placeholder, autoCapitalize, autoFocus, style },
   ref,
 ) {
   const { colors, scheme } = useTheme();
@@ -33,6 +35,7 @@ const SearchField = forwardRef<TextInput, Props>(function SearchField(
         placeholderTextColor={componentColors[scheme].placeholder}
         accessibilityLabel={placeholder}
         autoCapitalize={autoCapitalize}
+        autoFocus={autoFocus}
         autoCorrect={false}
         returnKeyType="search"
         clearButtonMode="while-editing"

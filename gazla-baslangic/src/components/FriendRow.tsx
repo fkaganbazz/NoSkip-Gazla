@@ -9,7 +9,7 @@ import { AddAvatar, Avatar } from '@/components/Avatar';
 import { flatShadowStyle } from '@/components/FlatShadow';
 import { CloseIcon, type IconProps } from '@/components/icons';
 import type { AvatarTintKey } from '@/data/types';
-import { borderWidth, cardColors, cardMetrics as m, cardTypography, componentColors, layout, useTheme } from '@/theme';
+import { borderWidth, cardColors, cardMetrics as m, cardTypography, componentColors, componentMetrics, layout, useTheme } from '@/theme';
 
 /** Satırda gösterilen kişi (PersonLite, FriendToday, FriendRequest.person … hepsi uyar) */
 export type FriendRowPerson = {
@@ -87,7 +87,7 @@ export function FriendRowButton({
           borderRadius: radius,
           paddingHorizontal: iconOnly ? 0 : paddingX,
           width: iconOnly ? height : undefined,
-          opacity: disabled ? 0.5 : 1,
+          opacity: disabled ? componentMetrics.disabledOpacity : 1,
         },
         // Dürt hapı: tok gölge, basılınca aşağı iner; diğerleri basılınca solar
         look.shadow

@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CameraIcon, ChevronRightIcon, LockIcon, SendIcon } from '@/components/icons';
 import { Button, ErrorState, IconButton, LoadingState, TextField } from '@/components/ui';
-import { useCheckinMutation, useToday } from '@/data';
+import { useCheckinMutation, useToday, useUndoCheckinMutation } from '@/data';
 import GroupSheet from '@/features/checkin/GroupSheet';
 import { formatClock } from '@/features/checkin/logic';
 import { componentMetrics, layout, radius, typography } from '@/theme';
@@ -21,11 +21,14 @@ const CAN_USE_CAMERA = Platform.OS !== 'web';
 
 // Fotoğraf kanıtı — design/PhotoProof.dc.html (yalnızca koyu çizilmiş; açık modda da koyu).
 // Seçilen dosya useCheckinMutation'a verilir; veri katmanı önce Storage'a yükler, sonra checkin çağırır.
+// Gün zaten gönderildiyse çerçevede gönderilen fotoğraf durur (dokununca yenisi seçilir, "Gönder" değiştirir);
+// altta "Bugünü geri al" (tasarımda yok) kaydı siler (Bugün'deki sağ buton fotoğraf tipinde bu ekranı açar).
 export default function PhotoProofScreen() {
   const { id, date } = useLocalSearchParams<{ id: string; date?: string }>();
   const router = useRouter();
   const today = useToday();
   const checkin = useCheckinMutation();
+  const undo = useUndoCheckinMutation();
 
   const task = useMemo(
     () => today.data?.find((x) => x.challengeId === id && (!date || x.localDate === date)),
@@ -71,6 +74,7 @@ export default function PhotoProofScreen() {
 
   const send = () => {
     if (!task || !photo) return;
+    undo.reset();
     checkin.mutate(
       { challengeId: task.challengeId, localDate: task.localDate, photoFileUri: photo.uri, note: note.trim() || undefined },
       { onSuccess: () => router.back() },
@@ -103,7 +107,16 @@ export default function PhotoProofScreen() {
       ? 'Galeriden seç'
       : 'Fotoğraf seç';
   const leftAction = photo ? (photo.fromCamera ? takePhoto : pickFromLibrary) : pickFromLibrary;
-  const error = pickError ?? (checkin.isError ? checkin.error.message : null);
+  const error = pickError ?? checkin.error?.message ?? undo.error?.message ?? null;
+  // Bugün gönderilmiş kanıt (yeni fotoğraf seçilene kadar çerçevede)
+  const sentUri = !photo && task.done ? task.photoUrl : null;
+  // Geri alma sürerken de görünür (iyimser güncelleme görevi hemen "yapılmadı" yapar)
+  const canUndo = task.done || undo.isPending;
+  const undoDay = () => {
+    checkin.reset();
+    setPickError(null);
+    undo.mutate({ challengeId: task.challengeId, localDate: task.localDate }, { onSuccess: () => router.back() });
+  };
 
   return (
     <SafeAreaView edges={['top', 'bottom']} style={styles.screen}>
@@ -136,6 +149,14 @@ export default function PhotoProofScreen() {
                 </View>
               )}
             </View>
+          ) : sentUri ? (
+            <Pressable
+              onPress={primaryPick}
+              accessibilityRole="button"
+              accessibilityLabel={`Bugün gönderdiğin fotoğraf. ${CAN_USE_CAMERA ? 'Yenisini çek' : 'Yenisini seç'}`}
+              style={[styles.frame, { backgroundColor: c.frameBg }]}>
+              <Image source={{ uri: sentUri }} style={styles.photo} resizeMode="cover" />
+            </Pressable>
           ) : (
             <Pressable
               onPress={primaryPick}
@@ -199,7 +220,7 @@ export default function PhotoProofScreen() {
                 size="md"
                 title="Gönder"
                 onPress={send}
-                disabled={!photo}
+                disabled={!photo || undo.isPending}
                 loading={checkin.isPending}
                 icon={(color) => (
                   <SendIcon color={color} size={componentMetrics.buttonIconSize} strokeWidth={componentMetrics.buttonIconStroke} />
@@ -207,6 +228,18 @@ export default function PhotoProofScreen() {
                 style={styles.button}
               />
             </View>
+            {canUndo && (
+              <Button
+                scheme="dark"
+                variant="text"
+                size="md"
+                title="Bugünü geri al"
+                onPress={undoDay}
+                loading={undo.isPending}
+                disabled={checkin.isPending}
+                accessibilityHint="Bugünkü fotoğraf kanıtı silinir, görev yapılmadı olur"
+              />
+            )}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

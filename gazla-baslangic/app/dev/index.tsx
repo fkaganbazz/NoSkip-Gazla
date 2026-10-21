@@ -17,7 +17,7 @@ const DESIGN: Row[] = [
 
 const SCREENS: Row[] = [
   { href: '/challenge/c-phone', title: 'Detail', detail: 'challenge/[id] · Telefonsuz sabah' },
-  { href: '/challenge/c-phone/finished', title: 'Finished', detail: 'challenge/[id]/finished' },
+  { href: '/challenge/g-okuma/finished', title: 'Finished', detail: 'challenge/[id]/finished · Bahçem: 30 gün okuma' },
   { href: '/challenge/c-phone/share', title: 'ShareCard', detail: 'challenge/[id]/share' },
   { href: '/completion', title: 'Completion', detail: 'Günün hepsi bitti anı' },
   { href: '/streak-lost', title: 'StreakLost', detail: 'Seri koptu, kurtarma' },
@@ -48,6 +48,14 @@ export default function DevIndex() {
             detail: 'Mock: dün kaçırılmış, kurtarma bekliyor',
             onPress: () => {
               mockDev.simulateStreakLost();
+              queryClient.invalidateQueries();
+            },
+          },
+          {
+            title: 'Challenge bitti senaryosu',
+            detail: 'Mock: telefonsuz sabah dün bitti (30/30, 1 kurtarma); Bugün açılınca "bitti" ekranı gelir',
+            onPress: () => {
+              mockDev.simulateFinished();
               queryClient.invalidateQueries();
             },
           },

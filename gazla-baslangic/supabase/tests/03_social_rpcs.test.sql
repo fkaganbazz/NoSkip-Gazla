@@ -23,7 +23,7 @@
 --   kid      signed up (auth user) but has no profile yet
 --   s_*      users for search_profiles (usernames start with "srch")
 begin;
-select plan(192);
+select plan(194);
 -- This file tests behaviour, not privileges (01_rls_privileges does). Expected values are computed
 -- with app.* helpers, sometimes while signed in, so the helpers are opened inside this transaction.
 grant execute on all functions in schema app to authenticated;
@@ -170,7 +170,7 @@ select lives_ok($$select public.complete_profile('  @Ali.K ', ' Ali ', 1990)$$,
   'complete_profile: creates the profile');
 select results_eq(
   $$select username::text, display_name, harsh_mode,
-           avatar_tint in ('peach', 'lavender', 'mint', 'butter')
+           avatar_tint in ('peach', 'lavender', 'mint', 'butter', 'sky')
       from public.profiles where id = auth.uid()$$,
   $$values ('ali.k'::text, 'Ali'::text, false, true)$$,
   'complete_profile: username normalised, display name trimmed, harsh mode off by default, tint from the palette');
@@ -218,6 +218,12 @@ select throws_ok($$update public.profiles set username = 'support' where id = au
   '23514', 'Bu kullanıcı adı kullanılamaz', 'profiles guard: cannot rename to a reserved username directly');
 select throws_ok($$update public.user_settings set timezone = 'Not/AZone' where user_id = auth.uid()$$,
   '22023', 'Geçersiz saat dilimi: Not/AZone', 'user_settings guard: an invalid timezone cannot be set directly');
+-- avatar tint: the client's palette keys (src/theme/accents.ts avatarTints), sky included
+select lives_ok($$update public.profiles set avatar_tint = 'sky' where id = auth.uid()$$,
+  'profiles: sky is an accepted avatar tint');
+select throws_ok($$update public.profiles set avatar_tint = 'navy' where id = auth.uid()$$,
+  '23514', null, 'profiles: an avatar tint outside the palette is rejected');
+update public.profiles set avatar_tint = :'ali_tint' where id = auth.uid();
 
 -- =========================================================================================
 -- Fixture part 2 (as postgres): challenges, memberships, check-ins, search relations

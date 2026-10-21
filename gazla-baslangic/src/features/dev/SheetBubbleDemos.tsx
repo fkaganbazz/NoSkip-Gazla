@@ -1,26 +1,29 @@
 /**
- * Geliştirme ekranı (app/dev/components.tsx) "Sayfa ve balon" bölümü: Sheet (seçenek, kaydırılan ve form sayfası),
- * ActionSheet (onaylı satırlarla) ve SpeechBubble (tüm kuyruk yönleri, boylar, mesaj ve alıntı).
+ * Geliştirme ekranı (app/dev/components.tsx) "Sayfa ve balon" bölümü: Sheet (seçenek — OptionSheet, kaydırılan,
+ * form ve koyu sabit modlu sayfa), ActionSheet (onaylı satırlarla) ve SpeechBubble (tüm kuyruk yönleri, boylar,
+ * mesaj ve alıntı).
  */
 import { useRef, useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import ActionSheet, { type ActionSheetItem } from '@/components/ActionSheet';
 import Diken from '@/components/Diken';
+import { FriendRow } from '@/components/FriendRow';
 import { HandIcon } from '@/components/icons';
+import OptionSheet from '@/components/OptionSheet';
 import Sheet, { SheetFlatList, type SheetHandle } from '@/components/Sheet';
 import SpeechBubble, { type SpeechBubbleTail } from '@/components/SpeechBubble';
-import { Button, Radio, SectionLabel, TextField } from '@/components/ui';
+import { Button, SectionLabel, TextField } from '@/components/ui';
 import { BlockIcon, FlagIcon, UserMinusIcon } from '@/features/friends/icons';
 import { borderWidth, componentColors, layout, palette, radius, spacing, typography, useTheme } from '@/theme';
 import { onboardingColors } from '@/theme/onboarding';
 
-const THEMES = [
+type ThemeValue = 'system' | 'light' | 'dark';
+const THEMES: { value: ThemeValue; label: string; detail?: string }[] = [
   { value: 'system', label: 'Sistem', detail: 'Telefonun ayarını izler' },
   { value: 'light', label: 'Açık' },
   { value: 'dark', label: 'Koyu' },
-] as const;
-type ThemeValue = (typeof THEMES)[number]['value'];
+];
 
 const YEARS = Array.from({ length: 60 }, (_, i) => 2013 - i);
 const YEAR_ROW = layout.minTouchTarget + spacing.xxs;
@@ -32,7 +35,7 @@ const fake = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export default function SheetBubbleDemos() {
   const { colors, scheme } = useTheme();
-  const [open, setOpen] = useState<'options' | 'years' | 'form' | 'actions' | null>(null);
+  const [open, setOpen] = useState<'options' | 'years' | 'form' | 'dark' | 'actions' | null>(null);
   const [themeValue, setThemeValue] = useState<ThemeValue>('system');
   const [year, setYear] = useState(2000);
   const [name, setName] = useState('Deniz');
@@ -87,6 +90,7 @@ export default function SheetBubbleDemos() {
           <Button title="Seçenek" variant="secondary" size="sm" onPress={() => setOpen('options')} />
           <Button title="Uzun liste" variant="secondary" size="sm" onPress={() => setOpen('years')} />
           <Button title="Form" variant="secondary" size="sm" onPress={() => setOpen('form')} />
+          <Button title="Koyu" variant="secondary" size="sm" onPress={() => setOpen('dark')} />
         </View>
         <Note>{`Görünüm: ${THEMES.find((x) => x.value === themeValue)?.label} · Yıl: ${year} · Ad: ${name}`}</Note>
       </Panel>
@@ -150,29 +154,20 @@ export default function SheetBubbleDemos() {
         </SpeechBubble>
       </Panel>
 
-      <Sheet visible={open === 'options'} onClose={close} title="Görünüm" surface>
-        <View accessibilityRole="radiogroup">
-          {THEMES.map((o, i) => (
-            <Pressable
-              key={o.value}
-              accessibilityRole="radio"
-              accessibilityState={{ selected: o.value === themeValue }}
-              onPress={() => {
-                setThemeValue(o.value);
-                close();
-              }}
-              style={[
-                styles.option,
-                i < THEMES.length - 1 && { borderBottomWidth: borderWidth.thin, borderBottomColor: colors.border },
-              ]}>
-              <View style={styles.flex}>
-                <Text style={[typography.cardTitle, { color: colors.text }]}>{o.label}</Text>
-                {'detail' in o && <Text style={[typography.meta, { color: colors.textSecondary }]}>{o.detail}</Text>}
-              </View>
-              <Radio selected={o.value === themeValue} />
-            </Pressable>
-          ))}
-        </View>
+      {/* Ortak tek seçimli liste (Ayarlar seçenekleri, hatırlatma saati) */}
+      <OptionSheet
+        visible={open === 'options'}
+        title="Görünüm"
+        options={THEMES}
+        value={themeValue}
+        onSelect={setThemeValue}
+        onClose={close}
+      />
+
+      {/* Sabit koyu mod (PhotoProof "Kimler görecek"): sayfa ve içindeki satırlar açık modda da koyu */}
+      <Sheet visible={open === 'dark'} onClose={close} title="Kimler görecek" surface scheme="dark">
+        <FriendRow person={{ displayName: 'Deniz', avatarTint: 'peach' }} sub="Sen · @deniz.k" divider />
+        <FriendRow person={{ displayName: 'Kerem', avatarTint: 'sky' }} sub="@kerem.a" />
       </Sheet>
 
       {/* Kendi listesi olan sayfa (BirthYearField gibi): SheetFlatList, seçili yıl ortada açılır */}
@@ -275,12 +270,6 @@ const styles = StyleSheet.create({
   },
   flex: {
     flex: 1,
-  },
-  option: {
-    minHeight: layout.minTouchTarget + spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
   },
   years: {
     height: YEAR_ROW * 7,

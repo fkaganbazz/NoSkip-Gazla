@@ -31,6 +31,11 @@ export const avatarTints = {
     light: { bg: '#FFF1C7', ink: '#8A5A00' },
     dark: { bg: '#4A3A12', ink: '#FFF1C7' },
   },
+  // Friends.dc.html / Activity.dc.html "Kerem": tuhaf kategorisinin mavisi; koyu tasarımı yok, challengeTints.sky.dark
+  sky: {
+    light: { bg: '#E0EEFF', ink: '#1E4F9A' },
+    dark: { bg: '#2E2352', ink: '#CDBEF5' },
+  },
 } as const satisfies Record<string, Record<Scheme, Tint>>;
 
 /** Challenge ikon karolarının zemin/ikon renkleri */

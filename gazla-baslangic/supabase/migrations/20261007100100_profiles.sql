@@ -21,7 +21,8 @@ create table public.profiles (
   -- Uzunluk ham metinden ölçülür (boşlukla şişirilemez); boş/yalnız boşluk olamaz
   constraint profiles_display_name_length
     check (char_length(display_name) <= 40 and char_length(btrim(display_name)) >= 1),
-  constraint profiles_avatar_tint check (avatar_tint in ('peach', 'lavender', 'mint', 'butter')),
+  -- İstemcideki avatarTints anahtarları (src/theme/accents.ts); sky: tuhaf kategorisinin mavisi
+  constraint profiles_avatar_tint check (avatar_tint in ('peach', 'lavender', 'mint', 'butter', 'sky')),
   -- avatars kovasında {id}/{dosya}: tek dosya adı, "." ile başlamaz
   constraint profiles_avatar_path check (
     avatar_path is null or (

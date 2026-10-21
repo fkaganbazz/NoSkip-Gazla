@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import OptionSheet from '@/components/OptionSheet';
 import { Chip, ErrorState, LoadingState, ScreenHeader, SectionLabel, ToastHost, useToast, type ChipTone } from '@/components/ui';
 import { useMySettings, useUpdateSettingsMutation, type SettingsUpdate } from '@/data';
-import { DEFAULT_REMINDER, REMINDER_OPTIONS, errorText, formatTime } from '@/features/settings/logic';
+import { DEFAULT_REMINDER, errorText, formatTime, reminderTimes } from '@/features/settings/logic';
 import { NOTIFICATION_COPY, NOTIFICATION_RULES, type RuleTone } from '@/features/settings/notificationCopy';
-import OptionSheet from '@/features/settings/OptionSheet';
 import { LinkRow, SettingsGroup, ToggleRow } from '@/features/settings/rows';
 import { borderWidth, layout, useTheme, type ChallengeTint } from '@/theme';
 import { settingsColors, settingsMetrics as m, settingsTypography as t } from '@/theme/settings';
@@ -105,7 +105,7 @@ export default function NotificationsScreen() {
       <OptionSheet
         visible={timeOpen}
         title="Hatırlatma saati"
-        options={REMINDER_OPTIONS}
+        options={reminderTimes(s.dailyReminderTime).map((time) => ({ value: time, label: time }))}
         value={formatTime(s.dailyReminderTime)}
         onSelect={(dailyReminderTime) => save({ dailyReminderTime })}
         onClose={() => setTimeOpen(false)}

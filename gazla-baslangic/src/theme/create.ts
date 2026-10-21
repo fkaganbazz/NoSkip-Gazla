@@ -105,8 +105,7 @@ export const createMetrics = {
   /** Artı/eksi: ortak IconButton (44) içinde ikon */
   stepIconSize: 18,
   stepIconStrokeWidth: 2.8,
-  /** Hatırlatma adımı (dakika) ve tasarımdaki varsayılan saat */
-  reminderStepMinutes: 30,
+  /** Tasarımdaki varsayılan hatırlatma saati; adımlar ve aralık ortak (features/settings/logic REMINDER_TIMES) */
   reminderDefault: '20:00',
   /** Seçim sayfası (Kimler görebilir, Başlangıç): seçenek kartları arası, tamamlama kartlarıyla aynı */
   choiceGap: 8,

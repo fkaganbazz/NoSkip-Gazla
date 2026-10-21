@@ -4,9 +4,8 @@ import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FriendBubble, InviteBubble } from '@/components/FriendRow';
-import { Skeleton, SkeletonTaskCard } from '@/components/Skeleton';
 import { TaskCard } from '@/components/TaskCard';
-import { ErrorState, useToast } from '@/components/ui';
+import { ErrorState, Skeleton, SkeletonTaskCard, useToast } from '@/components/ui';
 import {
   ApiError,
   useAuth,
@@ -110,17 +109,17 @@ export default function TodayScreen() {
   );
   const showError = useCallback((error: Error) => toast.show({ message: error.message }), [toast]);
 
-  // Sağdaki buton: işaretle tipi tek dokunuşla işaretler; tamamlanmış görev geri alınır (iyimser, ağ beklemez).
-  // Sayı ve fotoğraf tipi kendi ekranını açar.
+  // Sağdaki buton (EKRANLAR 2.1): işaretle tipi tek dokunuşla işaretler / tamamlanmışsa geri alır (iyimser, ağ
+  // beklemez). Sayı ve fotoğraf tipi tamamlanmış olsa da her zaman kendi ekranını açar (değeri değiştirmek, yeni
+  // fotoğraf ya da "Bugünü geri al" orada).
   const onAction = useCallback(
     (rowId: string) => {
       const task = findTask(rowId);
       if (!task) return;
       const target = { challengeId: task.challengeId, localDate: task.localDate };
-      if (task.done) {
-        undo.mutate(target, { onError: showError });
-      } else if (task.taskType === 'check') {
-        checkin.mutate(target, { onError: showError });
+      if (task.taskType === 'check') {
+        if (task.done) undo.mutate(target, { onError: showError });
+        else checkin.mutate(target, { onError: showError });
       } else if (task.taskType === 'number') {
         router.push({ pathname: '/checkin/number/[id]', params: { id: task.challengeId, date: task.localDate } });
       } else {

@@ -16,6 +16,8 @@ create table public.challenge_templates (
   difficulty public.challenge_difficulty not null,
   task_type public.task_type not null,
   default_duration_days smallint not null,
+  -- ChallengePreview süre seçicisi ve create_challenge: şablonun izin verdiği hazır süreler (EKRANLAR 4.2)
+  allowed_durations smallint[] not null default '{7,10,30}',
   icon text not null,
   tint text not null,
   number_unit text,
@@ -31,6 +33,16 @@ create table public.challenge_templates (
   created_at timestamptz not null default now(),
   constraint challenge_templates_slug check (slug ~ '^[a-z0-9-]{2,60}$'),
   constraint challenge_templates_duration check (default_duration_days in (7, 10, 30)),
+  -- Hazır sürelerin (7/10/30) boş olmayan alt kümesi, artan sırada ve tekrarsız; varsayılan süre içinde
+  constraint challenge_templates_allowed_durations check (
+    array_ndims(allowed_durations) = 1 and array_lower(allowed_durations, 1) = 1
+    and cardinality(allowed_durations) between 1 and 3
+    and array_position(allowed_durations, null) is null
+    and allowed_durations <@ '{7,10,30}'::smallint[]
+    and (cardinality(allowed_durations) < 2 or allowed_durations[1] < allowed_durations[2])
+    and (cardinality(allowed_durations) < 3 or allowed_durations[2] < allowed_durations[3])
+    and default_duration_days = any (allowed_durations)
+  ),
   constraint challenge_templates_icon check (icon ~ '^[a-zA-Z0-9]{1,32}$'),
   constraint challenge_templates_tint check (tint ~ '^[a-z]{1,16}$'),
   constraint challenge_templates_featured_monday

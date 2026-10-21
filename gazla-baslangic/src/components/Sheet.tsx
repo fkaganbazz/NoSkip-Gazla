@@ -12,6 +12,8 @@
  * İçerikten animasyonlu kapatmak için `ref` → `close()` (ör. sayfadaki kapat butonu, gönderince kapan).
  * `top`: sayfanın hemen üstünde, sayfayla birlikte hareket eden alan (Poke/NumberEntry'de Diken + balon);
  * karartmanın üstünde, sayfanın altında çizilir, dokunmaları karartmaya geçirir.
+ * `scheme`: temadan bağımsız sabit mod (iki modda koyu PhotoProof'tan açılan sayfa: `"dark"`); karartma, zemin,
+ * tutamaç ve içerideki her bileşen (`useTheme` kullanan FriendRow, metinler, durumlar) o modda çizilir.
  */
 import BottomSheet, {
   BottomSheetFlatList,
@@ -49,7 +51,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, { Extrapolation, interpolate, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { componentColors, componentMetrics as cm, spacing, typography, useTheme } from '@/theme';
+import { componentColors, componentMetrics as cm, SchemeProvider, spacing, typography, useTheme, type ColorScheme } from '@/theme';
 import { actionSheetMetrics as am, sheetMetrics as m } from '@/theme/sheet';
 
 export type SheetHandle = {
@@ -84,6 +86,8 @@ export type SheetProps = {
   contentStyle?: StyleProp<ViewStyle>;
   /** Ekran okuyucu için sayfanın adı */
   accessibilityLabel?: string;
+  /** Temadan bağımsız sabit mod: sayfa ve içeriği bu modda çizilir (PhotoProof grup sayfası: `"dark"`) */
+  scheme?: ColorScheme;
   children: ReactNode;
   ref?: Ref<SheetHandle>;
 };
@@ -93,7 +97,13 @@ export const SheetFlatList = BottomSheetFlatList;
 /** Sayfa içinde kaydırılan alan (`scrollable` yetmediğinde) */
 export const SheetScrollView = BottomSheetScrollView;
 
-export default function Sheet({ visible, ...props }: SheetProps) {
+export default function Sheet({ scheme, ...props }: SheetProps) {
+  const sheet = <SheetRoot {...props} />;
+  // Sabit mod: alt ağaçtaki her useTheme() bu modu döner (Modal içi de aynı React ağacı)
+  return scheme ? <SchemeProvider value={scheme}>{sheet}</SchemeProvider> : sheet;
+}
+
+function SheetRoot({ visible, ...props }: Omit<SheetProps, 'scheme'>) {
   if (visible === undefined) {
     const { ref, ...rest } = props;
     return (
@@ -108,7 +118,7 @@ export default function Sheet({ visible, ...props }: SheetProps) {
 }
 
 // Ekran içi kullanım: kapanma animasyonu bitene kadar Modal açık kalır.
-function ModalSheet({ visible, onClose, ref, ...props }: SheetProps & { visible: boolean }) {
+function ModalSheet({ visible, onClose, ref, ...props }: Omit<SheetProps, 'scheme'> & { visible: boolean }) {
   const [mounted, setMounted] = useState(visible);
   const inner = useRef<CoreHandle>(null);
   const visibleRef = useRef(visible);
@@ -175,7 +185,7 @@ function SheetCore({
   accessibilityLabel,
   children,
   ref,
-}: Omit<SheetProps, 'visible' | 'ref'> & { ref?: Ref<CoreHandle> }) {
+}: Omit<SheetProps, 'visible' | 'ref' | 'scheme'> & { ref?: Ref<CoreHandle> }) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();

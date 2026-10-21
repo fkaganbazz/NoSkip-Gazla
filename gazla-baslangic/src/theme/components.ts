@@ -101,6 +101,8 @@ export type ComponentColors = {
   /** Alt sayfanın arkasındaki karartma ve 44×5 tutamaç (Poke.dc.html, NumberEntry.dc.html) */
   scrim: string;
   sheetHandle: string;
+  /** Tek seçimli liste sayfasında satır ayracı (Settings.dc.html kart içi ayraç) */
+  optionDivider: string;
 };
 
 export const componentColors: Record<Scheme, ComponentColors> = {
@@ -169,6 +171,7 @@ export const componentColors: Record<Scheme, ComponentColors> = {
     permissionBackBorder: '#D5EBDD', // NotifPermission.dc.html: yeşil zeminde geri butonu kenarı
     scrim: 'rgba(36, 22, 63, 0.55)', // EKRANLAR.md: alt sayfa arka planı
     sheetHandle: '#D8CCBF', // Poke.dc.html / NumberEntry.dc.html: tutamaç
+    optionDivider: '#F4EDE5', // Settings.dc.html: kart içi satır ayracı
   },
   dark: {
     secondaryBg: palette.darkSurface,
@@ -248,6 +251,8 @@ export const componentColors: Record<Scheme, ComponentColors> = {
     // Koyu karartma tasarlanmadı: gece moru koyu zeminde seçilmiyor; diğer koyu karartmalarla aynı siyah .55
     scrim: 'rgba(0, 0, 0, 0.55)',
     sheetHandle: palette.darkLine,
+    // Koyu tasarım yok: ayraç kart kenarından bir ton koyu (DetailDark dolgu; Ayarlar satırlarıyla aynı)
+    optionDivider: palette.darkFill,
   },
 };
 
@@ -281,6 +286,8 @@ export const componentMetrics = {
   /** Gölgesiz butonlarda (apple, google) basılı / pasif saydamlık */
   buttonFlatPressedOpacity: 0.85,
   buttonFlatDisabledOpacity: 0.6,
+  /** Pasif kontrol saydamlığı: anahtar, seçim kutusunun pasif hücresi (Poke "Laf sok"), kişi satırı butonu */
+  disabledOpacity: 0.5,
   /** Yuvarlak ikon butonu (geri, kapat, seçenekler) */
   iconButton: 44,
   /**
@@ -386,6 +393,20 @@ export const componentMetrics = {
   sheetHandleWidth: 44,
   sheetHandleHeight: 5,
   sheetHandleRadius: 3,
+  /**
+   * Tek seçimli liste sayfası (`OptionSheet`; Ayarlar seçenekleri, hatırlatma saati) — Settings.dc.html satır dili:
+   * satır en az 52, dikey 10, başlık–seçim düğmesi arası 12, başlık–açıklama 2; üst açıklama ile ilk satır arası 8.
+   * Basılı satır saydamlığı kişi satırıyla aynı (cardMetrics.pressedOpacity).
+   */
+  optionRowHeight: 52,
+  optionRowPaddingY: 10,
+  optionRowGap: 12,
+  optionRowTextGap: 2,
+  optionDescriptionGap: 8,
+  optionPressedOpacity: 0.7,
+  /** İskelet nabzı (tasarımda yok): tam opaklıktan bu değere iner ve döner; bir yön süresi */
+  skeletonPulseMinOpacity: 0.5,
+  skeletonPulseDurationMs: 900,
   avatarSm: 40,
   avatarMd: 48,
   avatarLg: 72,
@@ -439,6 +460,9 @@ export const componentTypography = {
   toastStrong: { fontFamily: fonts.extraBold, fontSize: 14 },
   /** Onboarding adım etiketi "1/4" · Nunito 800 · 14 */
   stepLabel: { fontFamily: fonts.extraBold, fontSize: 14 },
+  /** Tek seçimli liste satırı: başlık · Nunito 800 · 16, açıklama · Nunito 600 · 13 (Settings.dc.html satır dili) */
+  optionTitle: { fontFamily: fonts.extraBold, fontSize: 16 },
+  optionDetail: { fontFamily: fonts.semiBold, fontSize: 13 },
   /** Avatar baş harfi · Nunito 800 · 14 (40 px avatar) */
   avatarInitial: { fontFamily: fonts.extraBold, fontSize: 14 },
 } as const satisfies Record<string, TextStyle>;

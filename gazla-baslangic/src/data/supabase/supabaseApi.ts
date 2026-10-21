@@ -445,6 +445,7 @@ export function createSupabaseApi(url: string, anonKey: string): GazlaApi {
         difficulty: r.difficulty,
         taskType: r.task_type,
         defaultDurationDays: r.default_duration_days,
+        allowedDurations: [...(r.allowed_durations ?? [r.default_duration_days])].sort((a: number, b: number) => a - b),
         icon: r.icon,
         tint: r.tint,
         number: toNumber(r),
@@ -586,6 +587,8 @@ export function createSupabaseApi(url: string, anonKey: string): GazlaApi {
         finishedAt: r.finished_at,
         finalRescues: r.final_rescues,
         finalRank: r.final_rank,
+        longestStreak: r.longest_streak,
+        isLongest: r.is_longest,
       }));
     },
     async getBadges() {

@@ -94,20 +94,6 @@ export function challengePhase(challenge: Challenge): ChallengePhase {
 /** 'HH:MM:SS' gelirse 'HH:MM' */
 export const hhmm = (time: string) => time.slice(0, 5);
 
-/**
- * Kişisel hatırlatma saati seçenekleri (Detail "…" → Hatırlatma saatini değiştir): 30 dakikalık adımlar,
- * sessiz saatler (23:30–08:00) dışında. Sessiz saat kuralı sunucuda; burada yalnızca o aralıkta saat önerilmez.
- * Listede olmayan mevcut saat (ör. başka cihazdan 07:15) kaybolmasın diye sırasına eklenir.
- */
-export function reminderTimes(current: string | null): string[] {
-  const times = Array.from({ length: 31 }, (_, i) => {
-    const minutes = 8 * 60 + i * 30;
-    return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
-  });
-  const now = current ? hhmm(current) : null;
-  return now && !times.includes(now) ? [...times, now].sort() : times;
-}
-
 /** Grup satırının alt bilgisi ve sağdaki sayının görünümü; "bugün bekliyor" yalnızca süren challenge'da */
 export function boardRowInfo(member: BoardMember, running = true) {
   if (running && !member.doneToday) {

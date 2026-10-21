@@ -15,9 +15,11 @@ export {
   type IconButtonIcon,
   type IconButtonTone,
   type SectionLabelTone,
+  type SegmentedOption,
   type SegmentedSize,
 } from './controls';
 export { CountBadge, ErrorState, LoadingState, TextField, Toast, type ToastAction, type ToastKind } from './form';
 export { ToastHost, useToast, type ToastController, type ToastOptions } from './toast';
 export { Avatar, upperTr } from '../Avatar';
 export { ProgressBar } from '../ProgressBar';
+export { Skeleton, SkeletonPulse, SkeletonTaskCard } from '../Skeleton';

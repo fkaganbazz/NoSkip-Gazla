@@ -45,7 +45,7 @@ export type NotificationKind =
   | 'friend_finished_challenge';
 export type Discoverability = 'everyone' | 'nobody';
 export type DikenStage = 'filiz' | 'genc' | 'tam' | 'cicek';
-export type AvatarTintKey = 'peach' | 'lavender' | 'mint' | 'butter';
+export type AvatarTintKey = 'peach' | 'lavender' | 'mint' | 'butter' | 'sky';
 export type Locale = 'tr' | 'en';
 /** Create "Kimler görebilir": Davetliler / Arkadaşlarım (challenges.visibility) */
 export type ChallengeVisibility = 'invited' | 'friends';
@@ -210,6 +210,9 @@ export type NumberSettings = {
   max: number | null;
 };
 
+/** Şablonlu challenge'ın hazır süreleri (challenges_template_duration) */
+export type TemplateDuration = 7 | 10 | 30;
+
 /** Katalog (challenge_templates), kullanıcının diline göre */
 export type Template = {
   id: string;
@@ -220,7 +223,9 @@ export type Template = {
   category: ChallengeCategory;
   difficulty: ChallengeDifficulty;
   taskType: TaskType;
-  defaultDurationDays: 7 | 10 | 30;
+  defaultDurationDays: TemplateDuration;
+  /** Seçilebilen hazır süreler, artan (challenge_templates.allowed_durations; varsayılanı içerir) */
+  allowedDurations: TemplateDuration[];
   icon: ChallengeIconKey;
   tint: ChallengeTintKey;
   number: NumberSettings | null;
@@ -343,6 +348,10 @@ export type GardenItem = {
   finishedAt: Timestamp;
   finalRescues: number;
   finalRank: number;
+  /** Challenge'daki en uzun ardışık seri (kurtarılan günler dahil) */
+  longestStreak: number;
+  /** Bahçedeki en uzun seri olan bitki (tek; eşitlikte en az kurtarma, sonra en yeni) → çiçek + gözlük */
+  isLongest: boolean;
 };
 
 // Arkadaşlar ve sosyal --------------------------------------------------------------------------

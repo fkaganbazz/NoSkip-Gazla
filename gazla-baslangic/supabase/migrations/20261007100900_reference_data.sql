@@ -19,25 +19,27 @@ insert into public.poke_messages (key, tone, sort_order, text_tr) values
   ('streak_crying',     'roast', 4, 'Serin şu an ağlıyor'),
   ('i_did_it',          'roast', 5, 'Ben yaptım. Sen?');
 
+-- allowed_durations: ChallengePreview'da seçilebilen süreler (kahvesiz tasarımdaki gibi 7/10/30). Sabah
+-- alışkanlığı, okuma ve artan plank kısa sürede oturmaz (10/30); zor sosyal ve tuhaf olanlar kısa (7/10).
 insert into public.challenge_templates (
   slug, title_tr, short_title_tr, description_tr, category, difficulty, task_type,
-  default_duration_days, icon, tint, number_unit, number_base_target, number_daily_increment,
+  default_duration_days, allowed_durations, icon, tint, number_unit, number_base_target, number_daily_increment,
   number_step, number_max, onboarding_order
 ) values
   ('kahvesiz', '7 gün kahvesiz', 'kahvesiz',
    'Kahveyi bir süreliğine bırak. İlk üç gün zor geçer, sonrası kolaylaşır. Söz vermiyoruz ama muhtemelen.',
-   'food_drink', 'medium', 'check', 7, 'coffee', 'butter', null, null, 0, null, null, 1),
+   'food_drink', 'medium', 'check', 7, '{7,10,30}', 'coffee', 'butter', null, null, 0, null, null, 1),
   ('telefonsuz-sabah', 'Uyanınca 1 saat telefonsuz', 'telefonsuz sabah', null,
-   'detox', 'medium', 'check', 30, 'phoneOff', 'lilac', null, null, 0, null, null, 2),
+   'detox', 'medium', 'check', 30, '{10,30}', 'phoneOff', 'lilac', null, null, 0, null, null, 2),
   ('iltifat', 'Her gün birine iltifat et', 'iltifat', null,
-   'social_courage', 'hard', 'check', 7, 'chatHeart', 'peach', null, null, 0, null, null, 3),
+   'social_courage', 'hard', 'check', 7, '{7,10}', 'chatHeart', 'peach', null, null, 0, null, null, 3),
   ('plank', 'Plank: her gün +5 saniye', 'plank', null,
-   'sport', 'medium', 'number', 10, 'timer', 'green', 'sn', 60, 5, 5, 600, 4),
+   'sport', 'medium', 'number', 10, '{10,30}', 'timer', 'green', 'sn', 60, 5, 5, 600, 4),
   ('20-sayfa', 'Her gün 20 sayfa oku', 'okuma', null,
-   'reading', 'easy', 'photo', 30, 'book', 'rose', null, null, 0, null, null, 5),
+   'reading', 'easy', 'photo', 30, '{10,30}', 'book', 'rose', null, null, 0, null, null, 5),
   ('harcamasiz', 'Gereksiz harcama yok', null, null,
-   'money', 'medium', 'check', 7, 'wallet', 'teal', null, null, 0, null, null, 6),
+   'money', 'medium', 'check', 7, '{7,10,30}', 'wallet', 'teal', null, null, 0, null, null, 6),
   ('ters-el', 'Ters elle diş fırçala', null, null,
-   'quirky', 'easy', 'check', 10, 'toothbrush', 'sky', null, null, 0, null, null, null),
+   'quirky', 'easy', 'check', 10, '{7,10}', 'toothbrush', 'sky', null, null, 0, null, null, null),
   ('sekersiz', '10 gün şekersiz', 'şekersiz', null,
-   'food_drink', 'medium', 'check', 10, 'candy', 'butter', null, null, 0, null, null, null);
+   'food_drink', 'medium', 'check', 10, '{7,10,30}', 'candy', 'butter', null, null, 0, null, null, null);

@@ -2,23 +2,32 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import Sheet from '@/components/Sheet';
 import { Radio } from '@/components/ui';
-import { borderWidth, typography, useTheme } from '@/theme';
-import { settingsColors, settingsMetrics as m, settingsTypography as t } from '@/theme/settings';
+import {
+  borderWidth,
+  componentColors,
+  componentMetrics as cm,
+  componentTypography as ct,
+  typography,
+  useTheme,
+} from '@/theme';
 
-type Option<T extends string | number> = { value: T; label: string; detail?: string };
+export type OptionSheetOption<T extends string | number> = { value: T; label: string; detail?: string };
 
 type Props<T extends string | number> = {
   visible: boolean;
   title: string;
   /** Listenin üstünde kısa açıklama (Gün bitişi) */
   description?: string;
-  options: Option<T>[];
+  options: OptionSheetOption<T>[];
   value: T | undefined;
   onSelect: (value: T) => void;
   onClose: () => void;
 };
 
-/** Tek seçimli liste (ortak Sheet, kart zemini): satır basılır, sağda seçim düğmesi; seçince kapanır */
+/**
+ * Tek seçimli liste (ortak Sheet, kart zemini; Settings.dc.html satır dili): satır basılır, sağda seçim düğmesi;
+ * seçince kapanır. Ayarlar seçenekleri, hatırlatma saati (Ayarlar → Bildirimler, Detail "…").
+ */
 export default function OptionSheet<T extends string | number>({
   visible,
   title,
@@ -30,7 +39,7 @@ export default function OptionSheet<T extends string | number>({
 }: Props<T>) {
   const { colors, scheme } = useTheme();
   return (
-    // Hatırlatma saatleri (16 satır) ekrana sığmıyor: kaydırılabilir gövde
+    // Hatırlatma saatleri (31 satır) ekrana sığmıyor: kaydırılabilir gövde
     <Sheet visible={visible} onClose={onClose} title={title} surface scrollable>
       {description ? (
         <Text style={[typography.body, styles.description, { color: colors.textBody }]}>{description}</Text>
@@ -53,13 +62,13 @@ export default function OptionSheet<T extends string | number>({
                 styles.row,
                 i < options.length - 1 && {
                   borderBottomWidth: borderWidth.thin,
-                  borderBottomColor: settingsColors[scheme].rowDivider,
+                  borderBottomColor: componentColors[scheme].optionDivider,
                 },
-                pressed && { opacity: 0.7 },
+                pressed && { opacity: cm.optionPressedOpacity },
               ]}>
               <View style={styles.texts}>
-                <Text style={[t.rowTitle, { color: colors.text }]}>{o.label}</Text>
-                {o.detail ? <Text style={[t.rowDetail, { color: colors.textSecondary }]}>{o.detail}</Text> : null}
+                <Text style={[ct.optionTitle, { color: colors.text }]}>{o.label}</Text>
+                {o.detail ? <Text style={[ct.optionDetail, { color: colors.textSecondary }]}>{o.detail}</Text> : null}
               </View>
               <Radio selected={selected} />
             </Pressable>
@@ -72,17 +81,17 @@ export default function OptionSheet<T extends string | number>({
 
 const styles = StyleSheet.create({
   description: {
-    marginBottom: m.optionDescriptionGap,
+    marginBottom: cm.optionDescriptionGap,
   },
   row: {
-    minHeight: m.optionRowHeight,
+    minHeight: cm.optionRowHeight,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: m.rowGap,
-    paddingVertical: m.optionRowPaddingY,
+    gap: cm.optionRowGap,
+    paddingVertical: cm.optionRowPaddingY,
   },
   texts: {
     flex: 1,
-    gap: m.rowTextGap,
+    gap: cm.optionRowTextGap,
   },
 });

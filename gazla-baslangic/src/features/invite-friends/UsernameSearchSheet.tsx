@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { FriendList, FriendRow, FriendRowButton } from '@/components/FriendRow';
 import SearchField from '@/components/SearchField';
@@ -33,8 +33,6 @@ type Props = {
  */
 export default function UsernameSearchSheet({ visible, onClose }: Props) {
   const { colors } = useTheme();
-  // Sayfa açılınca (alan çizilince) yazmaya hazır; sabit referans: her çizimde yeniden odaklanmasın
-  const focusOnMount = useCallback((input: TextInput | null) => input?.focus(), []);
   const [query, setQuery] = useState('');
   const term = normalizeUsername(query);
   const debounced = useDebouncedValue(term, m.usernameDebounceMs);
@@ -129,8 +127,9 @@ export default function UsernameSearchSheet({ visible, onClose }: Props) {
 
   return (
     <Sheet visible={visible} onClose={onClose} title="Arkadaş ekle" scrollable contentStyle={styles.body}>
+      {/* Sayfa açılınca (alan çizilince) yazmaya hazır */}
       <SearchField
-        ref={focusOnMount}
+        autoFocus
         value={query}
         onChangeText={setQuery}
         placeholder="Kullanıcı adıyla ara"

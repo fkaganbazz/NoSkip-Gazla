@@ -33,14 +33,41 @@ export const dayEndDetail = (hours: DayEndGraceHours) =>
 /** Varsayılan günlük hatırlatma saati (Settings.dc.html: 21:00) */
 export const DEFAULT_REMINDER = '21:00';
 
+/** Hatırlatma saatleri arası adım (dakika) ve aralık: 08:00–23:00 */
+export const REMINDER_STEP_MINUTES = 30;
+const REMINDER_FIRST_MINUTE = 8 * 60;
+const REMINDER_LAST_MINUTE = 23 * 60;
+
+const clock = (minutes: number) =>
+  `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+
 /**
- * Hatırlatma saati seçenekleri: sessiz saatler (23:30–08:00) dışında kalan saat başları.
- * Sessiz saat kuralı sunucuda; burada yalnızca o aralıkta saat önerilmez.
+ * Hatırlatma saati seçenekleri — tek kaynak (Ayarlar → Bildirimler, Detail "…" → Hatırlatma saatini değiştir,
+ * Create hatırlatma adımları): 08:00–23:00 arası 30 dakikalık adımlar. Sessiz saatler (23:30–08:00) önerilmez;
+ * kural sunucuda.
  */
-export const REMINDER_OPTIONS = Array.from({ length: 16 }, (_, i) => {
-  const value = `${String(8 + i).padStart(2, '0')}:00`;
-  return { value, label: value };
-});
+export const REMINDER_TIMES: readonly string[] = Array.from(
+  { length: (REMINDER_LAST_MINUTE - REMINDER_FIRST_MINUTE) / REMINDER_STEP_MINUTES + 1 },
+  (_, i) => clock(REMINDER_FIRST_MINUTE + i * REMINDER_STEP_MINUTES),
+);
+
+/**
+ * Seçenek listesi; listede olmayan mevcut saat (ör. başka cihazdan 07:15) kaybolmasın diye sırasına eklenir.
+ * 'HH:MM:SS' gelirse 'HH:MM'.
+ */
+export function reminderTimes(current: string | null): string[] {
+  const now = current ? current.slice(0, 5) : null;
+  return now && !REMINDER_TIMES.includes(now) ? [...REMINDER_TIMES, now].sort() : [...REMINDER_TIMES];
+}
+
+/** Bir sonraki / önceki seçenek (Create −/+); uçta aynı saat döner. Listede olmayan saat en yakın adıma oturur. */
+export function stepReminder(current: string, direction: 1 | -1): string {
+  const now = current.slice(0, 5);
+  const i = REMINDER_TIMES.indexOf(now);
+  if (i >= 0) return REMINDER_TIMES[Math.min(Math.max(i + direction, 0), REMINDER_TIMES.length - 1)];
+  const next = direction > 0 ? REMINDER_TIMES.find((t) => t > now) : [...REMINDER_TIMES].reverse().find((t) => t < now);
+  return next ?? now;
+}
 
 /** 'HH:MM:SS' gelirse 'HH:MM' göster */
 export const formatTime = (time: string | null) => (time ? time.slice(0, 5) : 'Kapalı');

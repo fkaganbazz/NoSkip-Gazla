@@ -9,7 +9,7 @@
 --
 -- Run:  supabase test db   (or the local testbed: ./test.sh supabase/tests/02_streak_engine.test.sql)
 begin;
-select plan(188);
+select plan(190);
 -- This file tests behaviour, not privileges (01_rls_privileges does). Expected values are computed
 -- with app.* helpers, sometimes while signed in, so the helpers are opened inside this transaction.
 grant execute on all functions in schema app to authenticated;
@@ -785,10 +785,15 @@ select is((select count(*)::int from public.my_today() where local_date = app.lo
 select results_eq($$select duration_days, stage, final_rank from public.my_garden() order by duration_days$$,
                   $$values (7, 'genc'::public.diken_stage, 1), (10, 'tam'::public.diken_stage, 1), (30, 'cicek'::public.diken_stage, 1)$$,
                   'my_garden after lazy finalization: 7 -> genc, 10 -> tam, 30 -> cicek; the missed one is absent');
+select results_eq($$select duration_days, longest_streak, is_longest from public.my_garden() order by duration_days$$,
+                  $$values (7, 7, false), (10, 10, false), (30, 30, true)$$,
+                  'my_garden: longest run per challenge; only the plant with the longest run is flagged (glasses)');
 reset role;
 select set_config('request.jwt.claims', '', true) as _r \gset
 select is((select count(*)::int from public.challenge_members where user_id = :'gd' and finished_at is not null), 4,
           'my_today finalized all four ended memberships');
+-- the missed day splits the 7-day run into 2 + 4
+select is(app.longest_covered_run(:'gd', :'gx'), 4, 'longest_covered_run: the longest unbroken run around a missed day');
 
 -- ================================================================================================
 -- I. Group board and friends strip (each member in their own timezone)

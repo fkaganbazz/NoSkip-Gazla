@@ -141,11 +141,6 @@ export const socialMetrics = {
   messageBadgeIconStrokeWidth: 4,
   sendMarginTop: 16,
   pokeErrorMarginBottom: 10,
-  /**
-   * Sert mod kapalıyken "Laf sok" sekmesi pasif: ortak Segmented'de pasif seçenek yok; sekmenin üstüne kap
-   * renginde yarı saydam örtü çizilir (kontrollerdeki pasif opaklık .5 ile aynı görünüm).
-   */
-  segmentVeilOpacity: 0.5,
 
   // Aktivite
   activitySectionMarginTop: 16,

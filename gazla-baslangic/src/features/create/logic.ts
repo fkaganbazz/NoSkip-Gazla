@@ -81,14 +81,6 @@ export function parseAmount(text: string) {
   return Number.isFinite(n) && n >= 0 ? n : null;
 }
 
-/** "20:00" + 30 dk → "20:30" (gün içinde döner) */
-export function shiftTime(time: string, minutes: number) {
-  const [h, m] = time.split(':').map(Number);
-  const total = (((h * 60 + m + minutes) % 1440) + 1440) % 1440;
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${pad(Math.floor(total / 60))}:${pad(total % 60)}`;
-}
-
 /** "Mert", "Mert ve Ece", "Mert, Ece ve Can" davet edilecek */
 export function inviteSummary(friends: Pick<FriendToday, 'displayName'>[]) {
   if (friends.length === 0) return 'Arkadaşlarını davet et';
@@ -128,8 +120,9 @@ export function toCreateInput(form: CreateForm, template: Template | undefined):
     inviteeIds: form.invitees,
     visibility: form.visibility,
   };
-  // Şablon süreleri 7/10/30 (challenges_template_duration); özel sürede şablonun alanları ayrı gönderilir
-  if (template && form.duration !== 'custom') {
+  // Şablonlu challenge yalnızca şablonun izin verdiği sürelerle (allowed_durations); özel ya da izin dışı sürede
+  // şablonun alanları ayrı gönderilir (şablonsuz challenge)
+  if (template && form.duration !== 'custom' && template.allowedDurations.includes(form.duration)) {
     return { templateId: template.id, ...common };
   }
 

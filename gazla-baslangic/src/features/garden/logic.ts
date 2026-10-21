@@ -20,26 +20,6 @@ export const plantLabel = (item: GardenItem) => `${item.durationDays} gün ${ite
 /** Raf sırası: en eski bitirilen solda, en yenisi "Sıradaki"nin yanında (my_garden yeniden eskiye döner) */
 export const gardenOrder = (items: GardenItem[]) => [...items].sort((a, b) => a.finishedAt.localeCompare(b.finishedAt));
 
-/**
- * "En uzun seri olan" bitki (EKRANLAR 5.1 → çiçek + gözlük): my_garden challenge başına seri dönmediği
- * için en uzun sorumlu olunan süre (requiredDays), eşitlikte en az kurtarma, sonra en yeni. Yoksa -1.
- */
-export function longestIndex(items: GardenItem[]) {
-  let best = -1;
-  items.forEach((item, i) => {
-    const b = items[best];
-    if (
-      !b ||
-      item.requiredDays > b.requiredDays ||
-      (item.requiredDays === b.requiredDays &&
-        (item.finalRescues < b.finalRescues ||
-          (item.finalRescues === b.finalRescues && item.finishedAt > b.finishedAt)))
-    ) {
-      best = i;
-    }
-  });
-  return best;
-}
 
 /** Aşamaya göre ifade; aynı aşama tekrar ettikçe sıradaki (Garden.dc.html: genç mutlu → selam) */
 const STAGE_MOODS: Record<DikenStage, DikenMood[]> = {
@@ -53,16 +33,15 @@ export type PlantLook = { mood: DikenMood; gear: DikenGear };
 
 /**
  * Bitkilerin ifadesi ve aksesuarı. Aşama sunucudan (`stage`: süreye göre 7→genç, 10→tam, 30→çiçek);
- * 10 günlük (tam) bandanalı, en uzun seri olan gözlüklü (EKRANLAR 5.1).
+ * 10 günlük (tam) bandanalı, en uzun seri olan (my_garden `is_longest`) gözlüklü (EKRANLAR 5.1).
  */
 export function plantLooks(items: GardenItem[]): PlantLook[] {
-  const longest = longestIndex(items);
   const seen: Partial<Record<DikenStage, number>> = {};
-  return items.map((item, i) => {
+  return items.map((item) => {
     const n = seen[item.stage] ?? 0;
     seen[item.stage] = n + 1;
     const moods = STAGE_MOODS[item.stage];
-    const gear: DikenGear = i === longest ? 'gozluk' : item.stage === 'tam' ? 'bant' : 'yok';
+    const gear: DikenGear = item.isLongest ? 'gozluk' : item.stage === 'tam' ? 'bant' : 'yok';
     return { mood: moods[n % moods.length], gear };
   });
 }

@@ -28,7 +28,7 @@ type Props = {
   task: TaskCardTask;
   /** Kart gövdesi (karo + metin): challenge detayı ya da ilgili işaretleme ekranı */
   onPressBody?: () => void;
-  /** Sağdaki aksiyon butonu: işaretle / geri al, fotoğraf çek, sayı gir */
+  /** Sağdaki aksiyon butonu: işaretle / geri al (işaretle tipi), fotoğraf ekranı, sayı ekranı */
   onPressAction?: () => void;
   style?: StyleProp<ViewStyle>;
 };
@@ -73,6 +73,13 @@ function TaskCardBase({ task, onPressBody, onPressAction, style }: Props) {
   );
 }
 
+/** Sağ butonun ekran okuyucu metni: işaretle tipi geri alır; sayı ve fotoğraf tipi ekranını açar */
+function actionLabel(task: TaskCardTask) {
+  if (task.taskType === 'number') return task.done ? 'tamamlandı, değeri değiştir' : 'değeri gir';
+  if (task.taskType === 'photo') return task.done ? 'tamamlandı, fotoğraf kanıtını aç' : 'fotoğrafla tamamla';
+  return task.done ? 'tamamlandı, geri al' : 'bugünü tamamla';
+}
+
 /** Sağdaki 52 px buton: yapıldı (dolu yeşil + tik), işaretle (yeşil kenar + soluk tik), fotoğraf, sayı */
 function ActionButton({ task, onPress }: { task: TaskCardTask; onPress?: () => void }) {
   const { colors, scheme } = useTheme();
@@ -86,7 +93,7 @@ function ActionButton({ task, onPress }: { task: TaskCardTask; onPress?: () => v
         onPress={onPress}
         disabled={!onPress}
         accessibilityRole="button"
-        accessibilityLabel={task.done ? `${task.title}: tamamlandı, geri al` : `${task.title}: bugünü tamamla`}
+        accessibilityLabel={`${task.title}: ${actionLabel(task)}`}
         accessibilityState={{ checked: task.done, disabled: !onPress }}
         style={({ pressed }) => [
           styles.action,

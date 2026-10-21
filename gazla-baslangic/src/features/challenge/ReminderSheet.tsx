@@ -1,8 +1,9 @@
 import { useMemo } from 'react';
 
-import OptionSheet from '@/features/settings/OptionSheet';
+import OptionSheet from '@/components/OptionSheet';
+import { reminderTimes } from '@/features/settings/logic';
 
-import { hhmm, reminderTimes } from './logic';
+import { hhmm } from './logic';
 
 /** "Grubun saati" seçeneğinin değeri: kişisel saat silinir (`time: null`) */
 const GROUP = 'group';
@@ -19,9 +20,9 @@ type Props = {
 };
 
 /**
- * Detail "…" → Hatırlatma saatini değiştir. Ayarlar'daki saat seçiciyle aynı dil (ortak `Sheet` üstünde tek
- * seçimli liste, `OptionSheet`): en üstte "Grubun saati (HH:MM)" (kişisel saati sıfırlar), altında 30 dakikalık
- * adımlarla saatler. Seçince kapanır.
+ * Detail "…" → Hatırlatma saatini değiştir. Ayarlar'daki saat seçiciyle aynı dil ve aynı saatler (ortak
+ * `OptionSheet`, `reminderTimes`): en üstte "Grubun saati (HH:MM)" (kişisel saati sıfırlar), altında 08:00–23:00
+ * arası 30 dakikalık adımlar. Seçince kapanır.
  */
 export default function ReminderSheet({ visible, groupTime, personalTime, onSelect, onClose }: Props) {
   const options = useMemo(

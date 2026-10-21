@@ -3,6 +3,7 @@
  * kart köşesi 22, yer tutucular ikincil yüzeyde (`surfaceMuted`), hafif nabız (opaklık, reanimated).
  * "Hareketi azalt" açıksa nabız yok.
  *
+ *   import { Skeleton, SkeletonPulse, SkeletonTaskCard } from '@/components/ui';
  *   <Skeleton width={120} height={13} />          // tek blok (kendi nabzıyla)
  *   <SkeletonTaskCard />                           // Bugün görev kartı ölçüsünde (Today.dc.html)
  *   <SkeletonPulse>…düz yer tutucular…</SkeletonPulse>  // birden çok bloğu birlikte nabızlat
@@ -21,18 +22,14 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { borderWidth, cardColors, cardMetrics as cm, cardTypography, radius, useTheme } from '@/theme';
-
-/** Nabız: tam opaklıktan bu değere iner ve döner (bir yön süresi) */
-const PULSE_MIN_OPACITY = 0.5;
-const PULSE_DURATION_MS = 900;
+import { borderWidth, cardColors, cardMetrics as cm, cardTypography, componentMetrics, radius, useTheme } from '@/theme';
 
 type PulseProps = {
   children?: ReactNode;
   style?: StyleProp<ViewStyle>;
 };
 
-/** İçindeki her şeyi birlikte nabızlatır (opaklık 1 ↔ 0.5) */
+/** İçindeki her şeyi birlikte nabızlatır (opaklık 1 ↔ en düşük nabız opaklığı) */
 export function SkeletonPulse({ children, style }: PulseProps) {
   const reduced = useReducedMotion();
   const opacity = useSharedValue(1);
@@ -42,8 +39,16 @@ export function SkeletonPulse({ children, style }: PulseProps) {
       opacity.set(1);
       return;
     }
+    // Tam opaklıktan en düşük nabız opaklığına iner ve döner (süre bir yön)
     opacity.set(
-      withRepeat(withTiming(PULSE_MIN_OPACITY, { duration: PULSE_DURATION_MS, easing: Easing.inOut(Easing.ease) }), -1, true),
+      withRepeat(
+        withTiming(componentMetrics.skeletonPulseMinOpacity, {
+          duration: componentMetrics.skeletonPulseDurationMs,
+          easing: Easing.inOut(Easing.ease),
+        }),
+        -1,
+        true,
+      ),
     );
     return () => cancelAnimation(opacity);
   }, [reduced, opacity]);

@@ -45,6 +45,9 @@ const AuthContext = createContext<AuthState>({ status: 'loading', session: null,
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: { staleTime: 30_000, retry: 1 },
+    // Yazmalar çevrimdışıyken duraklayıp sonsuz beklemesin: istek hemen gider, ağ yoksa api NetworkError ile düşer
+    // ("İnternet bağlantısı yok…" ekranda mutation.error olarak). İşaretleme/geri alma kendi kuyruğuyla zaten böyle.
+    mutations: { networkMode: 'always' },
   },
 });
 configurePersistedQueries(queryClient);

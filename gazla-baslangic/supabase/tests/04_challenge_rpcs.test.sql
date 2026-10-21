@@ -14,7 +14,7 @@
 --
 -- Run:  supabase test db   (or the local testbed: ./test.sh supabase/tests/04_challenge_rpcs.test.sql)
 begin;
-select plan(226);
+select plan(230);
 -- This file tests behaviour, not privileges (01_rls_privileges does). Expected values are computed
 -- with app.* helpers, sometimes while signed in, so the helpers are opened inside this transaction.
 grant execute on all functions in schema app to authenticated;
@@ -139,12 +139,13 @@ select id as ch_plank from public.create_challenge(p_template => :'t_plank') \gs
 
 select throws_ok(
   format($$select public.create_challenge(p_template => %L, p_duration_days => 14)$$, :'t_kahve'),
-  '23514', 'new row for relation "challenges" violates check constraint "challenges_template_duration"',
-  'template challenge: only 7/10/30 days (14 rejected)');
+  '23514', 'Bu challenge için bu süre seçilemez',
+  'template challenge: only the template''s allowed durations (14 rejected)');
 select throws_ok(
   format($$select public.create_challenge(p_template => %L, p_duration_days => 3)$$, :'t_kahve'),
-  '23514', 'new row for relation "challenges" violates check constraint "challenges_template_duration"',
+  '23514', 'Bu challenge için bu süre seçilemez',
   'template challenge: the custom-only 3 days is rejected');
+
 select throws_ok(
   format($$select public.create_challenge(p_template => %L)$$, gen_random_uuid()),
   'P0002', 'Şablon bulunamadı', 'unknown template id is rejected');
@@ -155,6 +156,27 @@ select throws_ok(
   format($$select public.create_challenge(p_template => %L)$$, :'t_tersel'),
   'P0002', 'Şablon bulunamadı', 'inactive template cannot be started');
 reset role;
+
+-- allowed_durations: iltifat allows 7 and 10 only
+select tests.authenticate_as('olcay');
+select throws_ok(
+  format($$select public.create_challenge(p_template => %L, p_duration_days => 30)$$, :'t_iltifat'),
+  '23514', 'Bu challenge için bu süre seçilemez',
+  'template challenge: a preset outside the template''s allowed durations (iltifat 30) is rejected');
+select id as ch_ilt10 from public.create_challenge(p_template => :'t_iltifat', p_duration_days => 10) \gset
+reset role;
+select is((select duration_days::int from public.challenges where id = :'ch_ilt10'), 10,
+  'template challenge: an allowed duration (iltifat 10) is accepted');
+-- the rest of the file counts olcay's active challenges without it
+delete from public.challenges where id = :'ch_ilt10';
+select throws_ok(
+  $$insert into public.challenge_templates (slug, title_tr, category, difficulty, task_type, default_duration_days,
+      allowed_durations, icon, tint) values ('uzun-yok', 'Uzun yok', 'quirky', 'easy', 'check', 30, '{7,10}', 'check', 'green')$$,
+  '23514', null, 'challenge_templates: the default duration must be one of the allowed durations');
+select throws_ok(
+  $$insert into public.challenge_templates (slug, title_tr, category, difficulty, task_type, default_duration_days,
+      allowed_durations, icon, tint) values ('karisik', 'Karışık', 'quirky', 'easy', 'check', 7, '{10,7,7}', 'check', 'green')$$,
+  '23514', null, 'challenge_templates: allowed durations are presets, ascending and without repeats');
 
 select results_eq(
   format($$select title, short_title, task_type::text, duration_days::int, start_date, end_date, icon, tint,

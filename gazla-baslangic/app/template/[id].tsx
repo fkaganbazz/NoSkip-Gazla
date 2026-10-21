@@ -5,21 +5,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AvatarStack } from '@/components/Avatar';
 import { Button, Chip, ErrorState, LoadingState, Segmented } from '@/components/ui';
-import { isOnline, NetworkError, useCreateChallengeMutation, useTemplates, useTemplateStats } from '@/data';
+import { useCreateChallengeMutation, useTemplates, useTemplateStats } from '@/data';
 import PreviewFeatures from '@/features/explore/PreviewFeatures';
 import PreviewHero from '@/features/explore/PreviewHero';
-import {
-  CATEGORY_NAMES,
-  DIFFICULTY_NAMES,
-  DURATION_OPTIONS,
-  TASK_TYPE_NAMES,
-  type DurationOption,
-} from '@/features/explore/labels';
+import { CATEGORY_NAMES, DIFFICULTY_NAMES, TASK_TYPE_NAMES, type DurationOption } from '@/features/explore/labels';
 import { doingNowText } from '@/features/explore/logic';
 import { categoryTint, layout, typography, useTheme } from '@/theme';
 import { previewMetrics as m, previewTypography } from '@/theme/explore';
-
-const DURATION_SEGMENTS = DURATION_OPTIONS.map((d) => ({ value: String(d), label: `${d} gün` }));
 
 // Challenge önizleme — design/ChallengePreview.dc.html. Veri: challenge_templates + template_stats.
 // İki buton da seçilen süreyle create_challenge çağırır. "Arkadaşlarla": oluşunca challenge detayı açılır,
@@ -39,8 +31,6 @@ export default function TemplatePreviewScreen() {
   const [picked, setPicked] = useState<DurationOption | null>(null);
   // Hangi butonla oluşturuluyor (yükleniyor göstergesi o butonda)
   const [mode, setMode] = useState<'friends' | 'solo' | null>(null);
-  // Çevrimdışıyken istek beklemeye alınır (sonsuz yükleniyor); bunun yerine mesaj
-  const [offline, setOffline] = useState(false);
 
   const goBack = () => (router.canGoBack() ? router.back() : router.replace('/explore'));
 
@@ -64,7 +54,9 @@ export default function TemplatePreviewScreen() {
     );
   }
 
+  // Süre seçici yalnızca şablonun izin verdiği süreleri gösterir (EKRANLAR 4.2)
   const duration = picked ?? template.defaultDurationDays;
+  const durationSegments = template.allowedDurations.map((d) => ({ value: String(d), label: `${d} gün` }));
   const doing = stats.data ? doingNowText(stats.data) : null;
   const faces = (stats.data?.friends ?? []).map((f) => ({ name: f.displayName, tint: f.avatarTint, url: f.avatarUrl }));
 
@@ -74,11 +66,7 @@ export default function TemplatePreviewScreen() {
 
   const start = (next: 'friends' | 'solo') => {
     if (create.isPending) return;
-    if (!isOnline()) {
-      setOffline(true);
-      return;
-    }
-    setOffline(false);
+    // Çevrimdışıyken hemen NetworkError ile düşer (yazmalar beklemeye alınmaz; DataProvider)
     setMode(next);
     create.mutate(
       { templateId: template.id, durationDays: duration },
@@ -125,7 +113,7 @@ export default function TemplatePreviewScreen() {
             Süre
           </Text>
           <Segmented
-            options={DURATION_SEGMENTS}
+            options={durationSegments}
             value={String(duration)}
             onChange={(v) => setPicked(Number(v) as DurationOption)}
             role="radio"
@@ -149,9 +137,9 @@ export default function TemplatePreviewScreen() {
           styles.footer,
           { backgroundColor: colors.background, paddingBottom: Math.max(insets.bottom, m.footerBottom) },
         ]}>
-        {(offline || create.isError) && (
+        {create.isError && (
           <Text accessibilityLiveRegion="polite" style={[typography.meta, styles.error, { color: colors.dangerText }]}>
-            {offline ? new NetworkError().message : create.error?.message}
+            {create.error.message}
           </Text>
         )}
         <View style={styles.buttons}>

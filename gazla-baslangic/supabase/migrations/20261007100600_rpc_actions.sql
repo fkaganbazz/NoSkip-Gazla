@@ -72,7 +72,7 @@ begin
     v_uid,
     lower(btrim(ltrim(btrim(p_username), '@'))),
     btrim(p_display_name),
-    (array['peach', 'lavender', 'mint', 'butter'])[1 + abs(hashtext(v_uid::text)) % 4]
+    (array['peach', 'lavender', 'mint', 'butter', 'sky'])[1 + abs(hashtext(v_uid::text)) % 5]
   )
   on conflict (id) do update
     set username = excluded.username, display_name = excluded.display_name
@@ -600,6 +600,10 @@ begin
     select * into v_t from public.challenge_templates t where t.id = p_template and t.is_active;
     if not found then
       raise exception 'Şablon bulunamadı' using errcode = 'P0002';
+    end if;
+    -- Süre şablonun izin verdiklerinden biri olmalı (ChallengePreview süre seçicisi)
+    if p_duration_days is not null and not (p_duration_days = any (v_t.allowed_durations)) then
+      raise exception 'Bu challenge için bu süre seçilemez' using errcode = '23514';
     end if;
     insert into public.challenges (
       template_id, created_by, title, short_title, task_type, duration_days, start_date,

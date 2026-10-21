@@ -8,6 +8,7 @@ import type { TextStyle } from 'react-native';
 
 import { avatarTints, challengeTints } from './accents';
 import { palette } from './colors';
+import { componentColors } from './components';
 import { fonts } from './typography';
 
 export type SettingsColors = {
@@ -28,7 +29,8 @@ export type SettingsColors = {
 
 export const settingsColors: Record<'light' | 'dark', SettingsColors> = {
   light: {
-    rowDivider: '#F4EDE5',
+    // Ortak seçenek listesiyle aynı ayraç (OptionSheet)
+    rowDivider: componentColors.light.optionDivider,
     dikenTitle: palette.actionGreen,
     friendTitle: palette.orange700,
     adCircle: palette.green100,
@@ -40,8 +42,7 @@ export const settingsColors: Record<'light' | 'dark', SettingsColors> = {
     adTargetInk: challengeTints.lilac.light.ink,
   },
   dark: {
-    // Koyu tasarım yok: ayraç kart kenarından bir ton koyu (DetailDark dolgu)
-    rowDivider: palette.darkFill,
+    rowDivider: componentColors.dark.optionDivider,
     dikenTitle: palette.darkActionText,
     friendTitle: '#FF9A6B', // TodayDark: turuncu metin
     adCircle: palette.darkActionTint,
@@ -79,11 +80,7 @@ export const settingsMetrics = {
   // Engellenenler (tasarımı yok): boş durum metninin üst boşluğu · 2 × bölüm boşluğu
   emptyMarginTop: 44,
 
-  // Seçenek listesi (ortak Sheet içinde)
-  optionRowHeight: 52,
-  optionRowPaddingY: 10,
-  /** Liste üstündeki açıklama ile ilk satır arası (Gün bitişi) · etiket → kart boşluğu */
-  optionDescriptionGap: 8,
+  // Seçenek listesi: ortak OptionSheet (componentMetrics.option*)
 
   // Profil düzenleme (Profile.dc.html)
   /** Avatar 84; kamera rozeti ortak `componentMetrics.cameraBadge` */
@@ -156,6 +153,8 @@ export const settingsTypography = {
   deleteTitle: { fontFamily: fonts.heading, fontSize: 28, lineHeight: 28 * 1.1 },
   /** Silinecekler satırı · Nunito 800 · 15 */
   deleteRow: { fontFamily: fonts.extraBold, fontSize: 15 },
+  /** "SİL" onay alanının metni (yer tutucu dahil) · Nunito 800 · 16 · aralık 1 (TextField `inputStyle`) */
+  deleteConfirmInput: { fontFamily: fonts.extraBold, fontSize: 16, letterSpacing: 1 },
   /** Reklam izni başlığı · Baloo 2 800 · 30 · 1.08 */
   adTitle: { fontFamily: fonts.heading, fontSize: 30, lineHeight: 30 * 1.08 },
   /** Reklam izni maddesi · Nunito 700 · 15 · 1.4 */

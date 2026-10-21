@@ -369,29 +369,41 @@ language sql stable security definer set search_path = '' as $$
 $$;
 
 -- Bahçe: sorumlu olduğu tüm günleri kapsanarak bitirilen challenge'lar. Kaktüs aşaması üyenin gün
--- sayısına göre (sonradan katılan için süreden az olabilir) ------------------------------------
+-- sayısına göre (sonradan katılan için süreden az olabilir). longest_streak: challenge'daki en uzun seri
+-- (app.longest_covered_run); is_longest: bahçedeki en uzun seri olan tek bitki (gözlüklü; eşitlikte en az
+-- kurtarma, sonra en yeni) ---------------------------------------------------------------------------
 
 create function app.completed_challenges(p_user uuid)
 returns table (
   challenge_id uuid, title text, short_title text, duration_days integer, required_days integer,
-  stage public.diken_stage, finished_at timestamptz, final_rescues integer, final_rank integer
+  stage public.diken_stage, finished_at timestamptz, final_rescues integer, final_rank integer,
+  longest_streak integer, is_longest boolean
 )
 language sql stable security definer set search_path = '' as $$
-  select c.id, c.title, c.short_title, c.duration_days::int, m.final_required_days::int,
-         public.diken_stage_for(m.final_required_days), m.finished_at, m.final_rescues::int,
-         m.final_rank::int
-  from public.challenge_members m
-  join public.challenges c on c.id = m.challenge_id
-  where m.user_id = p_user
-    and m.finished_at is not null
-    and m.final_days_done >= m.final_required_days
-  order by m.finished_at desc
+  with done as (
+    select c.id, c.title, c.short_title, c.duration_days::int as duration_days,
+           m.final_required_days::int as required_days,
+           public.diken_stage_for(m.final_required_days) as stage, m.finished_at,
+           m.final_rescues::int as final_rescues, m.final_rank::int as final_rank,
+           app.longest_covered_run(p_user, c.id) as longest_streak
+    from public.challenge_members m
+    join public.challenges c on c.id = m.challenge_id
+    where m.user_id = p_user
+      and m.finished_at is not null
+      and m.final_days_done >= m.final_required_days
+  )
+  select d.id, d.title, d.short_title, d.duration_days, d.required_days, d.stage, d.finished_at,
+         d.final_rescues, d.final_rank, d.longest_streak,
+         row_number() over (order by d.longest_streak desc, d.final_rescues, d.finished_at desc, d.id) = 1
+  from done d
+  order by d.finished_at desc
 $$;
 
 create function public.my_garden()
 returns table (
   challenge_id uuid, title text, short_title text, duration_days integer, required_days integer,
-  stage public.diken_stage, finished_at timestamptz, final_rescues integer, final_rank integer
+  stage public.diken_stage, finished_at timestamptz, final_rescues integer, final_rank integer,
+  longest_streak integer, is_longest boolean
 )
 language sql stable security definer set search_path = '' as $$
   select * from app.completed_challenges(app.require_user())

@@ -15,16 +15,27 @@ type Props = {
 
 /**
  * PhotoProof "Kimler görecek: Grup (n kişi) ›" → grubun üyeleri (ortak Sheet + FriendRow). Tasarımda sayfası
- * çizilmedi; fotoğraf ve not challenge'ın bütün üyelerine görünür, ayrı bir ayar yok.
+ * çizilmedi; fotoğraf ve not challenge'ın bütün üyelerine görünür, ayrı bir ayar yok. PhotoProof iki modda koyu:
+ * sayfa da `scheme="dark"` (içerik `GroupSheetBody`, koyu temayla).
  */
 export default function GroupSheet({ visible, challengeId, onClose }: Props) {
-  const { colors } = useTheme();
   const { session } = useAuth();
+  // Sayfa açılmadan yüklenir (açılınca liste hazır)
   const board = useChallengeBoard(challengeId);
+  return (
+    <Sheet visible={visible} onClose={onClose} title="Kimler görecek" surface scrollable scheme="dark">
+      <GroupSheetBody board={board} meId={session?.userId} />
+    </Sheet>
+  );
+}
+
+/** Sayfanın içeriği: Sheet'in koyu modu altında çizilir (useTheme koyu döner) */
+function GroupSheetBody({ board, meId }: { board: ReturnType<typeof useChallengeBoard>; meId?: string }) {
+  const { colors } = useTheme();
   const members = board.data ?? [];
 
   return (
-    <Sheet visible={visible} onClose={onClose} title="Kimler görecek" surface scrollable>
+    <>
       <Text style={[typography.caption, styles.lead, { color: colors.textBody }]}>
         Fotoğrafını ve notunu bu challenge&apos;daki herkes görür.
       </Text>
@@ -45,14 +56,14 @@ export default function GroupSheet({ visible, challengeId, onClose }: Props) {
             <FriendRow
               key={p.id}
               person={p}
-              sub={p.id === session?.userId ? `Sen · @${p.username}` : `@${p.username}`}
+              sub={p.id === meId ? `Sen · @${p.username}` : `@${p.username}`}
               divider={i < members.length - 1}
               style={styles.row}
             />
           ))}
         </View>
       )}
-    </Sheet>
+    </>
   );
 }
 

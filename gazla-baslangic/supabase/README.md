@@ -117,6 +117,12 @@ zamanlanmış işler içindir, API rollerine kapalıdır.
 
 ### Challenge ve üyelik
 - Hazır süreler 7/10/30; şablonsuz challenge 3–60 gün. Başlangıç bugün ile 7 gün sonrası arası.
+- Şablonun izin verdiği süreler `challenge_templates.allowed_durations` (7/10/30'un artan alt kümesi,
+  varsayılan süreyi içerir); `create_challenge` şablonla gelen süreyi buna göre doğrular
+  ("Bu challenge için bu süre seçilemez"). ChallengePreview süre seçicisi yalnızca bunları gösterir.
+- Bahçe (`my_garden`): `longest_streak` challenge'daki en uzun ardışık kapsanan gün dizisi
+  (`app.longest_covered_run`; kurtarılan günler dahil), `is_longest` bahçedeki en uzun seri olan tek bitki
+  (eşitlikte en az kurtarma, sonra en yeni) → çiçek + gözlük (EKRANLAR 5.1).
 - Grupta en çok 20 aktif üye; bir kullanıcı aynı anda en çok 20 süren challenge'da.
 - Davet yalnızca arkadaşa. Reddedilen davet aynı gün en çok 3 kez tekrarlanır. Davet linki her
   üyenin challenge başına bir kodu; challenge sahibi herhangi bir üyenin linkini kapatabilir.
@@ -331,7 +337,7 @@ Ekranlar mevcut veriyle çalışıyor; aşağıdakiler eklendiğinde tasarımın
 - **Reklamla seri kurtarma:** ödülü sunucuda doğrulayan AdMob SSV Edge Function (`grant_ad_rescue`'yu çağıracak).
 - **Reklam izni:** UMP/ATT sonucunu saklayacak alan (`user_settings`). (Ön ekranın bir kez gösterilmesi istemcide: `src/data/flags.ts` `adConsentShown`.)
 - **Challenge oluşturma:** `create_challenge`'a özel challenge için `icon`, `tint`, sayı `step` parametreleri.
-- **Bahçe:** bitki ifadesi/aksesuarı.
+- **Bahçe:** bitki ifadesi (aksesuar: bant süreden, gözlük `is_longest`ten).
 - **Keşfet:** şablon derin bağlantısı.
 - **Bildirim tercihleri:** "arkadaşın bitirdi", haftalık özet, seri koptu için ayrı anahtarlar; tema tercihi; doğum yılını güncelleme.
 - **Paketler (istemci):** `expo-notifications` (izin + `register_push_token`), `react-native-google-mobile-ads`, `react-native-view-shot` (görsel paylaşım), `expo-clipboard`, `expo-contacts` (rehberden bul), `expo-apple-authentication`.

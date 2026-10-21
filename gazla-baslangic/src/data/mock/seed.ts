@@ -10,7 +10,6 @@ import type {
   Badge,
   BadgeKey,
   Challenge,
-  GardenItem,
   PokeMessage,
   Profile,
   Template,
@@ -57,11 +56,18 @@ export const seedProfiles: Profile[] = [
   person('u-ece', 'ece.y', 'Ece', 'lavender', true),
   person('u-can', 'can.d', 'Can', 'mint'),
   person('u-selin', 'selin.a', 'Selin', 'butter'),
-  person('u-kerem', 'kerem.a', 'Kerem', 'lavender'),
+  person('u-kerem', 'kerem.a', 'Kerem', 'sky'),
   // Aramada çıkanlar (henüz ilişki yok)
   person('u-zeynep', 'zeynep.t', 'Zeynep', 'mint'),
   person('u-baris', 'baris.k', 'Barış', 'butter'),
   person('u-elif', 'elif.s', 'Elif', 'lavender'),
+  // Deniz'in engellediği kişi (Settings.dc.html "Engellenen kullanıcılar 1"): listelerde ve aramada görünmez
+  person('u-onur', 'onur.b', 'Onur', 'peach'),
+];
+
+/** Engeller: Deniz → Onur */
+export const seedBlocks: { blockerId: string; blockedId: string; createdAt: string }[] = [
+  { blockerId: ME_ID, blockedId: 'u-onur', createdAt: minutesAgo(60 * 24 * 21) },
 ];
 
 export const seedSettings: UserSettings = {
@@ -97,7 +103,7 @@ export const seedFriendRequests = [
 /** Şablonun katalog alanları; yapan sayısı ve popülerlik sırası mockApi'de hesaplanır */
 export type SeedTemplate = Omit<Template, 'activeCount' | 'popularity'>;
 
-const tpl = (t: Partial<SeedTemplate> & Pick<SeedTemplate, 'id' | 'slug' | 'title' | 'category' | 'difficulty' | 'taskType' | 'defaultDurationDays' | 'icon' | 'tint'>): SeedTemplate => ({
+const tpl = (t: Partial<SeedTemplate> & Pick<SeedTemplate, 'id' | 'slug' | 'title' | 'category' | 'difficulty' | 'taskType' | 'defaultDurationDays' | 'allowedDurations' | 'icon' | 'tint'>): SeedTemplate => ({
   shortTitle: null,
   description: null,
   number: null,
@@ -114,6 +120,7 @@ const monday = (() => {
   return localDate(d);
 })();
 
+/** Şablonlar; `allowedDurations` migration 900 ile aynı (ChallengePreview süre seçicisi) */
 export const seedTemplates: SeedTemplate[] = [
   tpl({
     id: 't-kahvesiz',
@@ -126,6 +133,7 @@ export const seedTemplates: SeedTemplate[] = [
     difficulty: 'medium',
     taskType: 'check',
     defaultDurationDays: 7,
+    allowedDurations: [7, 10, 30],
     icon: 'coffee',
     tint: 'butter',
     onboardingOrder: 1,
@@ -140,6 +148,7 @@ export const seedTemplates: SeedTemplate[] = [
     difficulty: 'medium',
     taskType: 'check',
     defaultDurationDays: 30,
+    allowedDurations: [10, 30],
     icon: 'phoneOff',
     tint: 'lilac',
     onboardingOrder: 2,
@@ -153,6 +162,7 @@ export const seedTemplates: SeedTemplate[] = [
     difficulty: 'hard',
     taskType: 'check',
     defaultDurationDays: 7,
+    allowedDurations: [7, 10],
     icon: 'chatHeart',
     tint: 'peach',
     onboardingOrder: 3,
@@ -166,6 +176,7 @@ export const seedTemplates: SeedTemplate[] = [
     difficulty: 'medium',
     taskType: 'number',
     defaultDurationDays: 10,
+    allowedDurations: [10, 30],
     icon: 'timer',
     tint: 'green',
     number: { unit: 'sn', baseTarget: 60, dailyIncrement: 5, step: 5, max: 600 },
@@ -180,6 +191,7 @@ export const seedTemplates: SeedTemplate[] = [
     difficulty: 'easy',
     taskType: 'photo',
     defaultDurationDays: 30,
+    allowedDurations: [10, 30],
     icon: 'book',
     tint: 'rose',
     onboardingOrder: 5,
@@ -192,6 +204,7 @@ export const seedTemplates: SeedTemplate[] = [
     difficulty: 'medium',
     taskType: 'check',
     defaultDurationDays: 7,
+    allowedDurations: [7, 10, 30],
     icon: 'wallet',
     tint: 'teal',
     onboardingOrder: 6,
@@ -204,6 +217,7 @@ export const seedTemplates: SeedTemplate[] = [
     difficulty: 'easy',
     taskType: 'check',
     defaultDurationDays: 10,
+    allowedDurations: [7, 10],
     icon: 'toothbrush',
     tint: 'sky',
   }),
@@ -216,6 +230,7 @@ export const seedTemplates: SeedTemplate[] = [
     difficulty: 'medium',
     taskType: 'check',
     defaultDurationDays: 10,
+    allowedDurations: [7, 10, 30],
     icon: 'candy',
     tint: 'butter',
   }),
@@ -243,6 +258,42 @@ const challenge = (c: Omit<SeedChallenge, 'endDate' | 'visibility'> & Partial<Pi
   ...c,
   endDate: addDays(c.startDate, c.durationDays - 1),
 });
+
+/** Şablondan kopyalanan, `daysAgo` gün önce sonuçlanmış challenge: son günü sonuçlanmadan bir önceki gün */
+const ended = (id: string, templateId: string, durationDays: number, daysAgo: number, createdBy: string): SeedChallenge => {
+  const t = seedTemplates.find((x) => x.id === templateId)!;
+  return challenge({
+    id,
+    templateId,
+    createdBy,
+    title: t.title,
+    shortTitle: t.shortTitle,
+    taskType: t.taskType,
+    durationDays,
+    startDate: addDays(today, -daysAgo - durationDays),
+    reminderTime: null,
+    inviteMessage: null,
+    category: t.category,
+    icon: t.icon,
+    tint: t.tint,
+    number: t.number,
+  });
+};
+
+/**
+ * Bitmiş challenge'lar: Bahçem'deki saksılar (Garden.dc.html) — sunucudaki my_garden gibi bitirilen
+ * üyeliklerden okunur. `daysAgo`: sonuçlanma (finished_at) kaç gün önce; sonuçlar (gün, kurtarma, sıra)
+ * mockApi'de geçmişten hesaplanır: kahvesiz 7/7 1., şekersiz 10/10 1 kurtarma 2., okuma 30/30 1 kurtarma 1.,
+ * iltifat 7/7 3., plank 30/30 1.
+ */
+export const seedFinished: { challengeId: string; daysAgo: number }[] = [
+  { challengeId: 'g-kahve', daysAgo: 120 },
+  { challengeId: 'g-seker', daysAgo: 95 },
+  { challengeId: 'g-okuma', daysAgo: 70 },
+  { challengeId: 'g-iltifat', daysAgo: 40 },
+  { challengeId: 'g-plank', daysAgo: 12 },
+];
+const endedDaysAgo = (id: string) => seedFinished.find((f) => f.challengeId === id)!.daysAgo;
 
 export const seedChallenges: SeedChallenge[] = [
   challenge({
@@ -312,6 +363,11 @@ export const seedChallenges: SeedChallenge[] = [
     tint: 'butter',
     number: null,
   }),
+  ended('g-kahve', 't-kahvesiz', 7, endedDaysAgo('g-kahve'), ME_ID),
+  ended('g-seker', 't-sekersiz', 10, endedDaysAgo('g-seker'), 'u-mert'),
+  ended('g-okuma', 't-20-sayfa', 30, endedDaysAgo('g-okuma'), 'u-selin'),
+  ended('g-iltifat', 't-iltifat', 7, endedDaysAgo('g-iltifat'), 'u-ece'),
+  ended('g-plank', 't-plank', 30, endedDaysAgo('g-plank'), ME_ID),
 ];
 
 /** [challengeId, userId, joinedDayOffset] — dayOffset: başlangıçtan kaç gün sonra katıldı */
@@ -327,6 +383,20 @@ export const seedMembers: { challengeId: string; userId: string; role: 'owner' |
   { challengeId: 'c-coffee', userId: 'u-mert', role: 'owner' },
   { challengeId: 'c-coffee', userId: 'u-kerem', role: 'member' },
   { challengeId: 'c-coffee', userId: 'u-can', role: 'member' },
+  // Bitmişler: sıra katılma sırası (eşit gün sayısında önce katılan önde)
+  { challengeId: 'g-kahve', userId: ME_ID, role: 'owner' },
+  { challengeId: 'g-kahve', userId: 'u-mert', role: 'member' },
+  { challengeId: 'g-seker', userId: 'u-mert', role: 'owner' },
+  { challengeId: 'g-seker', userId: ME_ID, role: 'member' },
+  { challengeId: 'g-seker', userId: 'u-can', role: 'member' },
+  { challengeId: 'g-okuma', userId: 'u-selin', role: 'owner' },
+  { challengeId: 'g-okuma', userId: ME_ID, role: 'member' },
+  { challengeId: 'g-iltifat', userId: 'u-ece', role: 'owner' },
+  { challengeId: 'g-iltifat', userId: 'u-mert', role: 'member' },
+  { challengeId: 'g-iltifat', userId: ME_ID, role: 'member' },
+  { challengeId: 'g-iltifat', userId: 'u-can', role: 'member' },
+  { challengeId: 'g-plank', userId: ME_ID, role: 'owner' },
+  { challengeId: 'g-plank', userId: 'u-can', role: 'member' },
 ];
 
 /** Kişisel hatırlatma saatleri (challenge_members.reminder_time): Deniz okumayı 21:30'da hatırlar */
@@ -334,11 +404,17 @@ export const seedPersonalReminders: { challengeId: string; userId: string; time:
   { challengeId: 'c-read', userId: ME_ID, time: '21:30' },
 ];
 
+/** Plank değerleri: her gün hedef kadar (60 sn + günde 5), `behind` saniye eksik */
+const plankValues = (days: number, behind = 0) =>
+  Object.fromEntries(Array.from({ length: days }, (_, i) => [i + 1, 60 + i * 5 - behind]));
+
 /**
  * Geçmiş işaretlemeler: her üye için kaçırdığı günler (gün numarası) ve bugünü bitirip bitirmediği.
- * Detail: Deniz 12, Mert 12, Ece 11 (bugün bekliyor), Can 4 (seri koptu).
+ * Detail: Deniz 12, Mert 12, Ece 11 (bugün bekliyor), Can 4 (seri koptu); Deniz'in 8. günü reklamla
+ * kurtarıldı (Detail.png turuncu damla).
  * Sayı görevinde günlerin değerleri `values` (gün numarası → değer) ve `todayValue`; NumberEntry
  * "Dün 65 sn · En iyin 65 sn · Grupta en iyi 90 sn" (NumberEntry.dc.html, plank 3. gün).
+ * Bitmiş challenge'ın son günü `doneToday` ile yazılır.
  */
 export const seedHistory: {
   challengeId: string;
@@ -349,7 +425,7 @@ export const seedHistory: {
   doneToday: boolean;
   todayValue?: number;
 }[] = [
-  { challengeId: 'c-phone', userId: ME_ID, missedDays: [], rescuedDays: [6], doneToday: true },
+  { challengeId: 'c-phone', userId: ME_ID, missedDays: [], rescuedDays: [8], doneToday: true },
   { challengeId: 'c-phone', userId: 'u-mert', missedDays: [], doneToday: true },
   { challengeId: 'c-phone', userId: 'u-ece', missedDays: [], doneToday: false },
   { challengeId: 'c-phone', userId: 'u-can', missedDays: [8], doneToday: true },
@@ -357,6 +433,19 @@ export const seedHistory: {
   { challengeId: 'c-read', userId: 'u-selin', missedDays: [], doneToday: false },
   { challengeId: 'c-plank', userId: ME_ID, missedDays: [], values: { 1: 60, 2: 65 }, doneToday: false },
   { challengeId: 'c-plank', userId: 'u-can', missedDays: [], values: { 1: 60, 2: 70 }, doneToday: true, todayValue: 90 },
+  { challengeId: 'g-kahve', userId: ME_ID, missedDays: [], doneToday: true },
+  { challengeId: 'g-kahve', userId: 'u-mert', missedDays: [3], doneToday: true },
+  { challengeId: 'g-seker', userId: 'u-mert', missedDays: [], doneToday: true },
+  { challengeId: 'g-seker', userId: ME_ID, missedDays: [], rescuedDays: [4], doneToday: true },
+  { challengeId: 'g-seker', userId: 'u-can', missedDays: [2, 7], doneToday: true },
+  { challengeId: 'g-okuma', userId: 'u-selin', missedDays: [12, 19, 25], doneToday: true },
+  { challengeId: 'g-okuma', userId: ME_ID, missedDays: [], rescuedDays: [17], doneToday: true },
+  { challengeId: 'g-iltifat', userId: 'u-ece', missedDays: [], doneToday: true },
+  { challengeId: 'g-iltifat', userId: 'u-mert', missedDays: [], doneToday: true },
+  { challengeId: 'g-iltifat', userId: ME_ID, missedDays: [], doneToday: true },
+  { challengeId: 'g-iltifat', userId: 'u-can', missedDays: [5, 6], doneToday: true },
+  { challengeId: 'g-plank', userId: ME_ID, missedDays: [], values: plankValues(30), doneToday: true },
+  { challengeId: 'g-plank', userId: 'u-can', missedDays: [9, 21], values: plankValues(30, 5), doneToday: true },
 ];
 
 /** Genel seriler (sunucu hesaplar; mock'ta sabit taban + bugün tamamsa 1) */
@@ -370,15 +459,6 @@ export const seedStreakBase: Record<string, number> = {
 };
 
 export const seedLongestStreak = 31;
-
-/** Bahçe: tamamlananlar (Garden.dc.html) */
-export const seedGarden: GardenItem[] = [
-  { challengeId: 'g-kahve', title: '7 gün kahvesiz', shortTitle: 'kahvesiz', durationDays: 7, requiredDays: 7, stage: 'genc', finishedAt: minutesAgo(60 * 24 * 120), finalRescues: 0, finalRank: 1 },
-  { challengeId: 'g-seker', title: '10 gün şekersiz', shortTitle: 'şekersiz', durationDays: 10, requiredDays: 10, stage: 'tam', finishedAt: minutesAgo(60 * 24 * 95), finalRescues: 1, finalRank: 2 },
-  { challengeId: 'g-okuma', title: 'Her gün 20 sayfa oku', shortTitle: 'okuma', durationDays: 30, requiredDays: 30, stage: 'cicek', finishedAt: minutesAgo(60 * 24 * 70), finalRescues: 1, finalRank: 1 },
-  { challengeId: 'g-iltifat', title: 'Her gün birine iltifat et', shortTitle: 'iltifat', durationDays: 7, requiredDays: 7, stage: 'genc', finishedAt: minutesAgo(60 * 24 * 40), finalRescues: 0, finalRank: 3 },
-  { challengeId: 'g-plank', title: 'Plank: her gün +5 saniye', shortTitle: 'plank', durationDays: 30, requiredDays: 30, stage: 'cicek', finishedAt: minutesAgo(60 * 24 * 12), finalRescues: 0, finalRank: 1 },
-];
 
 // Dürtme mesajları (src/content/pokes.ts = migration 900) -------------------------------------------
 

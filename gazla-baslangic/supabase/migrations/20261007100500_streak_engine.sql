@@ -63,6 +63,21 @@ language sql stable security definer set search_path = '' as $$
     and d > coalesce((select max(d) from days where not covered), (select range_start - 1 from r))
 $$;
 
+-- Üyenin challenge'daki en uzun ardışık kapsanan gün dizisi (kurtarılan günler seriyi sürdürür; üyenin
+-- aralığında). Bahçem "en uzun seri olan" bitki (EKRANLAR 5.1 → çiçek + gözlük)
+create function app.longest_covered_run(p_user uuid, p_challenge uuid) returns integer
+language sql stable security definer set search_path = '' as $$
+  with r as (select * from app.member_range(p_user, p_challenge)),
+  d as (
+    select c.d
+    from r
+    join app.covered_dates(p_user, p_challenge) as c(d) on c.d between r.range_start and r.range_end
+  ),
+  -- Ardışık günler aynı gruba düşer (gün − sıra numarası sabit)
+  g as (select d.d - (row_number() over (order by d.d))::int as grp from d)
+  select coalesce(max(n), 0)::int from (select count(*) as n from g group by grp) as runs
+$$;
+
 -- Challenge serisi (Detail sıralaması, StreakLost "12 günlük serin")
 create function app.challenge_streak(p_user uuid, p_challenge uuid, p_at timestamptz) returns integer
 language sql stable security definer set search_path = '' as $$

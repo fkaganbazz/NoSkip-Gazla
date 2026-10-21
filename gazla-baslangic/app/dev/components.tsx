@@ -56,6 +56,7 @@ import {
 } from '@/theme';
 import { celebrationColors } from '@/theme/moments';
 import { onboardingColors } from '@/theme/onboarding';
+import { settingsTypography } from '@/theme/settings';
 import { socialColors } from '@/theme/social';
 
 // Geliştirme ekranı: design/Components.dc.html'deki ortak bileşenler, açık/koyu modda ve tüm halleriyle.
@@ -240,7 +241,14 @@ export default function ComponentsScreen() {
             value={detail}
             onChangeText={setDetail}
           />
-          <Caption>md 52 · hata (koyuda okunur kırmızı) · sm çok satır 84</Caption>
+          <TextField
+            label="Onaylamak için SİL yaz"
+            placeholder="SİL"
+            value=""
+            onChangeText={noop}
+            inputStyle={settingsTypography.deleteConfirmInput}
+          />
+          <Caption>md 52 · hata (koyuda okunur kırmızı) · sm çok satır 84 · `inputStyle` (DeleteAccount 16 / 800, aralık 1)</Caption>
         </Panel>
         <View style={styles.row}>
           <Swatch bg={challengeTints.butter[scheme].bg} style={styles.half}>
@@ -286,6 +294,14 @@ export default function ComponentsScreen() {
             selectedColor={(v) => (v === 'roast' ? roastColor : colors.actionText)}
           />
           <Segmented role="radio" accessibilityLabel="Süre" options={DURATIONS} value={duration} onChange={setDuration} />
+          <Caption>Pasif seçenek (`disabled`) · Poke, sert mod kapalıyken "Laf sok"</Caption>
+          <Segmented
+            size="lg"
+            textSize="lg"
+            options={[TONES[0], { ...TONES[1], disabled: true }]}
+            value={TONES[0].value}
+            onChange={noop}
+          />
         </Swatch>
         <Panel title="Seçim">
           <View style={styles.row}>
@@ -526,7 +542,7 @@ export default function ComponentsScreen() {
           <SectionLabel>Arkadaş satırı</SectionLabel>
           <FriendList>
             <FriendRow
-              person={{ displayName: 'Kerem', avatarTint: 'lavender' }}
+              person={{ displayName: 'Kerem', avatarTint: 'sky' }}
               sub="@kerem.a · 3 ortak"
               action={{ type: 'request', onAccept: noop, onDismiss: noop }}
               divider

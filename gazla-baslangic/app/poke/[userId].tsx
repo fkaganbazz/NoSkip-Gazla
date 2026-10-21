@@ -20,7 +20,7 @@ import {
 import { ShieldIcon } from '@/features/friends/icons';
 import { toAccusative, toDative } from '@/features/friends/names';
 import MessageGrid from '@/features/poke/MessageGrid';
-import { componentColors, componentMetrics as cm, componentTypography, typography, useTheme } from '@/theme';
+import { componentMetrics as cm, componentTypography, typography, useTheme } from '@/theme';
 import { sheetDikenMetrics } from '@/theme/sheet';
 import { socialColors, socialMetrics as m, socialTypography } from '@/theme/social';
 
@@ -33,7 +33,7 @@ const UNDO_MS = 30_000;
 const defaultIndex = (tone: PokeTone) => (tone === 'roast' ? 1 : 0);
 
 // Dürt — design/Poke.dc.html (alt sayfa, `Sheet`; üstünde Diken + balon). Hazır mesajlar src/content/pokes.ts
-// (usePokeMessages). "Laf sok" yalnızca alıcının sert modu açıksa seçilebilir; kapalıysa sekme pasif görünür.
+// (usePokeMessages). "Laf sok" yalnızca alıcının sert modu açıksa seçilebilir; kapalıysa sekme pasif (Segmented `disabled`).
 // Günlük sınır (usePokeStatus): hak bitince gönder pasif. Gönderince 30 sn "Geri al" tostu, süre bitince
 // sayfa kapanır. Parametreler: userId; isteğe bağlı tone ('hype' — "Gaz ver" butonlarından) ve challengeId.
 export default function PokeSheet() {
@@ -137,29 +137,18 @@ export default function PokeSheet() {
             textSize="lg"
             role="tabs"
             accessibilityLabel="Mesaj türü"
+            // Sert mod kapalıyken "Laf sok" pasif (soluk, basılamaz); nedeni alttaki açıklama satırında
             options={[
               { value: 'hype', label: 'Gaz ver' },
-              { value: 'roast', label: 'Laf sok' },
+              { value: 'roast', label: 'Laf sok', disabled: !harsh },
             ]}
             value={activeTone}
             onChange={(t) => {
-              // Sert mod kapalıyken "Laf sok" seçilemez
-              if (t === 'roast' && !harsh) return;
               setTone(t);
               setPickedKey(null);
             }}
             selectedColor={(t) => (t === 'roast' ? c.roastText : colors.actionText)}
           />
-          {/* Ortak Segmented'de pasif seçenek yok: "Laf sok" hücresini kap rengindeki yarı saydam örtü soluklaştırır
-              ve dokunmayı tutar (açıklama altındaki satırda) */}
-          {!harsh && (
-            <View
-              accessible
-              accessibilityLabel={`Laf sok kapalı. ${name} sert modu açmamış.`}
-              aria-disabled
-              style={[styles.veil, { backgroundColor: componentColors[scheme].segmentTrack }]}
-            />
-          )}
         </View>
 
         <View style={styles.note}>
@@ -267,17 +256,6 @@ const styles = StyleSheet.create({
   },
   segment: {
     marginTop: m.segmentMarginTop,
-  },
-  // Sağ yarı ("Laf sok" hücresi + kap kenarı); köşeler kapla aynı
-  veil: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    bottom: 0,
-    width: '50%',
-    opacity: m.segmentVeilOpacity,
-    borderTopRightRadius: cm.segmentTrackRadius,
-    borderBottomRightRadius: cm.segmentTrackRadius,
   },
   note: {
     marginTop: m.noteMarginTop,

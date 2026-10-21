@@ -1,3 +1,4 @@
+import { createContext, useContext } from 'react';
 import { useColorScheme } from 'react-native';
 
 import { darkColors, lightColors, type ColorRoles } from './colors';
@@ -26,8 +27,16 @@ export type ColorScheme = 'light' | 'dark';
 export const colorsFor = (scheme: ColorScheme): ColorRoles =>
   scheme === 'dark' ? darkColors : lightColors;
 
-/** Sistemin açık/koyu moduna göre anlamsal renkleri döner. */
+/**
+ * Alt ağacı temadan bağımsız sabit bir modda çizer: `<SchemeProvider value="dark">` içindeki her `useTheme()`
+ * koyu döner (ör. iki modda koyu PhotoProof'tan açılan alt sayfa: `Sheet scheme="dark"`). `null` sistem moduna döner.
+ */
+const SchemeContext = createContext<ColorScheme | null>(null);
+export const SchemeProvider = SchemeContext.Provider;
+
+/** Sistemin (ya da üstteki `SchemeProvider`ın) açık/koyu moduna göre anlamsal renkleri döner. */
 export function useTheme() {
-  const scheme: ColorScheme = useColorScheme() === 'dark' ? 'dark' : 'light';
+  const system: ColorScheme = useColorScheme() === 'dark' ? 'dark' : 'light';
+  const scheme: ColorScheme = useContext(SchemeContext) ?? system;
   return { scheme, isDark: scheme === 'dark', colors: colorsFor(scheme) };
 }
