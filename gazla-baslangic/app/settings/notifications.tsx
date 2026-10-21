@@ -2,14 +2,13 @@ import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ErrorState, LoadingState, ScreenHeader, Toast } from '@/components/ui';
+import { Chip, ErrorState, LoadingState, ScreenHeader, SectionLabel, ToastHost, useToast } from '@/components/ui';
 import { useMySettings, useUpdateSettingsMutation, type SettingsUpdate } from '@/data';
 import { DEFAULT_REMINDER, REMINDER_OPTIONS, errorText, formatTime } from '@/features/settings/logic';
 import { NOTIFICATION_COPY, NOTIFICATION_RULES, type RuleTone } from '@/features/settings/notificationCopy';
 import OptionSheet from '@/features/settings/OptionSheet';
-import { LinkRow, SettingsGroup, SettingsSection, ToggleRow } from '@/features/settings/rows';
-import { useFlash } from '@/features/settings/useFlash';
-import { borderWidth, layout, radius, useTheme } from '@/theme';
+import { LinkRow, SettingsGroup, ToggleRow } from '@/features/settings/rows';
+import { borderWidth, layout, useTheme } from '@/theme';
 import { settingsColors, settingsMetrics as m, settingsTypography as t } from '@/theme/settings';
 
 // Bildirimler — design/Notifications.dc.html (kurallar ve metinler) + Settings.dc.html satır dili.
@@ -20,17 +19,15 @@ export default function NotificationsScreen() {
   const insets = useSafeAreaInsets();
   const settings = useMySettings();
   const update = useUpdateSettingsMutation();
-  const { message, flash } = useFlash();
+  const toast = useToast();
   const [timeOpen, setTimeOpen] = useState(false);
 
-  const save = (u: SettingsUpdate) => update.mutate(u, { onError: (e) => flash(errorText(e)) });
+  const save = (u: SettingsUpdate) => update.mutate(u, { onError: (e) => toast.show({ message: errorText(e) }) });
   const top = { paddingTop: insets.top + layout.screenTopGap };
 
-  const chipColors: Record<RuleTone, { bg: string; text: string }> = {
-    strong: { bg: c.ruleChipStrongBg, text: c.ruleChipStrongText },
-    lilac: { bg: c.ruleChipLilacBg, text: c.ruleChipLilacText },
-    peach: { bg: c.ruleChipPeachBg, text: c.ruleChipPeachText },
-  };
+  // Kural çipleri ortak Chip: koyu olan seçili çip görünümü. Lila/şeftali tonu Chip'te yok; şimdilik yalnızca
+  // zemin rengi verilir (metin rengi ortak bileşene ton eklenince tasarımdaki gibi olacak).
+  const chipTint: Record<RuleTone, string | null> = { strong: null, lilac: c.ruleChipLilacBg, peach: c.ruleChipPeachBg };
 
   if (settings.isPending || settings.isError) {
     return (
@@ -50,14 +47,20 @@ export default function NotificationsScreen() {
         <ScreenHeader title="Bildirimler" />
 
         <View style={styles.chips}>
-          {NOTIFICATION_RULES.map((r) => (
-            <View key={r.label} style={[styles.chip, { backgroundColor: chipColors[r.tone].bg }]}>
-              <Text style={[t.ruleChip, { color: chipColors[r.tone].text }]}>{r.label}</Text>
-            </View>
-          ))}
+          {NOTIFICATION_RULES.map((r) => {
+            const tint = chipTint[r.tone];
+            return (
+              <Chip
+                key={r.label}
+                label={r.label}
+                selected={!tint}
+                style={tint ? { backgroundColor: tint, borderColor: tint } : undefined}
+              />
+            );
+          })}
         </View>
 
-        <SettingsSection>TERCİHLER</SettingsSection>
+        <SectionLabel style={styles.section}>TERCİHLER</SectionLabel>
         <SettingsGroup>
           <ToggleRow
             title="Dürtme bildirimleri"
@@ -85,7 +88,7 @@ export default function NotificationsScreen() {
           )}
         </SettingsGroup>
 
-        <SettingsSection>NE ZAMAN NE GELİR</SettingsSection>
+        <SectionLabel style={styles.section}>NE ZAMAN NE GELİR</SectionLabel>
         <SettingsGroup>
           {NOTIFICATION_COPY.map((row, i) => (
             <View
@@ -102,8 +105,6 @@ export default function NotificationsScreen() {
         </SettingsGroup>
       </ScrollView>
 
-      {message && <Toast message={message} style={[styles.toast, { bottom: insets.bottom + layout.screenPadding }]} />}
-
       <OptionSheet
         visible={timeOpen}
         title="Hatırlatma saati"
@@ -112,6 +113,8 @@ export default function NotificationsScreen() {
         onSelect={(dailyReminderTime) => save({ dailyReminderTime })}
         onClose={() => setTimeOpen(false)}
       />
+
+      <ToastHost toast={toast} />
     </View>
   );
 }
@@ -129,19 +132,12 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: m.chipsGap,
   },
-  chip: {
-    paddingVertical: m.ruleChipPaddingY,
-    paddingHorizontal: m.ruleChipPaddingX,
-    borderRadius: radius.full,
+  section: {
+    marginTop: m.sectionMarginTop,
   },
   copyRow: {
     paddingVertical: m.copyRowPaddingY,
     paddingHorizontal: m.rowPaddingX,
     gap: m.rowTextGap,
-  },
-  toast: {
-    position: 'absolute',
-    left: layout.screenPadding,
-    right: layout.screenPadding,
   },
 });

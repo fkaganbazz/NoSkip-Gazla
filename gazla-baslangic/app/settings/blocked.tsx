@@ -1,21 +1,20 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Avatar, Chip, ErrorState, LoadingState, ScreenHeader, Toast } from '@/components/ui';
+import { FriendList, FriendRow, FriendRowButton } from '@/components/FriendRow';
+import { ErrorState, LoadingState, ScreenHeader, ToastHost, useToast } from '@/components/ui';
 import { useBlockedUsers, useUnblockUserMutation } from '@/data';
 import { errorText } from '@/features/settings/logic';
-import { LinkRow, SettingsGroup } from '@/features/settings/rows';
-import { useFlash } from '@/features/settings/useFlash';
 import { layout, typography, useTheme } from '@/theme';
 import { settingsMetrics as m } from '@/theme/settings';
 
-// Engellenenler — tasarım dosyası yok; Settings.dc.html satır/kart dili. Veri: blocks (useBlockedUsers).
+// Engellenenler — tasarım dosyası yok; ortak kişi listesi (FriendList + FriendRow). Veri: blocks (useBlockedUsers).
 export default function BlockedScreen() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const blocked = useBlockedUsers();
   const unblock = useUnblockUserMutation();
-  const { message, flash } = useFlash();
+  const toast = useToast();
 
   const top = { paddingTop: insets.top + layout.screenTopGap };
 
@@ -47,42 +46,39 @@ export default function BlockedScreen() {
             <Text style={[typography.body, styles.lead, { color: colors.textBody }]}>
               Engellediğin kişiler profilini göremez ve seni dürtemez.
             </Text>
-            <SettingsGroup>
+            <FriendList style={styles.list}>
               {users.map((u, i) => {
                 const busy = unblock.isPending && unblock.variables === u.id;
                 return (
-                  <LinkRow
+                  <FriendRow
                     key={u.id}
-                    title={u.displayName}
-                    detail={`@${u.username}`}
-                    leading={<Avatar name={u.displayName} tint={u.avatarTint} url={u.avatarUrl} />}
+                    person={u}
+                    sub={`@${u.username}`}
+                    divider={i < users.length - 1}
                     trailing={
-                      <Pressable
+                      <FriendRowButton
+                        title="Engeli kaldır"
+                        variant="muted"
+                        loading={busy}
+                        disabled={unblock.isPending && !busy}
+                        accessibilityLabel={`${u.displayName} engelini kaldır`}
                         onPress={() =>
                           unblock.mutate(u.id, {
-                            onSuccess: () => flash(`Engel kaldırıldı: ${u.displayName}`),
-                            onError: (e) => flash(errorText(e)),
+                            onSuccess: () => toast.show({ message: `Engel kaldırıldı: ${u.displayName}` }),
+                            onError: (e) => toast.show({ message: errorText(e) }),
                           })
                         }
-                        disabled={unblock.isPending}
-                        accessibilityRole="button"
-                        accessibilityLabel={`${u.displayName} engelini kaldır`}
-                        accessibilityState={{ disabled: unblock.isPending, busy }}
-                        hitSlop={6}
-                        style={({ pressed }) => [pressed && styles.pressed, unblock.isPending && !busy && styles.dim]}>
-                        <Chip label={busy ? 'Kaldırılıyor…' : 'Engeli kaldır'} />
-                      </Pressable>
+                      />
                     }
-                    last={i === users.length - 1}
                   />
                 );
               })}
-            </SettingsGroup>
+            </FriendList>
           </>
         )}
       </ScrollView>
 
-      {message && <Toast message={message} style={[styles.toast, { bottom: insets.bottom + layout.screenPadding }]} />}
+      <ToastHost toast={toast} />
     </View>
   );
 }
@@ -97,6 +93,9 @@ const styles = StyleSheet.create({
   lead: {
     marginTop: m.profileCardMarginTop,
   },
+  list: {
+    marginTop: m.groupMarginTop,
+  },
   empty: {
     marginTop: m.emptyMarginTop,
     gap: m.groupMarginTop,
@@ -104,16 +103,5 @@ const styles = StyleSheet.create({
   },
   center: {
     textAlign: 'center',
-  },
-  pressed: {
-    opacity: 0.7,
-  },
-  dim: {
-    opacity: 0.5,
-  },
-  toast: {
-    position: 'absolute',
-    left: layout.screenPadding,
-    right: layout.screenPadding,
   },
 });

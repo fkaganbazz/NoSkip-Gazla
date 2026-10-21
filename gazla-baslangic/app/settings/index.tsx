@@ -4,7 +4,17 @@ import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Button, ErrorState, LoadingState, ScreenHeader, Toast } from '@/components/ui';
+import Sheet from '@/components/Sheet';
+import {
+  Button,
+  ErrorState,
+  LoadingState,
+  ScreenHeader,
+  SectionLabel,
+  Segmented,
+  ToastHost,
+  useToast,
+} from '@/components/ui';
 import {
   useAuth,
   useBlockedUsers,
@@ -24,11 +34,8 @@ import {
 import OptionSheet from '@/features/settings/OptionSheet';
 import ProfileCard from '@/features/settings/ProfileCard';
 import ProfileEditSheet from '@/features/settings/ProfileEditSheet';
-import { LinkRow, SettingsGroup, SettingsSection, ToggleRow } from '@/features/settings/rows';
-import Sheet from '@/features/settings/Sheet';
-import ThemePicker from '@/features/settings/ThemePicker';
-import { useThemePreference } from '@/features/settings/themePreference';
-import { useFlash } from '@/features/settings/useFlash';
+import { LinkRow, SettingsGroup, ToggleRow } from '@/features/settings/rows';
+import { THEME_OPTIONS, useThemePreference } from '@/features/settings/themePreference';
 import { layout, typography, useTheme } from '@/theme';
 import { settingsMetrics as m, settingsTypography as t } from '@/theme/settings';
 
@@ -49,7 +56,8 @@ export default function SettingsScreen() {
   const updateSettings = useUpdateSettingsMutation();
   const signOut = useSignOutMutation();
   const [themePref, setThemePref] = useThemePreference();
-  const { message, flash } = useFlash();
+  const toast = useToast();
+  const flash = (message: string) => toast.show({ message });
   const [sheet, setSheet] = useState<OpenSheet>(null);
 
   const saveSettings = (update: SettingsUpdate) => updateSettings.mutate(update, { onError: (e) => flash(errorText(e)) });
@@ -89,7 +97,7 @@ export default function SettingsScreen() {
 
         <ProfileCard profile={profile} onPress={() => setSheet('profile')} />
 
-        <SettingsSection>CHALLENGE VE BİLDİRİMLER</SettingsSection>
+        <SectionLabel style={styles.section}>CHALLENGE VE BİLDİRİMLER</SectionLabel>
         <SettingsGroup>
           <ToggleRow
             title="Sert mod"
@@ -118,14 +126,22 @@ export default function SettingsScreen() {
           />
         </SettingsGroup>
 
-        <SettingsSection>GÖRÜNÜM</SettingsSection>
-        <ThemePicker value={themePref} onChange={setThemePref} />
+        <SectionLabel style={styles.section}>GÖRÜNÜM</SectionLabel>
+        <Segmented
+          options={THEME_OPTIONS}
+          value={themePref}
+          onChange={setThemePref}
+          size="lg"
+          role="radio"
+          accessibilityLabel="Tema"
+          style={styles.themePicker}
+        />
         {/* Tasarımda yok: dil seçimi (user_settings.locale) */}
         <SettingsGroup>
           <LinkRow title="Dil" value={labelOf(LOCALE_OPTIONS, s.locale)} onPress={() => setSheet('locale')} last />
         </SettingsGroup>
 
-        <SettingsSection>GİZLİLİK VE GÜVENLİK</SettingsSection>
+        <SectionLabel style={styles.section}>GİZLİLİK VE GÜVENLİK</SectionLabel>
         <SettingsGroup>
           <LinkRow
             title="Beni kimler bulabilir"
@@ -140,7 +156,7 @@ export default function SettingsScreen() {
           <LinkRow title="Reklam tercihleri" onPress={() => router.push('/ad-consent')} last />
         </SettingsGroup>
 
-        <SettingsSection>DESTEK VE YASAL</SettingsSection>
+        <SectionLabel style={styles.section}>DESTEK VE YASAL</SectionLabel>
         <SettingsGroup>
           {LEGAL_ROWS.map((title, i) => (
             <LinkRow
@@ -176,8 +192,6 @@ export default function SettingsScreen() {
         </Text>
       </ScrollView>
 
-      {message && <Toast message={message} style={[styles.toast, { bottom: insets.bottom + layout.screenPadding }]} />}
-
       <ProfileEditSheet
         visible={sheet === 'profile'}
         profile={profile}
@@ -203,13 +217,15 @@ export default function SettingsScreen() {
         onSelect={(locale) => saveSettings({ locale })}
         onClose={() => setSheet(null)}
       />
-      <Sheet visible={sheet === 'dayEnd'} onClose={() => setSheet(null)} title="Gün bitişi">
+      <Sheet visible={sheet === 'dayEnd'} onClose={() => setSheet(null)} title="Gün bitişi" surface>
         <Text style={[typography.body, { color: colors.textBody }]}>
           Gece yarısından sonra 2 saat daha işaretleyebilirsin. Saat dilimine göre hesaplanır.
         </Text>
         <Text style={[t.rowValue, styles.timezone, { color: colors.textSecondary }]}>Saat dilimin: {s.timezone}</Text>
         <Button title="Tamam" variant="secondary" onPress={() => setSheet(null)} style={styles.sheetButton} />
       </Sheet>
+
+      <ToastHost toast={toast} />
     </View>
   );
 }
@@ -221,17 +237,18 @@ const styles = StyleSheet.create({
   padded: {
     paddingHorizontal: layout.screenPadding,
   },
+  section: {
+    marginTop: m.sectionMarginTop,
+  },
+  themePicker: {
+    marginTop: m.groupMarginTop,
+  },
   accountGroup: {
     marginTop: m.sectionMarginTop,
   },
   footer: {
     marginTop: m.footerMarginTop,
     textAlign: 'center',
-  },
-  toast: {
-    position: 'absolute',
-    left: layout.screenPadding,
-    right: layout.screenPadding,
   },
   timezone: {
     marginTop: m.groupMarginTop,

@@ -1,10 +1,9 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import Sheet from '@/components/Sheet';
 import { Radio } from '@/components/ui';
 import { borderWidth, useTheme } from '@/theme';
 import { settingsColors, settingsMetrics as m, settingsTypography as t } from '@/theme/settings';
-
-import Sheet from './Sheet';
 
 type Option<T extends string> = { value: T; label: string; detail?: string };
 
@@ -17,11 +16,12 @@ type Props<T extends string> = {
   onClose: () => void;
 };
 
-/** Tek seçimli liste: satır basılır, sağda seçim düğmesi; seçince kapanır */
+/** Tek seçimli liste (ortak Sheet, kart zemini): satır basılır, sağda seçim düğmesi; seçince kapanır */
 export default function OptionSheet<T extends string>({ visible, title, options, value, onSelect, onClose }: Props<T>) {
   const { colors, scheme } = useTheme();
   return (
-    <Sheet visible={visible} onClose={onClose} title={title}>
+    // Hatırlatma saatleri (16 satır) ekrana sığmıyor: kaydırılabilir gövde
+    <Sheet visible={visible} onClose={onClose} title={title} surface scrollable>
       <View accessibilityRole="radiogroup">
         {options.map((o, i) => {
           const selected = o.value === value;

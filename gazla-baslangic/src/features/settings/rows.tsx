@@ -1,31 +1,18 @@
 /**
- * Ayarlar satır dili — design/Settings.dc.html: bölüm etiketi, satır kartı, anahtarlı satır,
- * bağlantı satırı (değer + ok). Bildirimler ve Engellenenler de aynı dili kullanır.
+ * Ayarlar satır dili — design/Settings.dc.html: satır kartı (ortak Card), anahtarlı satır, bağlantı satırı
+ * (değer + ok). Bölüm etiketi ortak SectionLabel. Bildirimler de aynı dili kullanır.
  */
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { ChevronRightIcon } from '@/components/icons';
-import { Toggle } from '@/components/ui';
-import { borderWidth, radius, typography, useTheme } from '@/theme';
+import { Card, Toggle } from '@/components/ui';
+import { borderWidth, useTheme } from '@/theme';
 import { settingsColors, settingsMetrics as m, settingsTypography as t } from '@/theme/settings';
 
-/** Büyük harf bölüm etiketi: "CHALLENGE VE BİLDİRİMLER" (Nunito 800 · 13 · aralık 0.6) */
-export function SettingsSection({ children }: { children: string }) {
-  const { colors } = useTheme();
-  return (
-    <Text accessibilityRole="header" style={[typography.label, styles.section, { color: colors.textSecondary }]}>
-      {children}
-    </Text>
-  );
-}
-
-/** Satırları taşıyan kart: yüzey, 1 px kenar, 22 köşe */
+/** Satırları taşıyan kart (ortak Card: yüzey, 1 px kenar, 22 köşe) */
 export function SettingsGroup({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
-  const { colors } = useTheme();
-  return (
-    <View style={[styles.group, { backgroundColor: colors.surface, borderColor: colors.border }, style]}>{children}</View>
-  );
+  return <Card style={[styles.group, style]}>{children}</Card>;
 }
 
 function useDivider(last: boolean | undefined) {
@@ -69,10 +56,6 @@ type LinkRowProps = {
   titleColor?: string;
   /** Destek ve yasal satırları: 54 */
   compact?: boolean;
-  /** Başlığın solundaki öğe (avatar) */
-  leading?: ReactNode;
-  /** Sağda değer/ok yerine özel öğe (Engeli kaldır butonu) */
-  trailing?: ReactNode;
   disabled?: boolean;
   last?: boolean;
   accessibilityLabel?: string;
@@ -87,8 +70,6 @@ export function LinkRow({
   chevron = true,
   titleColor,
   compact,
-  leading,
-  trailing,
   disabled,
   last,
   accessibilityLabel,
@@ -97,14 +78,12 @@ export function LinkRow({
   const divider = useDivider(last);
   const content = (
     <>
-      {leading}
       <View style={styles.texts}>
         <Text style={[t.rowTitle, { color: titleColor ?? colors.text }]}>{title}</Text>
         {detail ? <Text style={[t.rowDetail, { color: colors.textSecondary }]}>{detail}</Text> : null}
       </View>
-      {trailing}
       {value !== undefined && <Text style={[t.rowValue, styles.value, { color: colors.textSecondary }]}>{value}</Text>}
-      {chevron && !trailing && (
+      {chevron && (
         <ChevronRightIcon color={colors.textSecondary} size={m.rowChevronSize} strokeWidth={m.chevronStrokeWidth} />
       )}
     </>
@@ -131,13 +110,8 @@ export function LinkRow({
 }
 
 const styles = StyleSheet.create({
-  section: {
-    marginTop: m.sectionMarginTop,
-  },
   group: {
     marginTop: m.groupMarginTop,
-    borderRadius: radius.card,
-    borderWidth: borderWidth.thin,
     // Basılı satır zemini köşelerden taşmasın
     overflow: 'hidden',
   },

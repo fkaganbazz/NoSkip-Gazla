@@ -13,23 +13,13 @@ import { fonts } from './typography';
 export type SettingsColors = {
   /** Kart içi satır ayracı (açıkta kart kenarından açık) */
   rowDivider: string;
-  /** Görünüm seçici: zemin, seçili hücre, gölge */
-  themeTrack: string;
-  themeThumb: string;
-  themeShadow: string;
-  /** Alt sayfa arkasındaki karartma */
-  backdrop: string;
+  /** Bildirimler: lila ve şeftali kural çipinin zemini (koyu kural çipi ortak Chip'in seçili hali) */
+  ruleChipLilacBg: string;
+  ruleChipPeachBg: string;
   /** Profil düzenleme: kamera butonu zemini, ikonu, dış halkası */
   cameraBg: string;
   cameraIcon: string;
   cameraRing: string;
-  /** Bildirimler: kural çipleri (zemin / metin) */
-  ruleChipStrongBg: string;
-  ruleChipStrongText: string;
-  ruleChipLilacBg: string;
-  ruleChipLilacText: string;
-  ruleChipPeachBg: string;
-  ruleChipPeachText: string;
   /** Bildirim metni başlığı: Diken'den gelen / arkadaştan gelen */
   dikenTitle: string;
   friendTitle: string;
@@ -46,20 +36,11 @@ export type SettingsColors = {
 export const settingsColors: Record<'light' | 'dark', SettingsColors> = {
   light: {
     rowDivider: '#F4EDE5',
-    themeTrack: palette.line,
-    themeThumb: palette.card,
-    themeShadow: 'rgba(36, 22, 63, 0.14)',
-    // Tasarımda yok (alt sayfa açık hali çizilmedi): gece moru %45
-    backdrop: 'rgba(36, 22, 63, 0.45)',
+    ruleChipLilacBg: challengeTints.lilac.light.bg,
+    ruleChipPeachBg: palette.rescue,
     cameraBg: palette.nightPurple,
     cameraIcon: palette.white,
     cameraRing: palette.sand,
-    ruleChipStrongBg: palette.nightPurple,
-    ruleChipStrongText: palette.sand,
-    ruleChipLilacBg: challengeTints.lilac.light.bg,
-    ruleChipLilacText: challengeTints.lilac.light.ink,
-    ruleChipPeachBg: palette.rescue,
-    ruleChipPeachText: '#9A3412',
     dikenTitle: palette.actionGreen,
     friendTitle: palette.orange700,
     adCircle: palette.green100,
@@ -73,19 +54,11 @@ export const settingsColors: Record<'light' | 'dark', SettingsColors> = {
   dark: {
     // Koyu tasarım yok: ayraç kart kenarından bir ton koyu (DetailDark dolgu)
     rowDivider: palette.darkFill,
-    themeTrack: palette.darkFill,
-    themeThumb: palette.darkSurface,
-    themeShadow: 'rgba(0, 0, 0, 0.35)',
-    backdrop: 'rgba(0, 0, 0, 0.55)',
+    ruleChipLilacBg: challengeTints.lilac.dark.bg,
+    ruleChipPeachBg: avatarTints.peach.dark.bg,
     cameraBg: palette.sand,
     cameraIcon: palette.darkBackground,
     cameraRing: palette.darkBackground,
-    ruleChipStrongBg: palette.sand,
-    ruleChipStrongText: palette.darkBackground,
-    ruleChipLilacBg: challengeTints.lilac.dark.bg,
-    ruleChipLilacText: challengeTints.lilac.dark.ink,
-    ruleChipPeachBg: avatarTints.peach.dark.bg,
-    ruleChipPeachText: avatarTints.peach.dark.ink,
     dikenTitle: palette.darkActionText,
     friendTitle: '#FF9A6B', // TodayDark: turuncu metin
     adCircle: palette.darkActionTint,
@@ -117,19 +90,13 @@ export const settingsMetrics = {
   linkRowHeight: 56,
   linkRowHeightCompact: 54,
   rowChevronSize: 18,
-  themeTrackPadding: 4,
-  themeTrackRadius: 16,
-  themeCellHeight: 44,
-  themeCellRadius: 12,
   footerMarginTop: 20,
   screenPaddingBottom: 40,
 
   // Engellenenler (tasarımı yok): boş durum metninin üst boşluğu · 2 × bölüm boşluğu
   emptyMarginTop: 44,
 
-  // Alt sayfa (seçenek listesi, profil düzenleme)
-  sheetPaddingTop: 20,
-  sheetMaxHeightRatio: 0.85,
+  // Seçenek listesi (ortak Sheet içinde)
   optionRowHeight: 52,
   optionRowPaddingY: 10,
 
@@ -147,8 +114,6 @@ export const settingsMetrics = {
   // Bildirimler
   chipsMarginTop: 18,
   chipsGap: 10,
-  ruleChipPaddingY: 8,
-  ruleChipPaddingX: 14,
   copyRowPaddingY: 12,
 
   // Hesabı sil
@@ -162,7 +127,6 @@ export const settingsMetrics = {
   deleteIconSize: 20,
   deleteIconStrokeWidth: 2.2,
   confirmMarginTop: 16,
-  confirmButtonHeight: 56,
   actionsGap: 4,
   deletePaddingBottom: 30,
 
@@ -191,9 +155,6 @@ export const settingsMetrics = {
 export const settingsTypography = {
   /** Profil kartı adı · Nunito 800 · 17 */
   profileName: { fontFamily: fonts.extraBold, fontSize: 17 },
-  /** Profil avatar harfi · Baloo 2 800 · 24 (düzenleme ekranında 36) */
-  profileInitial: { fontFamily: fonts.heading, fontSize: 24 },
-  editInitial: { fontFamily: fonts.heading, fontSize: 36 },
   /** Satır başlığı · Nunito 800 · 16 */
   rowTitle: { fontFamily: fonts.extraBold, fontSize: 16 },
   /** Satır açıklaması · Nunito 600 · 13 */
@@ -202,12 +163,8 @@ export const settingsTypography = {
   photoHint: { fontFamily: fonts.semiBold, fontSize: 14 },
   /** Satır sağındaki değer · Nunito 700 · 15 */
   rowValue: { fontFamily: fonts.bold, fontSize: 15 },
-  /** Görünüm seçici hücresi · Nunito 800 · 15 */
-  themeCell: { fontFamily: fonts.extraBold, fontSize: 15 },
   /** Sürüm satırı · Nunito 700 · 13 */
   footer: { fontFamily: fonts.bold, fontSize: 13 },
-  /** Alt başlık satırı (Hesabı sil) · Nunito 800 · 17 */
-  headerTitle: { fontFamily: fonts.extraBold, fontSize: 17 },
   /** Hesabı sil başlığı · Baloo 2 800 · 28 · 1.1 */
   deleteTitle: { fontFamily: fonts.heading, fontSize: 28, lineHeight: 28 * 1.1 },
   /** Silinecekler satırı · Nunito 800 · 15 */
@@ -218,8 +175,6 @@ export const settingsTypography = {
   adItem: { fontFamily: fonts.bold, fontSize: 15, lineHeight: 15 * 1.4 },
   /** Alt not · Nunito 600 · 13 · 1.45 */
   note: { fontFamily: fonts.semiBold, fontSize: 13, lineHeight: 13 * 1.45 },
-  /** Bildirim kural çipi · Nunito 800 · 14 */
-  ruleChip: { fontFamily: fonts.extraBold, fontSize: 14 },
   /** Bildirim metni: ne zaman · Nunito 800 · 12 · aralık 0.4 (push kartı üst satırı) */
   copyWhen: { fontFamily: fonts.extraBold, fontSize: 12, letterSpacing: 0.4 },
   /** Bildirim metni: başlık · Nunito 800 · 15 */

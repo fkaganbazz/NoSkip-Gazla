@@ -7,14 +7,13 @@ import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { CameraIcon } from '@/components/icons';
-import { Button, TextField } from '@/components/ui';
+import Sheet from '@/components/Sheet';
+import { Avatar, Button, TextField } from '@/components/ui';
 import { ApiError, useUpdateProfileMutation, useUsernameAvailable, type Profile, type ProfileUpdate } from '@/data';
 import { typography, useTheme } from '@/theme';
 import { settingsColors, settingsMetrics as m, settingsTypography as t } from '@/theme/settings';
 
 import { displayNameProblem, errorText, normalizeUsername, usernameProblem } from './logic';
-import { ProfileAvatar } from './ProfileCard';
-import Sheet from './Sheet';
 
 const DEBOUNCE_MS = 400;
 
@@ -99,14 +98,15 @@ export default function ProfileEditSheet({ visible, profile, onClose, onSaved }:
   const serverTaken = update.error instanceof ApiError && update.error.code === '23505';
 
   return (
-    <Sheet visible={visible} onClose={onClose} title="Profili düzenle">
+    <Sheet visible={visible} onClose={onClose} title="Profili düzenle" surface scrollable>
       <View style={styles.photoRow}>
         <View style={styles.avatarWrap}>
-          <ProfileAvatar
-            profile={{ displayName: name || profile.displayName, avatarTint: profile.avatarTint }}
+          <Avatar
+            name={name || profile.displayName}
+            tint={profile.avatarTint}
             url={photoUrl}
             size={m.editAvatar}
-            initialStyle={t.editInitial}
+            accessibilityLabel="Profil fotoğrafın"
           />
           <Pressable
             onPress={pickPhoto}

@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Diken from '@/components/Diken';
 import { CameraIcon, FriendsIcon, StreakIcon, type IconProps } from '@/components/icons';
-import { Button, IconButton, TextField } from '@/components/ui';
+import { Button, ScreenHeader, TextField } from '@/components/ui';
 import { useDeleteAccountMutation, useStreak } from '@/data';
 import { errorText, isDeleteConfirmed } from '@/features/settings/logic';
 import { borderWidth, layout, typography, useTheme } from '@/theme';
@@ -37,12 +37,7 @@ export default function DeleteAccountScreen() {
           styles.content,
           { paddingTop: insets.top + layout.screenTopGap, paddingBottom: insets.bottom + m.deletePaddingBottom },
         ]}>
-        <View style={styles.header}>
-          <IconButton icon="back" accessibilityLabel="Geri" />
-          <Text accessibilityRole="header" style={[t.headerTitle, { color: colors.text }]}>
-            Hesabı sil
-          </Text>
-        </View>
+        <ScreenHeader title="Hesabı sil" />
 
         <View style={styles.diken}>
           <Diken mood="solgun" size={m.deleteDikenSize} />
@@ -94,7 +89,6 @@ export default function DeleteAccountScreen() {
             disabled={!confirmed}
             loading={remove.isPending}
             onPress={() => remove.mutate()}
-            style={styles.deleteButton}
           />
           <Button title="Vazgeç, kalıyorum" variant="text" onPress={() => router.back()} />
         </View>
@@ -110,11 +104,6 @@ const styles = StyleSheet.create({
   content: {
     flexGrow: 1,
     paddingHorizontal: layout.screenPadding,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: m.rowGap,
   },
   diken: {
     marginTop: m.deleteDikenMarginTop,
@@ -150,8 +139,5 @@ const styles = StyleSheet.create({
     marginTop: 'auto',
     paddingTop: m.confirmMarginTop,
     gap: m.actionsGap,
-  },
-  deleteButton: {
-    height: m.confirmButtonHeight,
   },
 });
