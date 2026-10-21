@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Diken from '@/components/Diken';
 import SpeechBubble from '@/components/SpeechBubble';
 import { Button, ErrorState, LoadingState } from '@/components/ui';
-import { savePendingInvite, useAuth, useInvitePreview, useJoinByInviteMutation } from '@/data';
+import { savePendingInvite, useAuth, useInvite } from '@/data';
 import GazlaLogo from '@/features/invite-landing/GazlaLogo';
 import { InviteChallengeCard, InviterMessage } from '@/features/invite-landing/InviteCard';
 import { useOnboarding } from '@/features/onboarding/OnboardingProvider';
@@ -29,9 +29,10 @@ export default function InviteLandingScreen() {
   // (oturum yok ya da onboarding yarım) katılım onboarding sonunda bekleyen kodla tamamlanır.
   const signedIn = status === 'ready' && !onboarding.inProgress;
 
-  const preview = useInvitePreview(code);
-  // Çevrimdışıyken hemen NetworkError ile düşer (yazmalar beklemeye alınmaz; DataProvider)
-  const join = useJoinByInviteMutation();
+  // Önizleme (data …) ve katıl; katılma çevrimdışıyken hemen NetworkError ile düşer (yazmalar beklemeye
+  // alınmaz; DataProvider)
+  const preview = useInvite(code);
+  const { join } = preview;
   const today = useMemo(() => deviceLocalDate(), []);
 
   // Bugün: '/(tabs)' sekmelerin ilk ekranına (Bugün) döner
@@ -52,7 +53,7 @@ export default function InviteLandingScreen() {
       goToday();
       return;
     }
-    join.mutate(code, { onSuccess: goToday });
+    join(code, { onSuccess: goToday });
   };
 
   const frame = [

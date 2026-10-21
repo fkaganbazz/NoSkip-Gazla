@@ -4,8 +4,8 @@ import { StyleSheet, View } from 'react-native';
 
 import OnboardingHeader from '@/components/OnboardingHeader';
 import { Button, ErrorState, LoadingState } from '@/components/ui';
-import { useAuth, useTemplates } from '@/data';
-import { nextStepAfterProfile, onboardingTemplates } from '@/features/onboarding/logic';
+import { useAuth, useChallengeTemplates } from '@/data';
+import { nextStepAfterProfile } from '@/features/onboarding/logic';
 import { useOnboarding } from '@/features/onboarding/OnboardingProvider';
 import StepScreen, { StepIntro } from '@/features/onboarding/StepScreen';
 import TemplateTile from '@/features/onboarding/TemplateTile';
@@ -19,10 +19,11 @@ export default function PickChallengeScreen() {
   const { status } = useAuth();
   const onboarding = useOnboarding();
   const { pickedTemplateId, pickTemplate, chooseCustom } = onboarding;
-  const templates = useTemplates();
+  // Onboarding şablonları (6), onboarding sırasıyla
+  const templates = useChallengeTemplates({ featured: true });
   const signedUp = status === 'ready';
 
-  const list = useMemo(() => onboardingTemplates(templates.data ?? []), [templates.data]);
+  const list = useMemo(() => templates.data ?? [], [templates.data]);
   const [choice, setChoice] = useState<string | null>(pickedTemplateId);
   // Seçim yoksa 2. şablon seçili gelir (tasarımda bir kart hep seçili; EKRANLAR.md 1.2 kabul)
   const selectedId =

@@ -10,13 +10,13 @@ import { Button, Chip, ErrorState, IconButton, LoadingState, Toast, ToastHost, u
 import {
   useAuth,
   useChallenge,
-  useChallengeBoard,
   useChallengeCalendar,
-  useCheckinMutation,
-  useLeaveChallengeMutation,
+  useChallengeMembers,
+  useCheckin,
+  useLeaveChallenge,
   useMyMembership,
-  useSetMyReminderMutation,
-  useToday,
+  useSetMyReminder,
+  useTodayTasks,
 } from '@/data';
 import BoardCard from '@/features/challenge/BoardCard';
 import {
@@ -49,12 +49,12 @@ export default function ChallengeDetailScreen() {
 
   const challenge = useChallenge(id);
   const membership = useMyMembership(id);
-  const board = useChallengeBoard(id);
+  const board = useChallengeMembers(id);
   const calendar = useChallengeCalendar(id);
-  const today = useToday();
-  const checkin = useCheckinMutation();
-  const leave = useLeaveChallengeMutation();
-  const setReminder = useSetMyReminderMutation();
+  const today = useTodayTasks();
+  const checkin = useCheckin();
+  const leave = useLeaveChallenge();
+  const setReminder = useSetMyReminder();
   const toast = useToast();
   const [menuOpen, setMenuOpen] = useState(false);
   const [reminderOpen, setReminderOpen] = useState(false);
@@ -77,12 +77,12 @@ export default function ChallengeDetailScreen() {
   const onMark = useCallback(() => {
     if (!openTask) return;
     if (openTask.taskType === 'check') {
-      checkin.mutate({ challengeId: openTask.challengeId, localDate: openTask.localDate });
+      checkin.mark({ challengeId: openTask.challengeId, localDate: openTask.localDate });
     } else {
       const params = { challengeId: openTask.challengeId, date: openTask.localDate };
       router.push({ pathname: openTask.taskType === 'number' ? '/checkin/number' : '/checkin/photo', params });
     }
-  }, [openTask, checkin, router]);
+  }, [openTask, checkin.mark, router]);
 
   const goPoke = (userId: string) => router.push({ pathname: '/poke/[userId]', params: { userId, challengeId: id } });
 
@@ -147,7 +147,7 @@ export default function ChallengeDetailScreen() {
     const markIcon = openTask.taskType === 'photo' ? CameraIcon : openTask.taskType === 'number' ? AddIcon : CheckIcon;
     const markTitle =
       openTask.taskType === 'photo' ? 'Fotoğrafla tamamla' : openTask.taskType === 'number' ? 'Bugünkü değeri gir' : 'Bugünü tamamla';
-    cta = <Button title={markTitle} icon={ctaIcon(markIcon)} loading={checkin.isPending} onPress={onMark} />;
+    cta = <Button title={markTitle} icon={ctaIcon(markIcon)} loading={checkin.mark.isPending} onPress={onMark} />;
   } else if (waitingFriend) {
     cta = (
       <Button
@@ -267,7 +267,7 @@ export default function ChallengeDetailScreen() {
 
       {cta && (
         <View style={[styles.cta, { bottom: ctaBottom }]}>
-          {checkin.error && <Toast message={checkin.error.message} />}
+          {checkin.mark.error && <Toast message={checkin.mark.error.message} />}
           {cta}
         </View>
       )}

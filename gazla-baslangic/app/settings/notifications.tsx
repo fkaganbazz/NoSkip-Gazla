@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import OptionSheet from '@/components/OptionSheet';
 import { Chip, ErrorState, LoadingState, ScreenHeader, SectionLabel, ToastHost, useToast, type ChipTone } from '@/components/ui';
-import { useMySettings, useUpdateSettingsMutation, type SettingsUpdate } from '@/data';
+import { useMySettings, useUpdateSettings, type SettingsUpdate } from '@/data';
 import { DEFAULT_REMINDER, errorText, formatTime, reminderTimes } from '@/features/settings/logic';
 import { NOTIFICATION_COPY, NOTIFICATION_RULES, type RuleTone } from '@/features/settings/notificationCopy';
 import { LinkRow, SettingsGroup, ToggleRow } from '@/features/settings/rows';
@@ -26,11 +26,11 @@ export default function NotificationsScreen() {
   const c = settingsColors[scheme];
   const insets = useSafeAreaInsets();
   const settings = useMySettings();
-  const update = useUpdateSettingsMutation();
+  const { update } = useUpdateSettings();
   const toast = useToast();
   const [timeOpen, setTimeOpen] = useState(false);
 
-  const save = (u: SettingsUpdate) => update.mutate(u, { onError: (e) => toast.show({ message: errorText(e) }) });
+  const save = (u: SettingsUpdate) => update(u, { onError: (e) => toast.show({ message: errorText(e) }) });
   // Bildirim açan anahtarlar izni de ister (onboarding'i atlayan hesaplar)
   const promptPush = usePushPrompt(toast);
   const top = { paddingTop: insets.top + layout.screenTopGap };

@@ -17,7 +17,7 @@
  */
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
-import { takePendingInvite, useAuth, useJoinByInviteMutation, useLeaveChallengeMutation } from '@/data';
+import { takePendingInvite, useAuth, useInvite, useLeaveChallenge } from '@/data';
 
 import { errorMessage, type OnboardingFlow } from './logic';
 
@@ -53,8 +53,8 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   const [inviteError, setInviteError] = useState<string | null>(null);
 
   const { status } = useAuth();
-  const { mutateAsync: joinByInvite } = useJoinByInviteMutation();
-  const { mutate: leaveChallenge } = useLeaveChallengeMutation();
+  const { join: joinByInvite } = useInvite();
+  const { mutate: leaveChallenge } = useLeaveChallenge();
 
   // Oturum kapandığında (yükleniyor ara durumu sayılmaz) onboarding'in oturumlu adımları sıfırlanır
   const lastStatus = useRef(status);

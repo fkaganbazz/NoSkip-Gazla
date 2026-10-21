@@ -224,7 +224,7 @@ export interface GazlaApi {
   removeFriendship(userId: string): Promise<void>;
   /** friend_profile */
   getFriendProfile(userId: string): Promise<FriendProfile | null>;
-  /** poke_messages (ekranlar `usePokeMessages` ile src/content/pokes.ts listesini kullanır) */
+  /** poke_messages (ekranlar `usePoke().messages` ile src/content/pokes.ts listesini kullanır) */
   getPokeMessages(): Promise<PokeMessage[]>;
   /** poke_status — alıcıya bugün gönderilen ve kalan dürtme hakkı */
   getPokeStatus(userId: string): Promise<PokeStatus>;

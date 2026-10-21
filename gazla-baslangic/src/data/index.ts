@@ -1,4 +1,4 @@
-/** Ekranlar veriye buradan erişir: `import { useToday, type TodayTask } from '@/data'`. */
+/** Ekranlar veriye buradan erişir: `import { useTodayTasks, type TodayTask } from '@/data'`. */
 export {
   AD_RESCUE_RETRY_DELAYS_MS,
   adRescueSsvOptions,

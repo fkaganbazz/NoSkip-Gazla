@@ -4,9 +4,9 @@ import { StyleSheet, Text, View } from 'react-native';
 import { FriendList, FriendRow, FriendRowButton } from '@/components/FriendRow';
 import {
   ApiError,
-  useAcceptFriendRequestMutation,
+  useAcceptFriendRequest,
   useFriendRequests,
-  useSendFriendRequestMutation,
+  useSendFriendRequest,
   type SearchResult,
 } from '@/data';
 import { componentTypography, useTheme } from '@/theme';
@@ -20,8 +20,8 @@ import { onboardingMetrics as m } from '@/theme/onboarding';
 export default function PersonResults({ people }: { people: SearchResult[] }) {
   const { colors } = useTheme();
   const requests = useFriendRequests();
-  const sendRequest = useSendFriendRequestMutation();
-  const accept = useAcceptFriendRequestMutation();
+  const sendRequest = useSendFriendRequest();
+  const accept = useAcceptFriendRequest();
   const [sent, setSent] = useState<ReadonlySet<string>>(new Set());
   const [accepted, setAccepted] = useState<ReadonlySet<string>>(new Set());
 

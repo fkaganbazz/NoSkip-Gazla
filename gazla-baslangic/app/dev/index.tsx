@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { resetConsentForTesting } from '@/ads';
 import { SectionLabel } from '@/components/ui';
-import { adConsentShown, api, mockDev, useIsOnline, usePendingCheckins, useSignOutMutation } from '@/data';
+import { adConsentShown, api, mockDev, useIsOnline, usePendingCheckins, useSignOut } from '@/data';
 import { borderWidth, layout, radius, spacing, typography, useTheme } from '@/theme';
 
 type Row = { title: string; detail: string; href?: Href; onPress?: () => void };
@@ -55,7 +55,7 @@ const SCREENS: Row[] = [
 export default function DevIndex() {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
-  const signOut = useSignOutMutation();
+  const signOut = useSignOut();
   const online = useIsOnline();
   const pending = usePendingCheckins();
   const offline = mockDev.isOffline();

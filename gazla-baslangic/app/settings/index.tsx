@@ -20,11 +20,11 @@ import { SUPPORT_EMAIL, legalLinks, supportMailto, type LegalLink } from '@/conf
 import { PRIVACY_OPTIONS_FAILED } from '@/features/ad-consent/messages';
 import {
   useAuth,
-  useBlockedUsers,
+  useBlock,
   useMySettings,
-  useSignOutMutation,
-  useUpdateProfileMutation,
-  useUpdateSettingsMutation,
+  useProfile,
+  useSignOut,
+  useUpdateSettings,
   type ProfileUpdate,
   type SettingsUpdate,
 } from '@/data';
@@ -64,10 +64,10 @@ export default function SettingsScreen() {
   const { profile } = useAuth();
 
   const settings = useMySettings();
-  const blocked = useBlockedUsers();
-  const updateProfile = useUpdateProfileMutation();
-  const updateSettings = useUpdateSettingsMutation();
-  const signOut = useSignOutMutation();
+  const { blocked } = useBlock({ list: true });
+  const { update: updateProfile } = useProfile();
+  const { update: updateSettings } = useUpdateSettings();
+  const signOut = useSignOut();
   const [themePref, setThemePref] = useThemePreference();
   const toast = useToast();
   const flash = (message: string) => toast.show({ message });
@@ -76,8 +76,8 @@ export default function SettingsScreen() {
 
   // İyimser: anahtar ve seçim anında değişir; sunucu reddederse eski değere döner ve tost çıkar
   const onSaveError = (e: unknown) => flash(errorText(e));
-  const settingsPatch = useOptimisticPatch<SettingsUpdate>((u) => updateSettings.mutateAsync(u), onSaveError);
-  const profilePatch = useOptimisticPatch<ProfileUpdate>((u) => updateProfile.mutateAsync(u), onSaveError);
+  const settingsPatch = useOptimisticPatch<SettingsUpdate>((u) => updateSettings(u), onSaveError);
+  const profilePatch = useOptimisticPatch<ProfileUpdate>((u) => updateProfile(u), onSaveError);
 
   const openPage = (page: LegalLink) =>
     WebBrowser.openBrowserAsync(legalLinks[page]).catch(() => flash('Sayfa açılamadı. Biraz sonra tekrar dene.'));

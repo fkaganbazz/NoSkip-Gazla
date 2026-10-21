@@ -9,10 +9,10 @@ import { Button, Card, ErrorState, IconButton, LoadingState, ToastHost, useToast
 import {
   useAuth,
   useChallenge,
-  useChallengeBoard,
   useChallengeCalendar,
+  useChallengeMembers,
   useGarden,
-  useMarkFinishSeenMutation,
+  useMarkFinishSeen,
   useMyMembership,
 } from '@/data';
 import Confetti from '@/features/moments/Confetti';
@@ -42,11 +42,11 @@ export default function FinishedScreen() {
   const toast = useToast();
 
   const challenge = useChallenge(id);
-  const board = useChallengeBoard(id);
+  const board = useChallengeMembers(id);
   const membership = useMyMembership(id);
   const calendar = useChallengeCalendar(id);
   const garden = useGarden();
-  const markSeen = useMarkFinishSeenMutation();
+  const markSeen = useMarkFinishSeen();
 
   const status = challenge.data?.status;
   const unseen = !!membership.data && !membership.data.finishSeenAt;

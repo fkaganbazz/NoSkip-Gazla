@@ -7,10 +7,10 @@ import ActionSheet, { type ActionSheetItem } from '@/components/ActionSheet';
 import { HandIcon } from '@/components/icons';
 import { Avatar, ErrorState, IconButton, LoadingState, SectionLabel, ToastHost, useToast } from '@/components/ui';
 import {
-  useBlockUserMutation,
+  useBlock,
   useFriendProfile,
-  useJoinFriendChallengeMutation,
-  useRemoveFriendshipMutation,
+  useJoinFriendChallenge,
+  useRemoveFriendship,
   type FriendProfile,
   type JoinableChallenge,
 } from '@/data';
@@ -30,9 +30,9 @@ export default function FriendProfileScreen() {
   const { colors } = useTheme();
 
   const profile = useFriendProfile(id);
-  const remove = useRemoveFriendshipMutation();
-  const block = useBlockUserMutation();
-  const join = useJoinFriendChallengeMutation();
+  const remove = useRemoveFriendship();
+  const { block } = useBlock();
+  const join = useJoinFriendChallenge();
   const toast = useToast();
 
   const [menuOpen, setMenuOpen] = useState(false);
@@ -127,7 +127,7 @@ export default function FriendProfileScreen() {
         loading: block.isPending,
         error: block.error?.message,
       },
-      onPress: () => block.mutate(p.id, { onSuccess: done }),
+      onPress: () => block(p.id, { onSuccess: done }),
     },
     {
       key: 'report',

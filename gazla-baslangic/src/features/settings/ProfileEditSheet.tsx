@@ -9,7 +9,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { CameraIcon } from '@/components/icons';
 import Sheet from '@/components/Sheet';
 import { Avatar, Button, IconButton, TextField } from '@/components/ui';
-import { ApiError, useUpdateProfileMutation, useUsernameAvailable, type Profile, type ProfileUpdate } from '@/data';
+import { ApiError, useProfile, useUsernameCheck, type Profile, type ProfileUpdate } from '@/data';
 import { componentColors, componentMetrics as cm, typography, useTheme } from '@/theme';
 import { settingsMetrics as m, settingsTypography as t } from '@/theme/settings';
 
@@ -27,7 +27,7 @@ type Props = {
 export default function ProfileEditSheet({ visible, profile, onClose, onSaved }: Props) {
   const { colors, scheme } = useTheme();
   const camera = cm.cameraBadge;
-  const update = useUpdateProfileMutation();
+  const { update } = useProfile();
 
   const [name, setName] = useState(profile.displayName);
   const [username, setUsername] = useState(profile.username);
@@ -54,7 +54,7 @@ export default function ProfileEditSheet({ visible, profile, onClose, onSaved }:
   const normalized = normalizeUsername(username);
   const usernameChanged = normalized !== profile.username;
   const formatProblem = usernameChanged ? usernameProblem(username) : null;
-  const availability = useUsernameAvailable(usernameChanged && !formatProblem ? debounced : '');
+  const availability = useUsernameCheck(usernameChanged && !formatProblem ? debounced : '');
   const checking = usernameChanged && !formatProblem && (debounced !== normalized || availability.isFetching);
   const taken = usernameChanged && !formatProblem && !checking && availability.data === false;
 
@@ -89,7 +89,7 @@ export default function ProfileEditSheet({ visible, profile, onClose, onSaved }:
 
   const save = () => {
     setSaveError(null);
-    update.mutate(changes, {
+    update(changes, {
       onSuccess: onSaved,
       onError: (e) => setSaveError(e instanceof ApiError && e.code === '23505' ? null : errorText(e)),
     });

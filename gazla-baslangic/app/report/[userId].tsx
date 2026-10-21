@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ClockIcon } from '@/components/icons';
 import { Button, Checkbox, ScreenHeader, TextField } from '@/components/ui';
-import { useFriendProfile, useSubmitReportMutation, type ReportReason, type ReportTarget } from '@/data';
+import { useFriendProfile, useReport, type ReportReason, type ReportTarget } from '@/data';
 import { toAccusative } from '@/features/friends/names';
 import ReasonList from '@/features/report/ReasonList';
 import { componentTypography, layout, typography, useTheme } from '@/theme';
@@ -52,7 +52,7 @@ export default function ReportScreen() {
   const [alsoBlock, setAlsoBlock] = useState(true);
   // Engellenince profil artık okunamaz; teşekkür metni için ad gönderirken saklanır
   const [sentName, setSentName] = useState<string | null>(null);
-  const submit = useSubmitReportMutation();
+  const { submit } = useReport();
   const sent = submit.isSuccess;
   const blocked = sent && !!submit.variables?.alsoBlock;
 
@@ -73,7 +73,7 @@ export default function ReportScreen() {
 
   const onSubmit = () => {
     setSentName(name);
-    submit.mutate({
+    submit({
       target,
       reason,
       details: details.trim() || undefined,

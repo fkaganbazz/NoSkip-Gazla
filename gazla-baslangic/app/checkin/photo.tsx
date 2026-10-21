@@ -18,7 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CameraIcon, ChevronRightIcon, LockIcon, SendIcon } from '@/components/icons';
 import { Button, ErrorState, IconButton, LoadingState, TextField } from '@/components/ui';
-import { useCheckinMutation, useToday, useUndoCheckinMutation } from '@/data';
+import { useCheckin, useTodayTasks } from '@/data';
 import CameraPane from '@/features/checkin/CameraPane';
 import GroupSheet from '@/features/checkin/GroupSheet';
 import { formatClock } from '@/features/checkin/logic';
@@ -36,7 +36,7 @@ const IS_WEB = Platform.OS === 'web';
 // önizleme: foto, "Bugün · SS:DD", not, "Kimler görecek", "Tekrar çek" ve "Gönder". Kamera izni istenmediyse
 // ekran açılınca istenir; reddedildiyse yeniden isteme ya da Ayarlar bağlantısı; galeriden seçme her zaman açık.
 // Kamera yoksa (web'de kamera bulunamadı, simülatör) yalnızca galeri.
-// Gönder: görsel küçültülür (uzun kenar 1080, JPEG %80) ve useCheckinMutation'a verilir; veri katmanı önce
+// Gönder: görsel küçültülür (uzun kenar 1080, JPEG %80) ve useCheckin().submitPhoto'ya verilir; veri katmanı önce
 // Storage'a yükler, sonra checkin çağırır (çevrimdışıysa dosyayı kuyruğa kopyalar). Küçültme + yükleme
 // boyunca buton yükleniyor.
 // Gün zaten gönderildiyse çerçevede gönderilen fotoğraf durur ("Tekrar çek" kamerayı açar, "Gönder" değiştirir);
@@ -45,9 +45,8 @@ export default function PhotoProofScreen() {
   // /checkin/photo?challengeId=…&date=YYYY-AA-GG (date: işaretlenecek yerel gün; yoksa my_today'deki ilk satırı)
   const { challengeId, date } = useLocalSearchParams<{ challengeId: string; date?: string }>();
   const router = useRouter();
-  const today = useToday();
-  const checkin = useCheckinMutation();
-  const undo = useUndoCheckinMutation();
+  const today = useTodayTasks();
+  const checkin = useCheckin();
   const camera = useCameraAccess();
 
   const task = useMemo(
@@ -79,7 +78,7 @@ export default function PhotoProofScreen() {
 
   const send = async () => {
     if (!task || !photo || compressing) return;
-    undo.reset();
+    checkin.undo.reset();
     setPickError(null);
     setCompressing(true);
     let uri = photo.uri;
@@ -89,7 +88,7 @@ export default function PhotoProofScreen() {
       // Küçültülemedi (bozuk/desteklenmeyen dosya): özgün dosya gönderilir
     }
     setCompressing(false);
-    checkin.mutate(
+    checkin.submitPhoto(
       { challengeId: task.challengeId, localDate: task.localDate, photoFileUri: uri, note: note.trim() || undefined },
       { onSuccess: () => router.back() },
     );
@@ -133,14 +132,14 @@ export default function PhotoProofScreen() {
   const leftTitle =
     photo || sentUri ? (cameraCapable ? 'Tekrar çek' : 'Başka seç') : cameraCapable ? 'Galeriden seç' : 'Fotoğraf seç';
   const leftAction = photo || sentUri ? retake : pickFromLibrary;
-  const sending = compressing || checkin.isPending;
-  const error = pickError ?? checkin.error?.message ?? undo.error?.message ?? null;
+  const sending = compressing || checkin.submitPhoto.isPending;
+  const error = pickError ?? checkin.submitPhoto.error?.message ?? checkin.undo.error?.message ?? null;
   // Geri alma sürerken de görünür (iyimser güncelleme görevi hemen "yapılmadı" yapar)
-  const canUndo = task.done || undo.isPending;
+  const canUndo = task.done || checkin.undo.isPending;
   const undoDay = () => {
-    checkin.reset();
+    checkin.submitPhoto.reset();
     setPickError(null);
-    undo.mutate({ challengeId: task.challengeId, localDate: task.localDate }, { onSuccess: () => router.back() });
+    checkin.undo({ challengeId: task.challengeId, localDate: task.localDate }, { onSuccess: () => router.back() });
   };
 
   return (
@@ -255,7 +254,7 @@ export default function PhotoProofScreen() {
                 size="md"
                 title="Gönder"
                 onPress={send}
-                disabled={!photo || undo.isPending}
+                disabled={!photo || checkin.undo.isPending}
                 loading={sending}
                 accessibilityLabel={sending ? 'Gönderiliyor' : 'Gönder'}
                 icon={(color) => (
@@ -271,7 +270,7 @@ export default function PhotoProofScreen() {
                 size="md"
                 title="Bugünü geri al"
                 onPress={undoDay}
-                loading={undo.isPending}
+                loading={checkin.undo.isPending}
                 disabled={sending}
                 accessibilityHint="Bugünkü fotoğraf kanıtı silinir, görev yapılmadı olur"
               />

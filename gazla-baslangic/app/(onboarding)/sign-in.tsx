@@ -11,9 +11,9 @@ import { legalLinks, type LegalLink as LegalLinkKind } from '@/config/links';
 import {
   isCancelledError,
   type OAuthProvider,
-  useSignInWithEmailMutation,
-  useSignInWithProviderMutation,
-  useTemplates,
+  useChallengeTemplates,
+  useSignInWithEmail,
+  useSignInWithProvider,
 } from '@/data';
 import { errorMessage } from '@/features/onboarding/logic';
 import { useOnboarding } from '@/features/onboarding/OnboardingProvider';
@@ -31,11 +31,11 @@ export default function SignInScreen() {
   const { colors, scheme } = useTheme();
   const c = onboardingColors[scheme];
   const { pickedTemplateId } = useOnboarding();
-  const templates = useTemplates();
+  const templates = useChallengeTemplates();
   const picked = pickedTemplateId ? templates.data?.find((x) => x.id === pickedTemplateId) : undefined;
 
-  const providerSignIn = useSignInWithProviderMutation();
-  const emailSignIn = useSignInWithEmailMutation();
+  const providerSignIn = useSignInWithProvider();
+  const emailSignIn = useSignInWithEmail();
   const [pendingProvider, setPendingProvider] = useState<OAuthProvider | null>(null);
   const [emailOpen, setEmailOpen] = useState(false);
   const [email, setEmail] = useState('');

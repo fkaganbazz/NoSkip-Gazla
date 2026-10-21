@@ -19,7 +19,7 @@ import { useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
 
 import { INVITE_BASE_URL, WEB_BASE_URL } from '@/config/links';
-import { useAuth, useRegisterPushTokenMutation } from '@/data';
+import { useAuth, useRegisterPushToken } from '@/data';
 
 import { ensureNotificationChannels } from './channels';
 import { notificationPath, type LinkOrigins } from './links';
@@ -66,7 +66,7 @@ export function useNotificationsBootstrap({ canNavigate }: NotificationsBootstra
   const router = useRouter();
   const { status, session } = useAuth();
   const userId = status === 'ready' ? (session?.userId ?? null) : null;
-  const { mutateAsync: registerToken } = useRegisterPushTokenMutation();
+  const { mutateAsync: registerToken } = useRegisterPushToken();
 
   const pendingPath = useRef<string | null>(null);
   const canNavigateRef = useRef(canNavigate);

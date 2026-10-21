@@ -3,20 +3,19 @@ import * as Linking from 'expo-linking';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, Share } from 'react-native';
 
-import { inviteLink } from '@/config/links';
-import { ApiError, useCreateInviteCodeMutation } from '@/data';
+import { ApiError, useInvite } from '@/data';
 
 /** Paylaşılan metin */
 export const inviteMessage = (title: string, url: string) =>
   `Gazla'da "${title}" challenge'ına katıl, birlikte gazlayalım: ${url}`;
 
 /**
- * Challenge'ın davet kodu (create_invite). Aynı kişi için sunucu aynı kodu döner; ekran açılınca
- * bir kez istenir, hatada yeniden denenir.
+ * Challenge'ın davet linki (`useInvite().createLink`, create_invite). Aynı kişi için sunucu aynı kodu döner;
+ * ekran açılınca bir kez istenir, hatada yeniden denenir.
  */
 export function useInviteCode(challengeId: string | null) {
-  const { mutateAsync } = useCreateInviteCodeMutation();
-  const [code, setCode] = useState<string | null>(null);
+  const { createLink } = useInvite();
+  const [url, setUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const requested = useRef<string | null>(null);
 
@@ -24,20 +23,20 @@ export function useInviteCode(challengeId: string | null) {
     if (!challengeId) return;
     requested.current = challengeId;
     setError(null);
-    mutateAsync(challengeId)
-      .then((c) => requested.current === challengeId && setCode(c))
+    createLink(challengeId)
+      .then((link) => requested.current === challengeId && setUrl(link))
       .catch((e: unknown) => setError(e instanceof ApiError ? e.message : 'Davet linki şu an oluşturulamadı.'));
-  }, [challengeId, mutateAsync]);
+  }, [challengeId, createLink]);
 
   useEffect(() => {
     if (challengeId && requested.current !== challengeId) {
-      setCode(null);
+      setUrl(null);
       load();
     }
   }, [challengeId, load]);
 
   // https://<alan>/d/<kod> (src/config/links.ts); açan kişi InviteLanding'e düşer
-  return { code, url: code ? inviteLink(code) : null, error, retry: load };
+  return { url, error, retry: load };
 }
 
 export type InviteCode = ReturnType<typeof useInviteCode>;

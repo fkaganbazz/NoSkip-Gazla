@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { FriendRow } from '@/components/FriendRow';
 import Sheet from '@/components/Sheet';
 import { ErrorState, LoadingState } from '@/components/ui';
-import { ApiError, useAuth, useChallengeBoard } from '@/data';
+import { ApiError, useAuth, useChallengeMembers } from '@/data';
 import { typography, useTheme } from '@/theme';
 import { photoProofMetrics as m } from '@/theme/checkin';
 
@@ -21,7 +21,7 @@ type Props = {
 export default function GroupSheet({ visible, challengeId, onClose }: Props) {
   const { session } = useAuth();
   // Sayfa açılmadan yüklenir (açılınca liste hazır)
-  const board = useChallengeBoard(challengeId);
+  const board = useChallengeMembers(challengeId);
   return (
     <Sheet visible={visible} onClose={onClose} title="Kimler görecek" surface scrollable scheme="dark">
       <GroupSheetBody board={board} meId={session?.userId} />
@@ -30,7 +30,7 @@ export default function GroupSheet({ visible, challengeId, onClose }: Props) {
 }
 
 /** Sayfanın içeriği: Sheet'in koyu modu altında çizilir (useTheme koyu döner) */
-function GroupSheetBody({ board, meId }: { board: ReturnType<typeof useChallengeBoard>; meId?: string }) {
+function GroupSheetBody({ board, meId }: { board: ReturnType<typeof useChallengeMembers>; meId?: string }) {
   const { colors } = useTheme();
   const members = board.data ?? [];
 

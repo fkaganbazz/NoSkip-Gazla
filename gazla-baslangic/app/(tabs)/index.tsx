@@ -9,12 +9,11 @@ import { ErrorState, Skeleton, SkeletonTaskCard, useToast } from '@/components/u
 import {
   ApiError,
   useAuth,
-  useCheckinMutation,
+  useCheckin,
   useFriendsToday,
-  usePendingRescues,
+  useRescueStreak,
   useStreak,
-  useToday,
-  useUndoCheckinMutation,
+  useTodayTasks,
   useUnreadCount,
   useUnseenFinished,
 } from '@/data';
@@ -43,14 +42,13 @@ export default function TodayScreen() {
   const now = useNow();
   const { profile } = useAuth();
 
-  const today = useToday();
+  const today = useTodayTasks();
   const streak = useStreak();
   const friends = useFriendsToday();
   const unreadCount = useUnreadCount();
-  const rescues = usePendingRescues();
+  const rescues = useRescueStreak();
   const finished = useUnseenFinished();
-  const checkin = useCheckinMutation();
-  const undo = useUndoCheckinMutation();
+  const checkin = useCheckin();
   const toast = useToast();
   const [toastHeight, setToastHeight] = useState(0);
 
@@ -121,14 +119,14 @@ export default function TodayScreen() {
       if (!task) return;
       const target = { challengeId: task.challengeId, localDate: task.localDate };
       if (task.taskType === 'check') {
-        if (task.done) undo.mutate(target, { onError: showError });
-        else checkin.mutate(target, { onError: showError });
+        if (task.done) checkin.undo(target, { onError: showError });
+        else checkin.mark(target, { onError: showError });
       } else {
         const params = { challengeId: task.challengeId, date: task.localDate };
         router.push({ pathname: task.taskType === 'number' ? '/checkin/number' : '/checkin/photo', params });
       }
     },
-    [findTask, checkin, undo, router, showError],
+    [findTask, checkin.mark, checkin.undo, router, showError],
   );
 
   // Kart gövdesi: işaretle tipi → challenge detayı; sayı → sayı gir; fotoğraf → fotoğraf kanıtı

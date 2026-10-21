@@ -11,10 +11,7 @@ import {
   ApiError,
   useFriendProfile,
   useFriendsToday,
-  usePokeMessages,
-  usePokeStatus,
-  useSendPokeMutation,
-  useUndoPokeMutation,
+  usePoke,
   type PokeTone,
 } from '@/data';
 import { ShieldIcon } from '@/features/friends/icons';
@@ -33,8 +30,8 @@ const UNDO_MS = 30_000;
 const defaultIndex = (tone: PokeTone) => (tone === 'roast' ? 1 : 0);
 
 // Dürt — design/Poke.dc.html (alt sayfa, `Sheet`; üstünde Diken + balon). Hazır mesajlar src/content/pokes.ts
-// (usePokeMessages). "Laf sok" yalnızca alıcının sert modu açıksa seçilebilir; kapalıysa sekme pasif (Segmented `disabled`).
-// Günlük sınır (usePokeStatus): hak bitince gönder pasif. Gönderince 30 sn "Geri al" tostu, süre bitince
+// (usePoke().messages). "Laf sok" yalnızca alıcının sert modu açıksa seçilebilir; kapalıysa sekme pasif (Segmented `disabled`).
+// Günlük sınır (usePoke(userId).status): hak bitince gönder pasif. Gönderince 30 sn "Geri al" tostu, süre bitince
 // sayfa kapanır. Parametreler: userId; isteğe bağlı tone ('hype' — "Gaz ver" butonlarından) ve challengeId.
 export default function PokeSheet() {
   const params = useLocalSearchParams<{ userId: string; tone?: PokeTone; challengeId?: string }>();
@@ -46,10 +43,9 @@ export default function PokeSheet() {
 
   const friends = useFriendsToday();
   const profile = useFriendProfile(userId);
-  const messages = usePokeMessages();
-  const status = usePokeStatus(userId);
-  const send = useSendPokeMutation();
-  const undo = useUndoPokeMutation();
+  // send / undo, hazır mesajlar ve alıcının bugünkü dürtme durumu
+  const poke = usePoke(userId);
+  const { messages, status } = poke;
 
   const friend = friends.data?.find((f) => f.id === userId);
   const person = friend ?? profile.data ?? null;
@@ -65,10 +61,10 @@ export default function PokeSheet() {
   const activeTone: PokeTone = !harsh ? 'hype' : (tone ?? 'roast');
   const list = useMemo(
     () =>
-      (messages.data ?? [])
+      messages
         .filter((x) => x.isActive && x.tone === activeTone)
         .sort((a, b) => a.sortOrder - b.sortOrder),
-    [messages.data, activeTone],
+    [messages, activeTone],
   );
   const selectedKey =
     pickedKey && list.some((x) => x.key === pickedKey)
@@ -86,11 +82,10 @@ export default function PokeSheet() {
     return () => clearTimeout(id);
   }, [sentId]);
 
-  const loading = messages.isPending || (friends.isPending && profile.isPending);
+  const loading = friends.isPending && profile.isPending;
 
   const body = () => {
     if (loading) return <LoadingState />;
-    if (messages.isError) return <ErrorState onRetry={() => messages.refetch()} />;
     if (!person) return <ErrorState message="Bu kişiyi şu an dürtemezsin." />;
 
     const name = person.displayName;
@@ -107,7 +102,7 @@ export default function PokeSheet() {
       : activeTone === 'roast'
         ? `${name} sert modu açtı, laf sokabilirsin.`
         : 'Gaz mesajları herkese her zaman açık.';
-    const error = [send.error, undo.error].find((e) => e instanceof ApiError) as ApiError | undefined;
+    const error = [poke.send.error, poke.undo.error].find((e) => e instanceof ApiError) as ApiError | undefined;
     const limitNote =
       status.data?.remaining === 0 ? `Bugün ${toAccusative(name)} ${status.data.dailyLimit} kez dürttün, yarın yine dene.` : null;
 
@@ -176,26 +171,26 @@ export default function PokeSheet() {
               message={`${toDative(name)} gönderildi`}
               action={{
                 label: 'Geri al',
-                onPress: () => undo.mutate(sentId, { onSuccess: () => setSentId(null) }),
+                onPress: () => poke.undo(sentId, { onSuccess: () => setSentId(null) }),
               }}
             />
           ) : (
             <Button
               title={`${toDative(name)} gönder`}
               icon={(color) => <SendIcon color={color} size={cm.buttonIconSize} strokeWidth={cm.buttonIconStroke} />}
-              loading={send.isPending}
+              loading={poke.send.isPending}
               disabled={!selectedKey || limitReached}
               onPress={() => {
                 if (!selectedKey) return;
-                undo.reset();
-                send.mutate(
+                poke.undo.reset();
+                // Ton seçilen mesajdan (gaz/laf listesi aktif sekmeye göre)
+                poke.send(
                   {
-                    recipientId: userId,
-                    tone: activeTone,
-                    messageKey: selectedKey,
+                    toUserId: userId,
+                    messageId: selectedKey,
                     challengeId: params.challengeId ?? friend?.sharedChallengeId ?? undefined,
                   },
-                  { onSuccess: (poke) => setSentId(poke.id) },
+                  { onSuccess: (sent) => setSentId(sent.id) },
                 );
               }}
             />

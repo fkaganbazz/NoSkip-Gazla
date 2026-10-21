@@ -4,7 +4,7 @@ import { AppState, Linking, StyleSheet, Text, View } from 'react-native';
 import { ShareIcon } from '@/components/icons';
 import Sheet from '@/components/Sheet';
 import { Button, ErrorState, LoadingState } from '@/components/ui';
-import { ApiError, hashContactEmails, useFindContactsMutation, type SearchResult } from '@/data';
+import { ApiError, hashContactEmails, useFindContacts, type SearchResult } from '@/data';
 import { spacing, typography, useTheme } from '@/theme';
 import { onboardingMetrics as m } from '@/theme/onboarding';
 
@@ -37,7 +37,7 @@ type Props = {
 export default function ContactsSheet({ visible, onClose, shareMessage }: Props) {
   const { colors } = useTheme();
   const [phase, setPhase] = useState<Phase>({ kind: 'loading' });
-  const { mutateAsync: findContacts } = useFindContactsMutation();
+  const { mutateAsync: findContacts } = useFindContacts();
   const run = useRef(0);
 
   const load = useCallback(async () => {

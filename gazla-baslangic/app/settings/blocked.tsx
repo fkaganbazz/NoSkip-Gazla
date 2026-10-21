@@ -3,17 +3,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FriendList, FriendRow, FriendRowButton } from '@/components/FriendRow';
 import { ErrorState, LoadingState, ScreenHeader, ToastHost, useToast } from '@/components/ui';
-import { useBlockedUsers, useUnblockUserMutation } from '@/data';
+import { useBlock } from '@/data';
 import { errorText } from '@/features/settings/logic';
 import { layout, typography, useTheme } from '@/theme';
 import { settingsMetrics as m } from '@/theme/settings';
 
-// Engellenenler — tasarım dosyası yok; ortak kişi listesi (FriendList + FriendRow). Veri: blocks (useBlockedUsers).
+// Engellenenler — tasarım dosyası yok; ortak kişi listesi (FriendList + FriendRow). Veri: blocks (useBlock({ list: true }).blocked).
 export default function BlockedScreen() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  const blocked = useBlockedUsers();
-  const unblock = useUnblockUserMutation();
+  const { blocked, unblock } = useBlock({ list: true });
   const toast = useToast();
 
   const top = { paddingTop: insets.top + layout.screenTopGap };
@@ -63,7 +62,7 @@ export default function BlockedScreen() {
                         disabled={unblock.isPending && !busy}
                         accessibilityLabel={`${u.displayName} engelini kaldır`}
                         onPress={() =>
-                          unblock.mutate(u.id, {
+                          unblock(u.id, {
                             onSuccess: () => toast.show({ message: `Engel kaldırıldı: ${u.displayName}` }),
                             onError: (e) => toast.show({ message: errorText(e) }),
                           })

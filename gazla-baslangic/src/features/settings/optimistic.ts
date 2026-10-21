@@ -3,7 +3,7 @@
  * görünür, istek arkada gider. Sunucu reddederse ekran sunucudaki değere döner ve hata bildirilir.
  * Aynı alana art arda dokunulursa yalnızca sonuncunun sonucu sayılır (eskisinin hatası tost çıkarmaz).
  * Başarıda bekleyen değer bırakılır; o anda sorgu verisi zaten günceldir (kanca yazmadan sonra önbelleği
- * günceller ya da yeniler, `mutateAsync` bundan sonra çözülür).
+ * günceller ya da yeniler, eylemin Promise'i bundan sonra çözülür).
  */
 import { useRef, useState } from 'react';
 

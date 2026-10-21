@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AddAvatar } from '@/components/Avatar';
 import { AddIcon, CalendarIcon, ClockIcon, LockIcon, MinusIcon } from '@/components/icons';
 import { Avatar, Button, Card, Chip, IconButton, ScreenHeader, TextField, Toggle } from '@/components/ui';
-import { useCreateChallengeMutation, useFriendsToday, useTemplates } from '@/data';
+import { useChallengeTemplates, useCreateChallenge, useFriendsToday } from '@/data';
 import {
   DURATION_OPTIONS,
   TASK_OPTIONS,
@@ -77,9 +77,9 @@ export default function CreateScreen({ onCreated, onClose, initialTemplateId, in
   const { colors, scheme } = useTheme();
   const c = createColors[scheme];
 
-  const templates = useTemplates();
+  const templates = useChallengeTemplates();
   const friends = useFriendsToday();
-  const create = useCreateChallengeMutation();
+  const { create } = useCreateChallenge();
 
   const [form, setForm] = useState<CreateForm>(() => ({ ...INITIAL, ...durationPatch(initialDurationDays) }));
   const [panel, setPanel] = useState<Panel>(null);
@@ -112,7 +112,7 @@ export default function CreateScreen({ onCreated, onClose, initialTemplateId, in
 
   const submit = () => {
     if (!input) return;
-    create.mutate(input, {
+    create(input, {
       onSuccess: (challenge) => {
         if (onCreated) onCreated(challenge.id);
         else router.replace({ pathname: '/challenge/[id]', params: { id: challenge.id } });

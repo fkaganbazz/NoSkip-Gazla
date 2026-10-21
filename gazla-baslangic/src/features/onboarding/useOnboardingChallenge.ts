@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { useCreateChallengeMutation } from '@/data';
+import { useCreateChallenge } from '@/data';
 
 import { errorMessage } from './logic';
 import { useOnboarding } from './OnboardingProvider';
@@ -16,7 +16,7 @@ import { useOnboarding } from './OnboardingProvider';
  */
 export function useOnboardingChallenge() {
   const { pickedTemplateId, createdChallengeId, setCreatedChallenge } = useOnboarding();
-  const { mutateAsync } = useCreateChallengeMutation();
+  const { create: createChallenge } = useCreateChallenge();
   const [error, setError] = useState<string | null>(null);
   /** Oluşturması başlatılan şablon (seçim davet adımından geri dönülüp değişirse yenisi oluşturulur) */
   const started = useRef<string | null>(null);
@@ -25,10 +25,10 @@ export function useOnboardingChallenge() {
     if (!pickedTemplateId) return;
     started.current = pickedTemplateId;
     setError(null);
-    mutateAsync({ templateId: pickedTemplateId })
+    createChallenge({ templateId: pickedTemplateId })
       .then((challenge) => setCreatedChallenge(challenge.id))
       .catch((e: unknown) => setError(errorMessage(e)));
-  }, [pickedTemplateId, mutateAsync, setCreatedChallenge]);
+  }, [pickedTemplateId, createChallenge, setCreatedChallenge]);
 
   useEffect(() => {
     if (pickedTemplateId && !createdChallengeId && started.current !== pickedTemplateId) create();

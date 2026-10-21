@@ -37,7 +37,7 @@ export const POKE_MESSAGES: readonly PokeMessageContent[] = [
 
 /**
  * Aktivite "Tebrik et" (arkadaş challenge bitirdi): seçim sayfası açılmadan doğrudan gönderilen gaz
- * mesajı. `useSendPokeMutation().mutate({ recipientId, tone: CONGRATS_POKE.tone, messageKey: CONGRATS_POKE.id })`
+ * mesajı. `usePoke().send({ toUserId, messageId: CONGRATS_POKE_ID })`
  */
 export const CONGRATS_POKE_ID = 'proud_of_you';
 export const CONGRATS_POKE = POKE_MESSAGES.find((m) => m.id === CONGRATS_POKE_ID)!;

@@ -5,7 +5,7 @@ import { Avatar } from '@/components/Avatar';
 import { FriendRowButton } from '@/components/FriendRow';
 import { DikenFaceIcon, MessageIcon, StarIcon } from '@/components/icons';
 import SpeechBubble from '@/components/SpeechBubble';
-import { useMyMembership, useRespondToInviteMutation, type ActivityItem } from '@/data';
+import { useMyMembership, useRespondToInvite, type ActivityItem } from '@/data';
 import { borderWidth, cardColors, cardTypography, useTheme } from '@/theme';
 import { socialColors, socialMetrics as m, socialTypography } from '@/theme/social';
 
@@ -176,7 +176,7 @@ export default function ActivityRow({ item, now, rich, divider, actions }: Props
 
 /** Açık challenge davetine yanıt: Katıl / Reddet (respond_to_invite) */
 function InviteActions({ challengeId }: { challengeId: string }) {
-  const respond = useRespondToInviteMutation();
+  const respond = useRespondToInvite();
   const { colors } = useTheme();
   const busy = respond.isPending ? respond.variables?.accept : undefined;
   return (

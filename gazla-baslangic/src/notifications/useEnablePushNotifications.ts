@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 
-import { useAuth, useRegisterPushTokenMutation } from '@/data';
+import { useAuth, useRegisterPushToken } from '@/data';
 
 import { getPushToken, requestPushPermission, type PushToken } from './push';
 import { markRegistered } from './registration';
@@ -58,7 +58,7 @@ export async function enablePushNotifications({
  */
 export function useEnablePushNotifications() {
   const { session } = useAuth();
-  const { mutateAsync: registerToken } = useRegisterPushTokenMutation();
+  const { mutateAsync: registerToken } = useRegisterPushToken();
   const [pending, setPending] = useState(false);
   const busy = useRef(false);
   const userId = session?.userId ?? null;

@@ -5,7 +5,7 @@
  * 2. Kullanıcı ödülü kazanınca Google, AdMob SSV geri çağrısını Edge Function `admob-ssv`'ye gönderir;
  *    fonksiyon imzayı doğrular ve `grant_ad_rescue(user_id, challenge_id, missed_date, transaction_id)`
  *    çağırır (kurallar sunucuda).
- * 3. Ekran `useRescueWithAdMutation().mutate({ challengeId, missedDate })` çağırır: doğrulama gelene
+ * 3. Ekran `useRescueStreak().rescue({ via: 'ad', challengeId, missedDate })` çağırır: doğrulama gelene
  *    kadar ('AD_REWARD_PENDING') kanca artan aralıklarla birkaç kez yeniden dener.
  */
 import type { LocalDate } from './types';
@@ -22,7 +22,7 @@ export function adRescueSsvOptions(userId: string, challengeId: string, missedDa
 }
 
 /**
- * `useRescueWithAdMutation` yeniden deneme aralıkları (ms): SSV geri çağrısı genelde birkaç saniyede
- * gelir. Toplam ~30 sn sonra hâlâ yoksa 'AD_REWARD_PENDING' hatası ekrana döner.
+ * `useRescueStreak().rescue({ via: 'ad' })` yeniden deneme aralıkları (ms): SSV geri çağrısı genelde
+ * birkaç saniyede gelir. Toplam ~30 sn sonra hâlâ yoksa 'AD_REWARD_PENDING' hatası ekrana döner.
  */
 export const AD_RESCUE_RETRY_DELAYS_MS = [1500, 2500, 4000, 6000, 8000, 10000] as const;

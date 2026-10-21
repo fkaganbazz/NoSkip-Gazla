@@ -1,10 +1,10 @@
 /**
  * Oturumsuz açılan davet linki (InviteLanding "Katıl ve başla", docs/EKRANLAR.md 3.6): kod cihazda
  * saklanır, giriş + onboarding bitince ekran `takePendingInvite()` ile alır ve
- * `useJoinByInviteMutation()` ile katılımı tamamlar. Okununca silinir (iki kez katılma denenmez).
+ * `useInvite().join(code)` ile katılımı tamamlar. Okununca silinir (iki kez katılma denenmez).
  *
  *   // InviteLanding, oturum yok:   await savePendingInvite(code); router.push('/sign-in')
- *   // onboarding bitti:            const code = await takePendingInvite(); if (code) join.mutate(code)
+ *   // onboarding bitti:            const code = await takePendingInvite(); if (code) join(code)
  *
  * Eski bir kod sonsuza kadar beklemesin diye 7 gün sonra yok sayılır.
  */

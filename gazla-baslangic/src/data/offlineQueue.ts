@@ -1,6 +1,6 @@
 /**
- * Çevrimdışı işaretleme kuyruğu (MMKV, `storage.ts`). `useCheckinMutation` ve
- * `useUndoCheckinMutation` çevrimdışıyken ya da istek ağ hatasıyla düşerse işlemi buraya yazar;
+ * Çevrimdışı işaretleme kuyruğu (MMKV, `storage.ts`). `useCheckin()` işaretleme (`mark`, `submitNumber`,
+ * `submitPhoto`) ve geri alma (`undo`) eylemleri çevrimdışıyken ya da istek ağ hatasıyla düşerse işlemi buraya yazar;
  * ekran iyimser durumu hemen gösterir ve kullanıcıya hata gösterilmez.
  *
  * Kurallar:

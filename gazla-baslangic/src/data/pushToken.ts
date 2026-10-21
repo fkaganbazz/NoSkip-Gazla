@@ -1,6 +1,6 @@
 /**
- * Bu cihazın kayıtlı Expo push token'ı (MMKV). `useRegisterPushTokenMutation` sunucuya yazınca
- * saklanır; çıkışta (`useSignOutMutation`) sunucudaki satır silinir (push_tokens owner delete) ki
+ * Bu cihazın kayıtlı Expo push token'ı (MMKV). `useRegisterPushToken` sunucuya yazınca
+ * saklanır; çıkışta (`useSignOut`) sunucudaki satır silinir (push_tokens owner delete) ki
  * cihaz el değiştirince eski hesabın bildirimleri gelmesin. Hesap silmede satır zincirleme silinir.
  */
 import { readJson, removeKey, writeJson } from './storage';

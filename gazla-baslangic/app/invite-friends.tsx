@@ -4,7 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, ErrorState, IconButton, LoadingState } from '@/components/ui';
-import { useToday } from '@/data';
+import { useTodayTasks } from '@/data';
 import InviteFriends from '@/features/invite-friends/InviteFriends';
 import { StepIntro } from '@/features/onboarding/StepScreen';
 import { layout, spacing, useTheme } from '@/theme';
@@ -14,7 +14,7 @@ import { layout, spacing, useTheme } from '@/theme';
 export default function InviteFriendsModal() {
   const router = useRouter();
   const { challengeId: param } = useLocalSearchParams<{ challengeId?: string }>();
-  const today = useToday();
+  const today = useTodayTasks();
   const close = () => (router.canGoBack() ? router.back() : router.replace('/'));
 
   const challengeId = param ?? today.data?.[0]?.challengeId ?? null;

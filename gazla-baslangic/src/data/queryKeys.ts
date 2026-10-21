@@ -29,8 +29,6 @@ export const queryKeys = {
   search: (q: string) => ['friends', 'search', q] as const,
   friendProfile: (id: string) => ['friends', 'profile', id] as const,
   pokeStatus: (id: string) => ['friends', 'pokeStatus', id] as const,
-  pokeMessages: ['pokeMessages'] as const,
-  activity: ['activity'] as const,
   activityPages: ['activity', 'pages'] as const,
   unreadCount: ['activity', 'unread'] as const,
   blocked: ['blocked'] as const,

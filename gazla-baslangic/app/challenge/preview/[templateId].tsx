@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AvatarStack } from '@/components/Avatar';
 import { Button, Chip, ErrorState, LoadingState, Segmented } from '@/components/ui';
-import { useCreateChallengeMutation, useTemplates, useTemplateStats } from '@/data';
+import { useChallengeTemplates, useCreateChallenge, useTemplateStats } from '@/data';
 import PreviewFeatures from '@/features/explore/PreviewFeatures';
 import PreviewHero from '@/features/explore/PreviewHero';
 import { CATEGORY_NAMES, DIFFICULTY_NAMES, TASK_TYPE_NAMES, type DurationOption } from '@/features/explore/labels';
@@ -23,9 +23,9 @@ export default function TemplatePreviewScreen() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
 
-  const templates = useTemplates();
+  const templates = useChallengeTemplates();
   const stats = useTemplateStats(templateId);
-  const create = useCreateChallengeMutation();
+  const { create } = useCreateChallenge();
   const template = templates.data?.find((t) => t.id === templateId);
 
   // Seçilmediyse şablonun varsayılan süresi
@@ -69,7 +69,7 @@ export default function TemplatePreviewScreen() {
     if (create.isPending) return;
     // Çevrimdışıyken hemen NetworkError ile düşer (yazmalar beklemeye alınmaz; DataProvider)
     setMode(next);
-    create.mutate(
+    create(
       { templateId: template.id, durationDays: duration },
       {
         onSuccess: (challenge) => {

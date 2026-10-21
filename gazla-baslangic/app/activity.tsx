@@ -14,15 +14,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FriendList } from '@/components/FriendRow';
 import { Button, ErrorState, LoadingState, ScreenHeader, SectionLabel, ToastHost, useToast } from '@/components/ui';
-import { CONGRATS_POKE } from '@/content/pokes';
+import { CONGRATS_POKE_ID } from '@/content/pokes';
 import {
   ApiError,
-  useAcceptFriendRequestMutation,
-  useActivityPages,
-  useMarkActivityReadMutation,
-  useRemoveFriendshipMutation,
-  useSendPokeMutation,
-  useUndoPokeMutation,
+  useAcceptFriendRequest,
+  useActivity,
+  useMarkAllRead,
+  usePoke,
+  useRemoveFriendship,
   useUnreadCount,
   type ActivityItem,
 } from '@/data';
@@ -35,7 +34,7 @@ import { socialMetrics as m } from '@/theme/social';
 /** Listenin sonuna bu kadar kala sonraki sayfa istenir */
 const LOAD_MORE_THRESHOLD = 400;
 
-// Aktivite — design/Activity.dc.html. Veri: notifications, 30'ar sayfa (useActivityPages), güne göre gruplu;
+// Aktivite — design/Activity.dc.html. Veri: notifications, 30'ar sayfa (useActivity), güne göre gruplu;
 // liste sonuna gelince sonraki sayfa yüklenir. Satır metni ve aksiyonu bildirimin türüne göre (ActivityRow).
 // "Tümü okundu" hepsini okundu yapar; "Tebrik et" hazır gaz mesajını sayfa açmadan gönderir.
 export default function ActivityScreen() {
@@ -43,13 +42,13 @@ export default function ActivityScreen() {
   const router = useRouter();
   const toast = useToast();
 
-  const activity = useActivityPages();
+  const activity = useActivity();
   const unreadCount = useUnreadCount();
-  const markRead = useMarkActivityReadMutation();
-  const accept = useAcceptFriendRequestMutation();
-  const remove = useRemoveFriendshipMutation();
-  const congrats = useSendPokeMutation();
-  const undoCongrats = useUndoPokeMutation();
+  const markRead = useMarkAllRead();
+  const accept = useAcceptFriendRequest();
+  const remove = useRemoveFriendship();
+  // "Tebrik et": hazır gaz mesajı (send) ve tostta "Geri al" (undo)
+  const poke = usePoke();
   /** Tebrik gönderilen bildirimler → gönderilen dürtme (geri alınca listeden çıkar) */
   const [congratulated, setCongratulated] = useState<Record<string, string>>({});
   const [congratsPendingId, setCongratsPendingId] = useState<string | null>(null);
@@ -82,23 +81,22 @@ export default function ActivityScreen() {
     const actor = item.actor;
     if (!actor) return;
     setCongratsPendingId(item.id);
-    congrats.mutate(
+    poke.send(
       {
-        recipientId: actor.id,
-        tone: CONGRATS_POKE.tone,
-        messageKey: CONGRATS_POKE.id,
+        toUserId: actor.id,
+        messageId: CONGRATS_POKE_ID,
         challengeId: item.challengeId ?? undefined,
       },
       {
         onSettled: () => setCongratsPendingId(null),
-        onSuccess: (poke) => {
-          setCongratulated((s) => ({ ...s, [item.id]: poke.id }));
+        onSuccess: (sent) => {
+          setCongratulated((s) => ({ ...s, [item.id]: sent.id }));
           toast.show({
             message: `${toDative(actor.displayName)} tebrik gönderildi`,
             action: {
               label: 'Geri al',
               onPress: () =>
-                undoCongrats.mutate(poke.id, {
+                poke.undo(sent.id, {
                   onSuccess: () =>
                     setCongratulated((s) => {
                       const next = { ...s };
@@ -124,7 +122,7 @@ export default function ActivityScreen() {
     congratsBusyId: congratsPendingId ?? undefined,
     congratulatedIds: congratulated,
   };
-  const error = [accept.error, remove.error, markRead.error, congrats.error, undoCongrats.error].find(
+  const error = [accept.error, remove.error, markRead.error, poke.send.error, poke.undo.error].find(
     (e) => e instanceof ApiError,
   ) as ApiError | undefined;
 
@@ -135,8 +133,8 @@ export default function ActivityScreen() {
       variant="text"
       size="sm"
       color={unread > 0 ? colors.actionText : undefined}
-      disabled={unread === 0 || markRead.isPending}
-      onPress={() => markRead.mutate(undefined)}
+      disabled={unread === 0 || markRead.isLoading}
+      onPress={() => markRead.markAll()}
       style={styles.markAll}
     />
   );

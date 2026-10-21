@@ -8,13 +8,13 @@ import SearchField from '@/components/SearchField';
 import { ErrorState, IconButton, SectionLabel, ToastHost, useToast, type SectionLabelTone } from '@/components/ui';
 import {
   ApiError,
-  useAcceptFriendRequestMutation,
+  useAcceptFriendRequest,
   useAuth,
   useFriendRequests,
   useFriendsToday,
-  useRemoveFriendshipMutation,
-  useSearchProfiles,
-  useSendFriendRequestMutation,
+  useRemoveFriendship,
+  useSendFriendRequest,
+  useUserSearch,
   type FriendRequest,
   type FriendToday,
   type SearchResult,
@@ -42,10 +42,10 @@ export default function FriendsScreen() {
 
   const friends = useFriendsToday();
   const requests = useFriendRequests();
-  const search = useSearchProfiles(searching ? debounced : '');
-  const sendRequest = useSendFriendRequestMutation();
-  const accept = useAcceptFriendRequestMutation();
-  const remove = useRemoveFriendshipMutation();
+  const search = useUserSearch(searching ? debounced : '');
+  const sendRequest = useSendFriendRequest();
+  const accept = useAcceptFriendRequest();
+  const remove = useRemoveFriendship();
 
   const groups = useMemo(() => groupFriends(friends.data ?? []), [friends.data]);
   const requestList = requests.data ?? [];

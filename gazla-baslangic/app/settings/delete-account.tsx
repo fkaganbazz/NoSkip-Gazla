@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Diken from '@/components/Diken';
 import { CameraIcon, FriendsIcon, StreakIcon, type IconProps } from '@/components/icons';
 import { Button, ScreenHeader, TextField } from '@/components/ui';
-import { useDeleteAccountMutation, useStreak } from '@/data';
+import { useDeleteAccount, useStreak } from '@/data';
 import { errorText, isDeleteConfirmed } from '@/features/settings/logic';
 import { borderWidth, layout, typography, useTheme } from '@/theme';
 import { settingsColors, settingsMetrics as m, settingsTypography as t } from '@/theme/settings';
@@ -18,7 +18,7 @@ export default function DeleteAccountScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const streak = useStreak();
-  const remove = useDeleteAccountMutation();
+  const account = useDeleteAccount();
   const [confirm, setConfirm] = useState('');
 
   const days = streak.data?.currentStreak ?? 0;
@@ -81,17 +81,17 @@ export default function DeleteAccountScreen() {
         />
 
         <View style={styles.actions}>
-          {remove.isError && (
+          {account.isError && (
             <Text accessibilityLiveRegion="polite" style={[typography.meta, styles.center, { color: colors.dangerText }]}>
-              {errorText(remove.error)}
+              {errorText(account.error)}
             </Text>
           )}
           <Button
             title="Hesabımı kalıcı olarak sil"
             variant="danger"
             disabled={!confirmed}
-            loading={remove.isPending}
-            onPress={() => remove.mutate()}
+            loading={account.isLoading}
+            onPress={() => account.deleteAccount()}
           />
           <Button title="Vazgeç, kalıyorum" variant="text" onPress={() => router.back()} />
         </View>

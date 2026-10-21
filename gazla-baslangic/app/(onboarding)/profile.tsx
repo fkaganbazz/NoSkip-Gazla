@@ -3,13 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import OnboardingHeader from '@/components/OnboardingHeader';
 import { Button, TextField } from '@/components/ui';
-import {
-  useAuth,
-  useCompleteProfileMutation,
-  useSignOutMutation,
-  useUpdateProfileMutation,
-  useUsernameAvailable,
-} from '@/data';
+import { useAuth, useProfile, useSignOut, useUsernameCheck } from '@/data';
 import AvatarPicker from '@/features/onboarding/AvatarPicker';
 import BirthYearField from '@/features/onboarding/BirthYearField';
 import { deviceTimezone, errorMessage, normalizeUsername } from '@/features/onboarding/logic';
@@ -29,9 +23,9 @@ export default function ProfileScreen() {
   const { colors } = useTheme();
   const { status } = useAuth();
   const { start } = useOnboarding();
-  const completeProfile = useCompleteProfileMutation();
-  const updateProfile = useUpdateProfileMutation();
-  const signOut = useSignOutMutation();
+  // create: profili tamamla, update: fotoğrafı yükle
+  const { create, update } = useProfile();
+  const signOut = useSignOut();
 
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
@@ -41,7 +35,7 @@ export default function ProfileScreen() {
 
   const normalized = normalizeUsername(username);
   const debounced = useDebouncedValue(normalized, m.usernameDebounceMs);
-  const availability = useUsernameAvailable(debounced);
+  const availability = useUsernameCheck(debounced);
   const usernameState: UsernameState =
     normalized.length === 0
       ? 'empty'
@@ -69,7 +63,7 @@ export default function ProfileScreen() {
     // Profil hazır olunca uygulama hemen açılmasın: davet ve bildirim adımları da görülsün
     start();
     try {
-      await completeProfile.mutateAsync({
+      await create({
         username: normalized,
         displayName: name.trim(),
         birthYear,
@@ -81,7 +75,7 @@ export default function ProfileScreen() {
       return;
     }
     // Fotoğraf isteğe bağlı: yüklenemezse akış durmaz, sonra Ayarlar'dan eklenebilir
-    if (avatarUri) updateProfile.mutate({ avatarFileUri: avatarUri });
+    if (avatarUri) update({ avatarFileUri: avatarUri });
   };
 
   return (
@@ -97,7 +91,7 @@ export default function ProfileScreen() {
             title="Devam"
             onPress={submit}
             disabled={!canSubmit && !finishing}
-            loading={completeProfile.isPending || finishing}
+            loading={create.isPending || finishing}
           />
         </>
       }>

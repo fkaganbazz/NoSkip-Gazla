@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import SearchField from '@/components/SearchField';
 import { Button, ErrorState, LoadingState } from '@/components/ui';
-import { usePopularTemplates, type ChallengeCategory, type Template } from '@/data';
+import { useChallengeTemplates, useFeaturedTemplate, type ChallengeCategory } from '@/data';
 import AdBannerSlot from '@/features/explore/AdBannerSlot';
 import CategoryChips from '@/features/explore/CategoryChips';
 import FeaturedCard from '@/features/explore/FeaturedCard';
@@ -14,42 +14,24 @@ import { CATEGORY_NAMES } from '@/features/explore/labels';
 import { layout, spacing, typography, useTheme } from '@/theme';
 import { exploreMetrics as m } from '@/theme/explore';
 
-const normalize = (s: string) => s.trim().toLocaleLowerCase('tr');
-
-/** En son haftanın öne çıkan şablonu */
-function pickFeatured(templates: Template[]) {
-  return templates
-    .filter((t) => t.featuredWeek)
-    .sort((a, b) => (b.featuredWeek ?? '').localeCompare(a.featuredWeek ?? ''))[0];
-}
-
-// Keşfet — design/Explore.dc.html. Veri: challenge_templates, popülerlik sırasıyla (usePopularTemplates).
+// Keşfet — design/Explore.dc.html. Veri: challenge_templates, popülerlik sırasıyla, kategori ve aramayla süzülmüş
+// (useChallengeTemplates); haftanın challenge'ı useFeaturedTemplate (ikisi aynı önbellekten).
 export default function ExploreScreen() {
   const { colors } = useTheme();
   const router = useRouter();
-  // Sıra sunucudan: 1 en popüler (şu an yapan sayısı); arama sonuçları da bu sırada
-  const templates = usePopularTemplates();
 
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<ChallengeCategory | null>(null);
   const [expanded, setExpanded] = useState(false);
 
-  const all = useMemo(() => templates.data ?? [], [templates.data]);
-  const featured = useMemo(() => pickFeatured(all), [all]);
+  // Sıra sunucudan: 1 en popüler (şu an yapan sayısı); arama sonuçları da bu sırada
+  const templates = useChallengeTemplates({ category, q: query, sort: 'popular' });
+  const featured = useFeaturedTemplate().data ?? null;
 
-  const q = normalize(query);
-  const filtering = q.length > 0 || category !== null;
-  const results = useMemo(
-    () =>
-      all.filter(
-        (t) =>
-          (category === null || t.category === category) &&
-          (q.length === 0 || normalize(t.title).includes(q) || (t.shortTitle && normalize(t.shortTitle).includes(q))),
-      ),
-    [all, category, q],
-  );
+  const filtering = query.trim().length > 0 || category !== null;
+  const results = useMemo(() => templates.data ?? [], [templates.data]);
   // Öne çıkan, Popüler listesinde tekrar edilmez
-  const popular = useMemo(() => all.filter((t) => t.id !== featured?.id), [all, featured]);
+  const popular = useMemo(() => results.filter((t) => t.id !== featured?.id), [results, featured]);
   const showAll = filtering || expanded;
   const list = filtering ? results : expanded ? popular : popular.slice(0, m.popularPreviewCount);
 
@@ -73,7 +55,7 @@ export default function ExploreScreen() {
     );
   }
 
-  const listTitle = category !== null ? CATEGORY_NAMES[category] : q.length > 0 ? 'Sonuçlar' : 'Popüler';
+  const listTitle = category !== null ? CATEGORY_NAMES[category] : filtering ? 'Sonuçlar' : 'Popüler';
 
   return (
     <SafeAreaView edges={['top']} style={styles.screen}>

@@ -17,10 +17,10 @@ import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { api } from './client';
-import { recentDaysQuery } from './hooks';
 import { forgetSession, lastSession, rememberSession } from './lastSession';
 import { connectivityKnown } from './network';
 import { reapplyCheckinQueue, useCheckinQueueSync } from './offlineQueue';
+import { profileQuery, recentDaysQuery } from './queries';
 import { configurePersistedQueries, getCacheOwner, persistOptions, setCacheOwner } from './queryPersist';
 import type { Profile, Session } from './types';
 
@@ -105,20 +105,17 @@ function AuthGate({ children }: { children: ReactNode }) {
     };
   }, [client]);
 
-  const profileQuery = useQuery({
-    queryKey: ['me', 'profile', session?.userId ?? null],
-    queryFn: () => api.getMyProfile(),
-    enabled: !!session,
-  });
+  // useProfile() aynı sorguyu (aynı anahtar) okur
+  const profile = useQuery({ ...profileQuery(session?.userId ?? null), enabled: !!session });
 
   const state = useMemo<AuthState>(() => {
-    if (session === undefined || (session && profileQuery.isPending)) {
+    if (session === undefined || (session && profile.isPending)) {
       return { status: 'loading', session: session ?? null, profile: null };
     }
     if (!session) return { status: 'signedOut', session: null, profile: null };
-    if (!profileQuery.data) return { status: 'needsProfile', session, profile: null };
-    return { status: 'ready', session, profile: profileQuery.data };
-  }, [session, profileQuery.isPending, profileQuery.data]);
+    if (!profile.data) return { status: 'needsProfile', session, profile: null };
+    return { status: 'ready', session, profile: profile.data };
+  }, [session, profile.isPending, profile.data]);
 
   const ready = state.status === 'ready';
   useCheckinQueueSync(api, ready ? state.session!.userId : null);

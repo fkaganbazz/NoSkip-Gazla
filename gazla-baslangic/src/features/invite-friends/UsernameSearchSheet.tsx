@@ -4,7 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import SearchField from '@/components/SearchField';
 import Sheet from '@/components/Sheet';
 import { ErrorState, LoadingState } from '@/components/ui';
-import { ApiError, useSearchProfiles } from '@/data';
+import { ApiError, useUserSearch } from '@/data';
 import { normalizeUsername } from '@/features/onboarding/logic';
 import { useDebouncedValue } from '@/features/onboarding/useDebouncedValue';
 import { typography, useTheme } from '@/theme';
@@ -32,7 +32,7 @@ export default function UsernameSearchSheet({ visible, onClose }: Props) {
   const debounced = useDebouncedValue(term, m.usernameDebounceMs);
   const searching = term.length >= MIN_QUERY;
 
-  const search = useSearchProfiles(searching ? debounced : '');
+  const search = useUserSearch(searching ? debounced : '');
 
   // Kapanınca arama sıfırlanır (satırların istek durumu sayfayla birlikte kapanır)
   useEffect(() => {

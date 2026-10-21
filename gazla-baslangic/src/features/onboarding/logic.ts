@@ -97,12 +97,6 @@ export const categoryLabels: Record<ChallengeCategory, string> = {
   quirky: 'Tuhaf',
 };
 
-/** PickChallenge şablonları: yalnızca onboarding sırası olanlar, sırasıyla */
-export const onboardingTemplates = (templates: Template[]) =>
-  templates
-    .filter((t) => t.onboardingOrder !== null)
-    .sort((a, b) => (a.onboardingOrder ?? 0) - (b.onboardingOrder ?? 0));
-
 /** "Yeme-içme · 7 gün" */
 export const templateMeta = (t: Template) => `${categoryLabels[t.category]} · ${t.defaultDurationDays} gün`;
 

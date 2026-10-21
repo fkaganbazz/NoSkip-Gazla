@@ -6,7 +6,7 @@ import { FriendList, FriendRowButton } from '@/components/FriendRow';
 import { ChevronRightIcon, CopyIcon, MessageIcon, ShareIcon, type IconProps } from '@/components/icons';
 import OnboardingHeader from '@/components/OnboardingHeader';
 import { Button, Card, ErrorState, IconButton, LoadingState, ToastHost, useToast } from '@/components/ui';
-import { useChallenge, useChallengeBoard } from '@/data';
+import { useChallenge, useChallengeMembers } from '@/data';
 import StepScreen, { StepIntro } from '@/features/onboarding/StepScreen';
 import { borderWidth, cardColors, componentMetrics, componentTypography as ct, typography, useTheme } from '@/theme';
 import { onboardingColors, onboardingMetrics as m, onboardingTypography as t } from '@/theme/onboarding';
@@ -143,7 +143,7 @@ function InviteBody({
   const { colors, scheme } = useTheme();
   const c = onboardingColors[scheme];
   const challenge = useChallenge(challengeId);
-  const board = useChallengeBoard(challengeId);
+  const board = useChallengeMembers(challengeId);
 
   if (challenge.isPending) {
     return (

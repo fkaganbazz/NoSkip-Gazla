@@ -3,7 +3,7 @@
  * web'de rewarded.web.ts (hemen "yüklenemedi").
  *
  *   const ad = useRewardedAd();
- *   ad.watch({ ssv, onEarned: () => rescue.mutate(...), onFailed: () => setAdFailed(true), onNeedsConsent });
+ *   ad.watch({ ssv, onEarned: () => rescue({ via: 'ad', … }), onFailed: () => setAdFailed(true), onNeedsConsent });
  *
  * Bas → 8 sn içinde reklam yüklenmezse (izin bilgisinin okunması dahil) `onFailed('timeout')`.
  * `onEarned` yalnızca EARNED_REWARD olayında çağrılır; ödülsüz kapanışta hiçbir şey olmaz.

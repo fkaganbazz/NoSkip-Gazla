@@ -12,11 +12,8 @@ import {
   adRescueSsvOptions,
   isAdRewardPendingError,
   useAuth,
-  useChallengeBoard,
-  useDeclineRescueMutation,
-  usePendingRescues,
-  useRescueWithAdMutation,
-  useRescueWithFreeRightMutation,
+  useChallengeMembers,
+  useRescueStreak,
   type PendingRescue,
 } from '@/data';
 import { addDays, formatShortDate, isoDate, joinNames } from '@/features/challenge/logic';
@@ -46,16 +43,21 @@ export default function StreakLostScreen() {
   const now = useNow();
   const { session } = useAuth();
 
-  const rescues = usePendingRescues();
-  const rescue = useRescueWithFreeRightMutation();
-  const decline = useDeclineRescueMutation();
+  // Bekleyen kurtarmalar (data) + kurtarma: rescue({ via: 'ad' | 'free' }), "Baştan başla": decline
+  const rescues = useRescueStreak();
+  const { rescue, decline } = rescues;
+  // Hangi yol sürüyor / son hata hangi yolun (butonların yükleniyor durumu ve hata tostu için)
+  const rescueVia = rescue.variables?.via;
+  const freePending = rescue.isPending && rescueVia === 'free';
+  const adRescuePending = rescue.isPending && rescueVia === 'ad';
+  const freeError = rescueVia === 'free' ? rescue.error : null;
+  const adRescueError = rescueVia === 'ad' ? rescue.error : null;
   const [saved, setSaved] = useState<Saved | null>(null);
   // Vazgeçilen kurtarma: liste yenilenip ekran kapanana kadar aynı kart görünür (boş hali yanıp sönmesin)
   const [declined, setDeclined] = useState<PendingRescue | null>(null);
   const [adFailed, setAdFailed] = useState(false);
 
   const ad = useRewardedAd();
-  const rescueAd = useRescueWithAdMutation();
   // Ödül kazanıldı ama sunucu doğrulaması gecikti ('AD_REWARD_PENDING'): bir sonraki basış yeni reklam
   // açmadan doğrulamayı bir kez daha dener
   const [verifyAgain, setVerifyAgain] = useState<PendingRescue | null>(null);
@@ -63,8 +65,8 @@ export default function StreakLostScreen() {
   const resumeAfterConsent = useRef<PendingRescue | null>(null);
 
   const verifyAdRescue = (item: PendingRescue, retried: boolean) => {
-    rescueAd.mutate(
-      { challengeId: item.challengeId, missedDate: item.missedDate },
+    rescue(
+      { via: 'ad', challengeId: item.challengeId, missedDate: item.missedDate },
       {
         onSuccess: () => {
           setAdFailed(false);
@@ -84,7 +86,8 @@ export default function StreakLostScreen() {
     }
     setAdFailed(false);
     setVerifyAgain(null);
-    rescueAd.reset();
+    // Önceki reklam kurtarmasının hatası silinir (ücretsiz hakkınki reklam boyunca görünür kalır)
+    if (rescueVia === 'ad') rescue.reset();
     ad.watch({
       ssv: adRescueSsvOptions(userId, item.challengeId, item.missedDate),
       onEarned: () => verifyAdRescue(item, false),
@@ -115,7 +118,7 @@ export default function StreakLostScreen() {
 
   const pending = rescues.data?.find((r) => r.challengeId === challengeId);
   const current = saved?.item ?? declined ?? pending;
-  const board = useChallengeBoard(current?.challengeId);
+  const board = useChallengeMembers(current?.challengeId);
 
   const close = () => (router.canGoBack() ? router.back() : router.replace('/'));
   // Sıradaki bekleyen kurtarmanın ekranına geç (yeni ekran: durum sıfırdan); yoksa kapan
@@ -195,8 +198,8 @@ export default function StreakLostScreen() {
 
   const onFree = () => {
     ad.cancel();
-    rescue.mutate(
-      { challengeId: current.challengeId, missedDate: current.missedDate },
+    rescue(
+      { via: 'free', challengeId: current.challengeId, missedDate: current.missedDate },
       {
         onSuccess: () => {
           setAdFailed(false);
@@ -210,7 +213,7 @@ export default function StreakLostScreen() {
     ad.cancel();
     const item = current;
     setDeclined(item);
-    decline.mutate(
+    decline(
       { challengeId: item.challengeId, missedDate: item.missedDate },
       {
         onSuccess: () => goNext(item.challengeId),
@@ -275,15 +278,15 @@ export default function StreakLostScreen() {
         <View style={styles.actions}>
           {lost ? (
             <>
-              {(adFailed || rescue.error || decline.error || rescueAd.error) && (
+              {(adFailed || freeError || decline.error || adRescueError) && (
                 <Toast
                   message={
                     decline.error
                       ? decline.error.message
-                      : rescue.error
-                        ? rescue.error.message
-                        : rescueAd.error
-                          ? rescueAd.error.message
+                      : freeError
+                        ? freeError.message
+                        : adRescueError
+                          ? adRescueError.message
                           : current.freeRescueAvailable
                             ? 'Reklam şu an yüklenemedi. Ücretsiz hakkını kullanabilirsin.'
                             : 'Reklam şu an yüklenemedi. Biraz sonra tekrar dene.'
@@ -294,8 +297,8 @@ export default function StreakLostScreen() {
                 title="Reklam izle, Diken'i sula"
                 accessibilityLabel="Reklam izle, Diken'i sula, 30 saniye"
                 onPress={onWatchAd}
-                loading={ad.status !== 'idle' || rescueAd.isPending}
-                disabled={rescue.isPending || decline.isPending}
+                loading={ad.status !== 'idle' || adRescuePending}
+                disabled={freePending || decline.isPending}
                 style={styles.adButton}
                 icon={<SolidDropIcon color={c.adDrop} size={m.adDropSize} />}
                 trailing={
@@ -312,8 +315,8 @@ export default function StreakLostScreen() {
                 }
                 variant="secondary"
                 highlighted={adFailed}
-                disabled={!current.freeRescueAvailable || decline.isPending || rescueAd.isPending}
-                loading={rescue.isPending}
+                disabled={!current.freeRescueAvailable || decline.isPending || adRescuePending}
+                loading={freePending}
                 onPress={onFree}
               />
               <Button
@@ -321,7 +324,7 @@ export default function StreakLostScreen() {
                 variant="text"
                 size="md"
                 loading={decline.isPending}
-                disabled={rescue.isPending || rescueAd.isPending}
+                disabled={rescue.isPending}
                 onPress={onRestart}
               />
             </>

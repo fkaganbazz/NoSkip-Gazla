@@ -8,7 +8,7 @@ import { CheckIcon } from '@/components/icons';
 import Sheet, { type SheetHandle } from '@/components/Sheet';
 import SpeechBubble from '@/components/SpeechBubble';
 import { Button, Chip, ErrorState, IconButton, LoadingState } from '@/components/ui';
-import { useChallenge, useCheckinMutation, useNumberStats, useToday, useUndoCheckinMutation } from '@/data';
+import { useChallenge, useCheckin, useNumberStats, useTodayTasks } from '@/data';
 import { formatNumber, targetText, unitName } from '@/features/checkin/logic';
 import StepButton from '@/features/checkin/StepButton';
 import { borderWidth, componentTypography, spacing, typography, useTheme } from '@/theme';
@@ -34,10 +34,9 @@ export default function NumberEntryScreen() {
   const { colors, scheme } = useTheme();
   const c = numberEntryColors[scheme];
 
-  const today = useToday();
+  const today = useTodayTasks();
   const challenge = useChallenge(challengeId);
-  const checkin = useCheckinMutation();
-  const undo = useUndoCheckinMutation();
+  const checkin = useCheckin();
 
   const task = useMemo(
     () => today.data?.find((x) => x.challengeId === challengeId && (!date || x.localDate === date)),
@@ -96,15 +95,15 @@ export default function NumberEntryScreen() {
 
   // Kaydedince sayfa kapanır; hepsi bittiyse Bugün odağa dönünce tamamlama anını açar
   const save = () => {
-    undo.reset();
-    checkin.mutate({ challengeId: task.challengeId, localDate: task.localDate, value }, { onSuccess: close });
+    checkin.undo.reset();
+    checkin.submitNumber({ challengeId: task.challengeId, localDate: task.localDate, value }, { onSuccess: close });
   };
   // Kayıtlı günü geri al: iyimser (Bugün hemen güncellenir), bitince sayfa kapanır; hata olursa burada yazar
   const undoDay = () => {
-    checkin.reset();
-    undo.mutate({ challengeId: task.challengeId, localDate: task.localDate }, { onSuccess: close });
+    checkin.submitNumber.reset();
+    checkin.undo({ challengeId: task.challengeId, localDate: task.localDate }, { onSuccess: close });
   };
-  const error = checkin.error ?? undo.error;
+  const error = checkin.submitNumber.error ?? checkin.undo.error;
 
   // Diken ve balon: sayfanın üstünde, karartmanın üzerinde (yalnızca hedefli görevde)
   const top =
@@ -214,16 +213,16 @@ export default function NumberEntryScreen() {
             {error.message}
           </Text>
         )}
-        <Button title="Kaydet" onPress={save} loading={checkin.isPending} disabled={undo.isPending} />
+        <Button title="Kaydet" onPress={save} loading={checkin.submitNumber.isPending} disabled={checkin.undo.isPending} />
         {/* Geri alma sürerken de görünür (iyimser güncelleme görevi hemen "yapılmadı" yapar) */}
-        {(task.done || undo.isPending) && (
+        {(task.done || checkin.undo.isPending) && (
           <Button
             title="Bugünü geri al"
             variant="text"
             size="md"
             onPress={undoDay}
-            loading={undo.isPending}
-            disabled={checkin.isPending}
+            loading={checkin.undo.isPending}
+            disabled={checkin.submitNumber.isPending}
             accessibilityHint="Bugünkü kayıt silinir, görev yapılmadı olur"
           />
         )}
