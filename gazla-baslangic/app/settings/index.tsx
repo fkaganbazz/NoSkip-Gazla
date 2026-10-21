@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { openPrivacyOptions } from '@/ads';
 import OptionSheet from '@/components/OptionSheet';
 import {
   ErrorState,
@@ -16,6 +17,7 @@ import {
   useToast,
 } from '@/components/ui';
 import { SUPPORT_EMAIL, legalLinks, supportMailto, type LegalLink } from '@/config/links';
+import { PRIVACY_OPTIONS_FAILED } from '@/features/ad-consent/messages';
 import {
   useAuth,
   useBlockedUsers,
@@ -81,6 +83,15 @@ export default function SettingsScreen() {
     Linking.openURL(supportMailto('Gazla destek')).catch(() =>
       flash(`E-posta uygulaması açılamadı. Bize ${SUPPORT_EMAIL} adresinden yazabilirsin.`),
     );
+  // Reklam tercihleri: UMP gizlilik seçenekleri formu (AB/İngiltere); bu kullanıcı için yoksa (ve web'de) ön ekran
+  const [adPrefsBusy, setAdPrefsBusy] = useState(false);
+  const openAdPreferences = async () => {
+    setAdPrefsBusy(true);
+    const result = await openPrivacyOptions().catch(() => 'failed' as const);
+    setAdPrefsBusy(false);
+    if (result === 'notRequired') router.push('/ad-consent');
+    else if (result === 'failed') flash(PRIVACY_OPTIONS_FAILED);
+  };
 
   const top = { paddingTop: insets.top + layout.screenTopGap };
 
@@ -168,8 +179,7 @@ export default function SettingsScreen() {
             value={blocked.data ? String(blocked.data.length) : undefined}
             onPress={() => router.push('/settings/blocked')}
           />
-          {/* UMP gizlilik seçenekleri formu kurulana kadar (Madde 3) reklam izni ön ekranı */}
-          <LinkRow title="Reklam tercihleri" onPress={() => router.push('/ad-consent')} last />
+          <LinkRow title="Reklam tercihleri" onPress={openAdPreferences} disabled={adPrefsBusy} last />
         </SettingsGroup>
 
         <SectionLabel style={styles.section}>DESTEK VE YASAL</SectionLabel>

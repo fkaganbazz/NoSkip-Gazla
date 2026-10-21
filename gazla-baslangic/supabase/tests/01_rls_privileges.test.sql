@@ -288,20 +288,22 @@ select set_eq(
         'public.my_pending_rescues', 'public.my_unseen_finished', 'public.challenge_detail',
         'public.my_membership', 'public.challenge_board', 'public.number_stats',
         'public.friends_today', 'public.friend_requests', 'public.poke_status', 'public.my_garden',
-        'public.my_recent_days', 'public.friend_profile', 'public.my_badges'],
+        'public.my_recent_days', 'public.friend_profile', 'public.my_badges',
+        'public.find_contacts', 'public.ad_rescue_result'],
   'authenticated may execute exactly the user RPCs in public');
 
 select is(
   array(select p.proname::text from pg_proc p join pg_namespace n on n.oid = p.pronamespace
         where n.nspname = 'public'
           and p.proname in ('grant_ad_rescue', 'can_send_diken_push', 'claim_diken_push',
-                            'finish_due_challenges')
+                            'finish_due_challenges', 'record_ad_rescue_failure',
+                            'queue_diken_notifications', 'claim_social_push')
           and (has_function_privilege('anon', p.oid, 'EXECUTE')
                or has_function_privilege('authenticated', p.oid, 'EXECUTE')
                or not has_function_privilege('service_role', p.oid, 'EXECUTE'))
         order by 1),
   '{}'::text[],
-  'grant_ad_rescue, can_send_diken_push, claim_diken_push, finish_due_challenges: service_role only');
+  'grant_ad_rescue, can_send_diken_push, claim_diken_push, finish_due_challenges, record_ad_rescue_failure, queue_diken_notifications, claim_social_push: service_role only');
 
 select is(
   array(select p.proname::text from pg_proc p join pg_namespace n on n.oid = p.pronamespace
@@ -367,7 +369,8 @@ select is(
             'public.challenge_board', 'public.number_stats',
             'public.friends_today', 'public.friend_requests', 'public.poke_status',
             'public.my_garden', 'public.my_recent_days',
-            'public.friend_profile', 'public.my_badges'])
+            'public.friend_profile', 'public.my_badges', 'public.find_contacts',
+            'public.ad_rescue_result'])
         order by 1),
   '{}'::text[],
   'authenticated can execute no SECURITY DEFINER function outside the RPC + RLS-helper allow-list');

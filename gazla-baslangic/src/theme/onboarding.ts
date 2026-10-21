@@ -28,7 +28,7 @@ export type OnboardingColors = {
   tileSelected: string;
   tileShadow: string | undefined;
   tileBadgeIcon: string;
-  // SignIn (Apple/Google: ortak Button `apple` / `google`)
+  // SignIn (Apple/Google: resmi bileşenler; native yoksa ortak Button `apple` / `google`)
   legalText: string;
   legalLink: string;
   // Profile
@@ -171,6 +171,12 @@ export const onboardingMetrics = {
   pickedChipIconStroke: 3.6,
   signInIntroMarginTop: 20,
   providerGap: 10,
+  /**
+   * Resmi giriş butonları: satır yüksekliği ve Apple köşesi ortak `componentMetrics.button.lgCompact` (54 / 18, tasarım).
+   * Google'ın resmi butonu (GoogleSigninButton Wide) kendi yüksekliğinde (48, Google SDK) 54'lük satırın ortasında
+   * durur; böylece alttaki öğelerin yeri tasarımdaki gibi kalır.
+   */
+  googleButtonHeight: 48,
   mailIconSize: 20,
   mailIconStroke: 2.2,
   legalMarginTop: 6,

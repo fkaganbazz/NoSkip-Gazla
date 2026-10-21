@@ -1,3 +1,4 @@
+import * as Clipboard from 'expo-clipboard';
 import * as Linking from 'expo-linking';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, Share } from 'react-native';
@@ -39,24 +40,17 @@ export function useInviteCode(challengeId: string | null) {
   return { code, url: code ? inviteLink(code) : null, error, retry: load };
 }
 
-type ClipboardLike = { writeText: (text: string) => Promise<void> };
+export type InviteCode = ReturnType<typeof useInviteCode>;
 
 /**
- * Panoya kopyalar; başarılıysa true. Yerel panoya erişim paketi (expo-clipboard) kurulu değil:
- * web'de tarayıcı panosu, telefonda paylaşım sayfası açılır (orada "Kopyala" seçeneği var).
+ * Panoya kopyalar (expo-clipboard; web'de tarayıcı panosu); başarılıysa true. Web'de tarayıcı izin vermezse false.
  */
 export async function copyText(text: string): Promise<boolean> {
-  const clipboard = (globalThis as { navigator?: { clipboard?: ClipboardLike } }).navigator?.clipboard;
-  if (Platform.OS === 'web' && clipboard) {
-    try {
-      await clipboard.writeText(text);
-      return true;
-    } catch {
-      // izin yoksa paylaşım sayfasına düş
-    }
+  try {
+    return await Clipboard.setStringAsync(text);
+  } catch {
+    return false;
   }
-  await shareText(text);
-  return false;
 }
 
 /** Sistem paylaşım sayfası */

@@ -15,9 +15,11 @@ import {
 } from '@tanstack/react-query';
 
 import { POKE_MESSAGES } from '../content/pokes';
-import { isNetworkError, type OAuthProvider } from './api';
+import { AD_RESCUE_RETRY_DELAYS_MS } from './adRescue';
+import { isAdRewardPendingError, isCancelledError, isNetworkError, type OAuthProvider } from './api';
 import { api } from './client';
 import { forgetSession } from './lastSession';
+import { forgetPushToken, rememberPushToken, savedPushToken } from './pushToken';
 import { isOnline } from './network';
 import {
   adjustRecentDays,
@@ -83,6 +85,18 @@ export const useCompleteProfileMutation = () =>
 
 export const useUpdateProfileMutation = () => useWrite((update: ProfileUpdate) => api.updateProfile(update), [['me'], ['friends']]);
 
+/**
+ * Bildirim izni verildikten sonra Expo push token'ını kaydet: `mutate({ token, platform })`.
+ * Token bu cihazda saklanır; çıkışta sunucudan silinir (`useSignOutMutation`).
+ */
+export const useRegisterPushTokenMutation = () =>
+  useMutation({
+    mutationFn: async ({ token, platform }: { token: string; platform: 'ios' | 'android' }) => {
+      await api.registerPushToken(token, platform);
+      rememberPushToken({ token, platform });
+    },
+  });
+
 export const useUpdateSettingsMutation = () => {
   const client = useQueryClient();
   return useMutation({
@@ -93,25 +107,60 @@ export const useUpdateSettingsMutation = () => {
 
 // Oturum -------------------------------------------------------------------------------------------
 
+/**
+ * Apple / Google ile giriş. Kullanıcı pencereyi kapatırsa hata değil: sonuç `'cancelled'`
+ * (oturum açılınca route korumaları ilerletir, sonuç `'signedIn'`).
+ */
 export const useSignInWithProviderMutation = () =>
-  useMutation({ mutationFn: (provider: OAuthProvider) => api.signInWithProvider(provider) });
+  useMutation({
+    mutationFn: async (provider: OAuthProvider): Promise<'signedIn' | 'cancelled'> => {
+      try {
+        await api.signInWithProvider(provider);
+        return 'signedIn';
+      } catch (error) {
+        if (isCancelledError(error)) return 'cancelled';
+        throw error;
+      }
+    },
+  });
 
 export const useSignInWithEmailMutation = () => useMutation({ mutationFn: (email: string) => api.signInWithEmail(email) });
+
+/** Çıkışta bu cihazın push token'ını sunucudan sil; ağ yoksa ya da yavaşsa çıkışı bekletme */
+const UNREGISTER_TIMEOUT_MS = 4000;
+
+async function unregisterDevicePushToken() {
+  const saved = savedPushToken();
+  if (!saved) return;
+  try {
+    await Promise.race([
+      api.unregisterPushToken(saved.token),
+      new Promise((resolve) => setTimeout(resolve, UNREGISTER_TIMEOUT_MS)),
+    ]);
+  } catch {
+    // Silinemezse sunucu bir sonraki register_push_token'da token'ı yeni hesaba taşır
+  } finally {
+    forgetPushToken();
+  }
+}
 
 // Bilerek çıkış: kayıtlı oturum önce unutulur (yoksa çevrimdışı çıkış yok sayılırdı, lastSession.ts)
 export const useSignOutMutation = () =>
   useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       forgetSession();
+      await unregisterDevicePushToken();
       return api.signOut();
     },
   });
 
+/** Hesap silme (Edge Function `delete-account`); push token satırı zincirleme silinir */
 export const useDeleteAccountMutation = () =>
   useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       forgetSession();
-      return api.deleteAccount();
+      await api.deleteAccount();
+      forgetPushToken();
     },
   });
 
@@ -299,6 +348,28 @@ export const useRescueWithFreeRightMutation = () =>
   useWrite(({ challengeId, missedDate }: { challengeId: string; missedDate: LocalDate }) =>
     api.rescueWithFreeRight(challengeId, missedDate), DAILY);
 
+/**
+ * StreakLost reklamla kurtarma: reklam ödülü kazanıldıktan sonra `mutate({ challengeId, missedDate })`.
+ * Sunucu ödülü AdMob SSV ile doğrulayana kadar ('AD_REWARD_PENDING') artan aralıklarla yeniden dener
+ * (`AD_RESCUE_RETRY_DELAYS_MS`, toplam ~30 sn); sonra hâlâ gelmediyse `error` o koddur
+ * (`isAdRewardPendingError`; ekran "Ödül doğrulanıyor…" ya da yeniden dene gösterebilir).
+ * Reklam yüklenirken SSV seçenekleri: `adRescueSsvOptions(userId, challengeId, missedDate)`.
+ */
+export function useRescueWithAdMutation() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ challengeId, missedDate }: { challengeId: string; missedDate: LocalDate }) =>
+      api.rescueWithAd(challengeId, missedDate),
+    // failureCount ilk hatada 0: en çok AD_RESCUE_RETRY_DELAYS_MS.length yeniden deneme
+    retry: (failureCount, error) => isAdRewardPendingError(error) && failureCount < AD_RESCUE_RETRY_DELAYS_MS.length,
+    retryDelay: (attempt) => AD_RESCUE_RETRY_DELAYS_MS[Math.min(attempt, AD_RESCUE_RETRY_DELAYS_MS.length - 1)],
+    onSettled: (_r, _e, { challengeId }) =>
+      Promise.all(
+        [...DAILY, queryKeys.calendar(challengeId), queryKeys.badges].map((queryKey) => client.invalidateQueries({ queryKey })),
+      ),
+  });
+}
+
 /** StreakLost "Baştan başla": bekleyen kurtarmadan vazgeç (usePendingRescues artık onu döndürmez) */
 export const useDeclineRescueMutation = () =>
   useWrite(({ challengeId, missedDate }: { challengeId: string; missedDate: LocalDate }) =>
@@ -415,6 +486,13 @@ export const useSearchProfiles = (query: string) =>
     queryFn: () => api.searchProfiles(query),
     enabled: query.trim().replace(/^@/, '').length >= 2,
   });
+
+/**
+ * Rehberden bul: `mutate(await hashContactEmails(emails))` → keşfedilebilir eşleşen kullanıcılar
+ * (`SearchResult[]`, arkadaşlık durumu ve ortak arkadaş sayısıyla).
+ */
+export const useFindContactsMutation = () =>
+  useMutation({ mutationFn: (emailHashes: string[]) => api.findContacts(emailHashes) });
 
 export const useFriendProfile = (userId: string | undefined) =>
   useQuery({ queryKey: queryKeys.friendProfile(userId ?? ''), queryFn: () => api.getFriendProfile(userId!), enabled: !!userId });

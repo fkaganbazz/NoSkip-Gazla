@@ -20,8 +20,19 @@ tablolara yalnızca politikası olan yerlerde doğrudan dokunur, geri kalan her 
 | `20261007100800_storage.sql` | `proofs` (özel) ve `avatars` (açık) kovaları, Storage politikaları |
 | `20261007100900_reference_data.sql` | 12 hazır dürtme mesajı, 8 challenge şablonu (prod'da da gerekli) |
 | `20261007101000_badges.sql` | rozet kataloğu (12, prod'da da gerekli), `user_badges`, kazanım tetikleyicileri, `my_badges` |
+| `20261021100000_find_contacts.sql` | rehberden bul: `app.email_hashes` (auth.users tetikleyicisi), `find_contacts`, günlük arama sınırı |
+| `20261021100100_ad_rescue_ssv.sql` | reklamla kurtarma sonucu: `record_ad_rescue_failure` (service role), `ad_rescue_result` (istemci) |
+| `20261021100200_push_jobs.sql` | push: `claim_social_push`, `queue_diken_notifications` (Diken kuralları), notifications → `push` tetikleyicisi (pg_net + Vault), pg_cron işleri (`app.install_cron_jobs`) |
 
-Testler (`tests/`, pgTAP, 1139 doğrulama):
+Edge Function'lar (`functions/`, Deno; her birinin `deno.json` içe aktarma haritası var):
+
+| Fonksiyon | Ne yapar | JWT |
+|---|---|---|
+| `admob-ssv` | AdMob ödüllü reklam SSV geri çağrısı: imzayı (ECDSA P-256) doğrular, `grant_ad_rescue` | kapalı (`--no-verify-jwt`; Google çağırır) |
+| `delete-account` | Hesabı sil: Storage `proofs/{uid}/`, `avatars/{uid}/`, sonra `auth.admin.deleteUser` | açık (uygulama oturumuyla) |
+| `push` | Expo push: arkadaş bildirimleri (notifications INSERT) ve 15 dakikada bir Diken bildirimleri | kapalı (`x-gazla-secret`) |
+
+Testler (`tests/`, pgTAP, 1216 doğrulama):
 
 | Dosya | Kapsam |
 |---|---|
@@ -31,6 +42,7 @@ Testler (`tests/`, pgTAP, 1139 doğrulama):
 | `04_challenge_rpcs.test.sql` | challenge oluşturma, davet, link, katılma, ayrılma, işaretleme |
 | `05_review_fixes.test.sql` | iki inceleme turunda eklenen kurallar (saat dilimi tabanı, ilk gün kurtarma, bitiş ve sıra, şikayet, engel, Diken push, sınırlar, dosya adları, tolerans, hesap silme) |
 | `06_screen_data.test.sql` | ekranların verisi: dürtme kotası, kişisel hatırlatma, "Arkadaşlarım" görünürlüğü ve katılma, 0/1/2 saat tolerans, 12 rozetin kuralları, kurtarmadan vazgeçme, sayı istatistikleri, bitti ekranı bir kez, durum/gün no, ortak arkadaş, kısa ad, popülerlik |
+| `07_server_jobs.test.sql` | rehberden bul (özet, keşfedilebilirlik, engel, sınırlar), reklamla kurtarma (süre geçmiş, zaten kurtarılmış, aynı ödül, ret sonucu), arkadaş push'u (dürtme tercihi, engel, bir kez), Diken push'u (yerel saat, günde bir, günde 2, sessiz saat, işaretlenmiş gün, token'sız kullanıcı, seri koptu), uzantı yokken iş kurulumu |
 
 ## Uygulama ve test
 
@@ -48,7 +60,8 @@ fonksiyonlarını kullanır (`tests.create_supabase_user`, `tests.authenticate_a
 verisini oluşturur ve `rollback` ile geri alır.
 
 Bu şema ve testler PostgreSQL 16 üzerinde, Supabase rolleri, `auth` ve `storage` şemalarıyla aynı
-davranan bir test ortamında doğrulandı (1139/1139). Gerçek Supabase'de ilk `supabase test db`
+davranan bir test ortamında doğrulandı (1216/1216; pg_cron, pg_net ve Vault olmadan — o yollar
+koşullu). Gerçek Supabase'de ilk `supabase test db`
 çalıştırmasında farklılık çıkarsa önce Storage tablolarına doğrudan yazan testlere bakın (Storage
 sürümleri `storage.objects` üzerinde ek tetikleyiciler getirebiliyor).
 
@@ -175,6 +188,49 @@ zamanlanmış işler içindir, API rollerine kapalıdır.
 ### Diken bildirimleri
 - Günde en çok 2 (gönderim anının yerel gününe göre), sessiz saatler 23:30–08:00 (kullanıcının
   yerel saati). Kural `public.claim_diken_push` içinde ve atomik.
+- Ne zaman (`app.queue_diken_notifications`, kullanıcının yerel saatinde; her biri günde bir kez,
+  hedef saatten sonraki 1 saat içinde; push token'ı olmayana hiç):
+  | Tür | Saat | Koşul | Metin (Notifications.dc.html) |
+  |---|---|---|---|
+  | `daily_reminder` | `user_settings.daily_reminder_time` (null = kapalı) | bugün bekleyen görev var | "Su yok mu su? Bugünkü görevlerin seni bekliyor." |
+  | `daily_reminder` + `challenge_id` | `app.member_reminder_time` (kişisel, yoksa grubun saati) | o challenge bugün işaretlenmedi; saat genel hatırlatmayla aynı değil | "Su yok mu su? {kısa ad} seni bekliyor." |
+  | `day_ending` | 22:00 ("gün bitimine 2 saat kala") | bekleyen görev var | "Gün bitiyor, {n} görevin duruyor. Susuz kaldım burada." |
+  | `streak_broken` | 09:00 ("ertesi sabah") | bekleyen kurtarma var | "Dün kaçtı. Beni sulamak için 24 saatin var." |
+- Hakkı alınamayan (sessiz saat, günün 2 hakkı doldu) Diken bildirimi için satır eklenmez; satır
+  eklenirse metni `payload.text`'te, uygulama içi yolu `payload.url`'de durur (Aktivite aynı metni
+  gösterir). Haftalık özet ("Haftan", Pazar 19:00) henüz yok.
+
+### Arkadaş bildirimleri (push)
+- Dürtme, gaz, arkadaşlık isteği, challenge daveti, arkadaşın bitirdi: satırı mevcut tetikleyiciler
+  ekler (`actor_id` dolu), `push` Edge Function'ı `claim_social_push` ile gönderim hakkını alır. Alıcı
+  dürtme bildirimlerini kapattıysa (`poke_push_enabled`) dürtme push'u gitmez; engel varsa hiçbiri.
+  Aynı satır bir kez gönderilir (`pushed_at`). Diken sınırına sayılmaz.
+- Metinler: "{ad} sana gaz verdi" / "{ad} sana laf soktu" + dürtme metni tırnak içinde; "{ad}
+  bitirdi" + "{challenge} tamam. Tebrik etmek ister misin?"; "{ad} arkadaşlık isteği gönderdi"; "{ad}
+  seni bir challenge'a ekledi" + challenge adı.
+- Android kanalı (`channelId`, src/notifications/channels.ts): Diken `diken`; arkadaş bildirimleri
+  `friends`; diğerleri `default`. `data.url`: Diken `/`, `/challenge/<id>`, `/streak-lost`; dürtme
+  `/poke/<gönderen>` (geri dürt), istek `/friends`, davet ve bitirdi `/activity`.
+- Expo `DeviceNotRegistered` dönen token `push_tokens`'tan silinir. Uygulama çıkışta kendi token'ını
+  siler (`push_tokens` owner delete).
+
+### Rehberden bul
+- İstemci rehberdeki e-postaları kırpıp küçük harfe çevirir, SHA-256 özetlerini (hex) gönderir;
+  e-postanın kendisi gitmez (`src/data/contactHash.ts`). Sunucu `auth.users.email`'in aynı özetini
+  `app.email_hashes`'te tutar (auth.users tetikleyicisi; e-posta değişince güncellenir).
+- `find_contacts(p_email_hashes)`: yalnızca profili olan ve "Beni herkes bulabilir" diyen kullanıcılar;
+  iki yönde engel ve kendisi hariç. En çok 500 özet, en çok 100 sonuç (arkadaş olmayanlar önce), günde
+  en çok 20 arama (boş arama sayılmaz). Sonuç `search_profiles` ile aynı alanlar (ortak arkadaş dahil).
+
+### Reklamla kurtarma (AdMob SSV)
+- Uygulama rewarded reklamı `serverSideVerificationOptions: { userId, customData: '{"challengeId","missedDate"}' }`
+  ile gösterir (`adRescueSsvOptions`). Google ödülü `admob-ssv`'ye bildirir; imza doğrulanınca
+  `grant_ad_rescue` (kurallar yukarıda, "Kurtarma"). Kural reddederse (süre geçti, gün zaten
+  kurtarıldı, ödül kullanıldı) sebep `app.ad_rescue_failures`'a yazılır.
+- Uygulama reklam kapanınca `ad_rescue_result(challenge, gün)` sorar: 'granted', 'pending' (istemci
+  artan aralıklarla ~30 sn yeniden sorar) ya da son 10 dakikadaki reddin hatası.
+- `user_id` ve `custom_data`'yı istemci verir, Google yalnızca imzalar: ödül bir kez ve yalnızca kurtarma
+  kurallarına uyan bir gün için kullanılabilir.
 
 ### Engelleme, şikayet, hesap silme
 - Engel iki yönde de görünürlüğü keser: profil, grup listesi, işaretlemeler, kanıt fotoğrafları,
@@ -241,30 +297,68 @@ zamanlanmış işler içindir, API rollerine kapalıdır.
 | Activity | `notifications` (30'ar sayfa), `mark_notifications_read`, `pokes`; "Tebrik et" → `send_poke('hype', 'proud_of_you')` |
 | Garden / Finished | `my_garden`, `my_streak`, `my_badges`, `my_unseen_finished`, `mark_finish_seen` |
 | Report | `submit_report` |
-| Bildirimler | `register_push_token`, `push_tokens` (delete = çıkış) |
+| Bildirimler | `register_push_token`, `push_tokens` (delete = çıkış; cihazın token'ı) |
+| Rehberden bul (InviteFriends, Friends) | `find_contacts` (e-posta SHA-256 özetleri) |
+| StreakLost reklam | AdMob SSV → `admob-ssv` → `grant_ad_rescue`; uygulama `ad_rescue_result` |
+| DeleteAccount | Edge Function `delete-account` |
 
 ## Sunucu tarafı işler (Edge Function / pg_cron)
 
-Bunlar henüz yazılmadı; şema hazır.
+| İş | Nasıl |
+|---|---|
+| Challenge bitişi | pg_cron `gazla-finish-due-challenges` saatlik (`7 * * * *`): `select public.finish_due_challenges()` |
+| Diken bildirimleri | pg_cron `gazla-diken-push` 15 dakikada bir: pg_net → `push` (`{"mode":"schedule"}`) → `queue_diken_notifications()` → Expo |
+| Arkadaş bildirimleri | `notifications` INSERT tetikleyicisi `notifications_push_webhook` (actor_id dolu): pg_net → `push` (Database Webhook gövdesi) → `claim_social_push` → Expo |
+| Reklamla kurtarma | AdMob SSV → `admob-ssv` → `grant_ad_rescue` / `record_ad_rescue_failure` |
+| Hesap silme | Uygulama → `delete-account` (JWT) → Storage dosyaları + `auth.admin.deleteUser`; veritabanı zincirleme temizlenir |
+| Şikayet incelemesi | Ekip `reports`'u service role ile okur (`reports_pending_idx`, `review_due_at`); karar `status` ve `reviewed_at` |
 
-- **Challenge bitişi**: `select public.finish_due_challenges();` saatlik (pg_cron, service role).
-- **Reklamla kurtarma**: AdMob SSV geri çağrısını alan Edge Function imzayı doğrular, sonra
-  `grant_ad_rescue(user_id, challenge_id, missed_date, transaction_id)` çağırır (challenge ve gün
-  `custom_data` ile gelir). İstemci reklam bitince yalnızca `my_streak`/`my_pending_rescues`'u
-  yeniler.
-- **Diken bildirimleri**: zamanlayıcı (pg_cron + Edge Function) `notifications` satırını
-  `actor_id = null` ile ekler (tür: `daily_reminder`, `day_ending`, `streak_broken`, …; `local_date` =
-  kullanıcının günü), `claim_diken_push(id)` true dönerse Expo push gönderir. Genel günlük
-  hatırlatma `user_settings.daily_reminder_time`; challenge hatırlatmasında üyenin etkin saati
-  `app.member_reminder_time(user, challenge)` (kişisel `challenge_members.reminder_time`, yoksa
-  grubun `challenges.reminder_time`), üyenin yerel saatinde.
-- **Dürtme ve istek bildirimleri**: `notifications` satırları tetikleyicilerle oluşur
-  (`actor_id` dolu). Push için Database Webhook → Edge Function; `poke_push_enabled` kapalıysa
-  gönderme. Diken sınırına sayılmaz.
-- **Hesap silme** (DeleteAccount): Edge Function JWT'yi doğrular, `proofs/{uid}/` ve `avatars/{uid}/`
-  altındaki dosyaları siler, `auth.admin.deleteUser(uid)` çağırır. Veritabanı zincirleme temizlenir.
-- **Şikayet incelemesi**: ekip `reports`'u service role ile okur (`reports_pending_idx`,
-  `review_due_at`); karar `status` ve `reviewed_at` ile kaydedilir.
+### Kurulum (bir kez, Supabase projesinde)
+
+1. **Migration'lar**: `supabase link --project-ref <ref>` sonra `supabase db push`.
+2. **Uzantılar** (Dashboard → Database → Extensions): `pg_cron` ve `pg_net`'i aç (Vault Supabase'te hazır).
+   Migration'dan sonra açtıysan SQL Editor'de `select app.install_cron_jobs();` çalıştır (aynı adla
+   tekrar çalıştırmak işleri günceller; dönen dizi kurulan işlerin adları).
+3. **Sırlar**: bir push sırrı üret (`openssl rand -hex 32`) ve
+   ```sql
+   select vault.create_secret('https://<ref>.supabase.co', 'gazla_project_url');
+   select vault.create_secret('<push-sırrı>', 'gazla_push_secret');
+   ```
+   ```bash
+   supabase secrets set PUSH_WEBHOOK_SECRET=<push-sırrı>
+   supabase secrets set EXPO_ACCESS_TOKEN=<expo erişim belirteci>   # yalnızca Expo'da "push security" açıksa
+   ```
+   `SUPABASE_URL` ve `SUPABASE_SERVICE_ROLE_KEY` Edge Function'lara Supabase tarafından verilir.
+4. **Edge Function'lar**:
+   ```bash
+   supabase functions deploy delete-account
+   supabase functions deploy admob-ssv --no-verify-jwt
+   supabase functions deploy push --no-verify-jwt
+   ```
+   (`supabase init` ile `config.toml` oluşturduysan `[functions.admob-ssv]` ve `[functions.push]`
+   altına `verify_jwt = false` yaz; yerelde `supabase functions serve` de aynı ayarı kullanır.)
+5. **Arkadaş bildirimleri (webhook)**: migration'daki `notifications_push_webhook` tetikleyicisi pg_net
+   ve 3. adımdaki Vault sırlarıyla kendiliğinden çalışır; ayrıca panelden Database Webhook kurma.
+   (Panelden kurmak istersen tetikleyiciyi sil: Database → Webhooks → notifications, INSERT, HTTP POST
+   `https://<ref>.supabase.co/functions/v1/push`, başlık `x-gazla-secret: <push-sırrı>`. Gövde biçimi
+   aynıdır; iki yol birden kurulsa da `pushed_at` sayesinde bildirim bir kez gider.)
+6. **AdMob SSV**: AdMob → Uygulamalar → Reklam birimleri → rewarded birim → "Sunucu tarafı doğrulama"
+   → URL `https://<ref>.supabase.co/functions/v1/admob-ssv` → "Doğrula" (test isteği 200 döner).
+7. **Kontrol**: `select jobname, schedule from cron.job;` iki iş; `select * from net._http_response order by created desc limit 5;`
+   push çağrılarının durum kodları; Edge Function günlükleri Dashboard → Edge Functions → Logs.
+
+Yerel geliştirmede (pg_cron/pg_net yokken) tetikleyici ve iş kurulumu sessizce atlanır; push'u elle
+denemek için: `curl -X POST http://127.0.0.1:54321/functions/v1/push -H "x-gazla-secret: …" -d '{"mode":"schedule"}'`.
+
+### Kimlik sağlayıcıları (Supabase Auth)
+- **Apple**: Auth → Providers → Apple: "Client IDs" alanına bundle id (`app.gazla`; tarayıcı akışı
+  için Services ID de). iOS'ta native giriş (expo-apple-authentication + `signInWithIdToken`, nonce)
+  ek anahtar istemez; Android/web tarayıcı akışı Apple Services ID + gizli anahtar ister.
+- **Google**: Auth → Providers → Google: "Client IDs" alanına web ve iOS istemci kimlikleri (virgülle),
+  gizli anahtar web istemcisinin. iOS SDK'sının kimlik belirteci nonce taşıdığı için "Skip nonce check"
+  açık olmalı. Uygulama tarafı: `.env` `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`, `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`.
+- Dönüş adresleri (tarayıcı akışı, e-posta bağlantısı): `gazla://auth/callback` ve web adresi
+  Auth → URL Configuration → Redirect URLs'e eklenir.
 
 ## Kararlar
 
@@ -304,6 +398,14 @@ Tasarımda ya da CLAUDE.md'de açık olmayan noktalarda verilen kararlar:
     ekran mesajı seçer.
 23. NumberEntry "En iyin" girilen gün hariç (önceki rekorla kıyas); "Grupta en iyi" kullanıcı dahil,
     engelli ve ayrılmış üyeler hariç, eşitlikte önce giren.
+24. Rehberden bul: çağrı başına en çok 500 özet, en çok 100 sonuç, günde 20 arama; keşfedilemez
+    ("Beni kimse bulamasın") kullanıcı rehberden de bulunmaz (ilişki olsa bile).
+25. Diken saatleri: "gün bitiyor" 22:00, "seri koptu" 09:00 (yerel); her biri hedef saatten sonraki 1
+    saat içinde gönderilir, sonra o gün düşer. Challenge hatırlatması genel hatırlatmayla aynı saatteyse
+    yalnızca genel olan gider. Gönderilmeyen Diken bildirimi Aktivite'ye de yazılmaz.
+26. Arkadaş push'u satır eklenir eklenmez gider (dürtmenin 30 sn geri alma süresi beklenmez; README
+    "Dürtme": bildirim çoktan gitti).
+27. Reklam ödülü reddi 10 dakika gösterilir; sonraki reklam yeni deneme sayılır.
 
 ## Açık sorular
 
@@ -327,18 +429,21 @@ Tasarımda ya da CLAUDE.md'de açık olmayan noktalarda verilen kararlar:
   adla yeniden yüklenebilir. Saat dilimini ileri alarak yarını erkenden işaretlemek mümkündür
   (geriye dönük işaretleme ise kapalı).
 - Aynı cihazda başka hesapla `register_push_token` çağrılırsa token yeni hesaba geçer (cihaz el
-  değiştirince doğru davranış). Çıkışta istemci kendi token satırını silmeli.
+  değiştirince doğru davranış). Çıkışta istemci kendi token satırını siler (çevrimdışıysa silinemez;
+  sonraki girişte token yeni hesaba geçer).
+- Expo push makbuzları (receipt) okunmuyor: yalnızca gönderim anındaki `DeviceNotRegistered` token'ı siler.
+- AdMob SSV'de `user_id`'yi istemci verir: biri reklamı izleyip başka bir kullanıcının kurtarılabilir
+  gününü kurtarabilir (yalnızca o kullanıcının lehine; ödül bir kez).
 - `template_stats` "şu an yapıyor" sayısını sunucu gününe göre (±1 gün) hesaplar.
 - Storage dosya adlarını uygulama üretir (`{uuid}.jpg` gibi; harf, rakam, `.`, `_`, `-`); galeri
   dosya adıyla yükleme reddedilir.
 
 ## Ekranların beklediği, henüz olmayanlar
 Ekranlar mevcut veriyle çalışıyor; aşağıdakiler eklendiğinde tasarımın tamamı gösterilebilir.
-- **Reklamla seri kurtarma:** ödülü sunucuda doğrulayan AdMob SSV Edge Function (`grant_ad_rescue`'yu çağıracak).
 - **Reklam izni:** UMP/ATT sonucunu saklayacak alan (`user_settings`). (Ön ekranın bir kez gösterilmesi istemcide: `src/data/flags.ts` `adConsentShown`.)
 - **Challenge oluşturma:** `create_challenge`'a özel challenge için `icon`, `tint`, sayı `step` parametreleri.
 - **Bahçe:** bitki ifadesi (aksesuar: bant süreden, gözlük `is_longest`ten).
 - **Keşfet:** şablon derin bağlantısı.
 - **Bildirim tercihleri:** "arkadaşın bitirdi", haftalık özet, seri koptu için ayrı anahtarlar; tema tercihi; doğum yılını güncelleme.
-- **Paketler (istemci):** `expo-notifications` (izin + `register_push_token`), `react-native-google-mobile-ads`, `react-native-view-shot` (görsel paylaşım), `expo-clipboard`, `expo-contacts` (rehberden bul), `expo-apple-authentication`.
+- **Bildirimler:** haftalık özet ("Haftan", Pazar 19:00) zamanlayıcısı; Expo push makbuzlarının okunması.
 - **İçerik:** Kullanım Koşulları, Gizlilik, KVKK, destek adresleri.

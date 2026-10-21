@@ -66,6 +66,7 @@ import {
   seedBadges,
   seedChallenges,
   seedBlocks,
+  seedContactEmails,
   seedEarnedBadges,
   seedFinished,
   seedFriendIds,
@@ -621,6 +622,9 @@ export const mockApi: GazlaApi = {
   async registerPushToken() {
     await wait();
   },
+  async unregisterPushToken() {
+    await wait();
+  },
 
   // Bugün ve seri -------------------------------------------------------------------------------
   async getToday() {
@@ -731,6 +735,17 @@ export const mockApi: GazlaApi = {
     if (store.freeRescueUsedMonth === month) throw new ApiError('Bu ayın ücretsiz kurtarma hakkı kullanıldı', 'P0001');
     store.freeRescueUsedMonth = month;
     store.rescues.push({ challengeId, userId: uid, rescuedDate: missedDate, method: 'free' });
+    store.pendingRescues = store.pendingRescues.filter((p) => p.challengeId !== challengeId);
+  },
+  // Gerçekte ödül AdMob SSV ile sunucuda doğrulanır (admob-ssv → grant_ad_rescue); örnekte hemen kurtarır
+  async rescueWithAd(challengeId, missedDate) {
+    await wait();
+    const uid = me();
+    if (store.rescues.some((r) => r.userId === uid && r.challengeId === challengeId && r.rescuedDate === missedDate)) return;
+    if (!store.pendingRescues.some((p) => p.challengeId === challengeId && p.missedDate === missedDate)) {
+      throw new ApiError('Bu gün için kurtarma yapılamaz', 'P0001');
+    }
+    store.rescues.push({ challengeId, userId: uid, rescuedDate: missedDate, method: 'ad' });
     store.pendingRescues = store.pendingRescues.filter((p) => p.challengeId !== challengeId);
   },
   async declineRescue(challengeId, missedDate) {
@@ -1160,6 +1175,25 @@ export const mockApi: GazlaApi = {
           isFriend: f?.status === 'accepted',
           requestPending: f?.status === 'pending',
           mutualCount: store.mutualCount(uid, p.id),
+        };
+      });
+  },
+  async findContacts(emailHashes): Promise<SearchResult[]> {
+    await wait();
+    const uid = me();
+    if (emailHashes.length > 500) throw new ApiError('En fazla 500 kişi aranabilir', '22023');
+    const wanted = new Set(emailHashes.map((h) => h.trim().toLowerCase()));
+    return seedContactEmails
+      .filter((c) => wanted.has(c.sha256) && c.discoverable && c.userId !== uid)
+      .filter((c) => store.profiles.has(c.userId) && !store.isBlocked(uid, c.userId))
+      .slice(0, 100)
+      .map((c) => {
+        const f = store.friendship(uid, c.userId);
+        return {
+          ...store.lite(c.userId),
+          isFriend: f?.status === 'accepted',
+          requestPending: f?.status === 'pending',
+          mutualCount: store.mutualCount(uid, c.userId),
         };
       });
   },

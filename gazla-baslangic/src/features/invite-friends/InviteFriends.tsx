@@ -8,11 +8,13 @@ import OnboardingHeader from '@/components/OnboardingHeader';
 import { Button, Card, ErrorState, IconButton, LoadingState, ToastHost, useToast } from '@/components/ui';
 import { useChallenge, useChallengeBoard } from '@/data';
 import StepScreen, { StepIntro } from '@/features/onboarding/StepScreen';
-import { borderWidth, componentMetrics, componentTypography as ct, typography, useTheme } from '@/theme';
+import { borderWidth, cardColors, componentMetrics, componentTypography as ct, typography, useTheme } from '@/theme';
 import { onboardingColors, onboardingMetrics as m, onboardingTypography as t } from '@/theme/onboarding';
 
-import { UserSearchIcon } from './icons';
-import { copyText, inviteMessage, sendAsMessage, shareText, useInviteCode } from './share';
+import { CONTACTS_SUPPORTED } from './contacts';
+import ContactsSheet from './ContactsSheet';
+import { ContactsIcon, UserSearchIcon } from './icons';
+import { copyText, inviteMessage, sendAsMessage, shareText, useInviteCode, type InviteCode } from './share';
 import UsernameSearchSheet from './UsernameSearchSheet';
 
 type Props = {
@@ -36,7 +38,8 @@ type Props = {
 
 // Arkadaşlarını çağır — design/InviteFriends.dc.html. Onboarding'in 3. adımı ve uygulama içinden
 // açılan davet modalı aynı ekranı kullanır. Davet linki create_invite kodundan (`inviteLink`, https://<alan>/d/<kod>);
-// paylaşım RN Share. "Kullanıcı adıyla ara" iki halde de aynı alt sayfayı açar.
+// "Kopyala" expo-clipboard, paylaşım RN Share. "Rehberden bul" (iOS/Android; web'de yok) ve "Kullanıcı adıyla ara"
+// iki halde de aynı alt sayfaları açar.
 export default function InviteFriends({
   variant,
   challengeId,
@@ -52,6 +55,11 @@ export default function InviteFriends({
   const toast = useToast();
   const { show } = toast;
   const [searchOpen, setSearchOpen] = useState(false);
+  const [contactsOpen, setContactsOpen] = useState(false);
+  // Davet kodu ve challenge burada: link kutusu ve "Rehberden bul"un boş durumu aynı paylaşım metnini kullanır
+  const invite = useInviteCode(challengeId);
+  const challenge = useChallenge(challengeId ?? undefined);
+  const message = invite.url && challenge.data ? inviteMessage(challenge.data.title, invite.url) : null;
 
   useEffect(() => {
     if (!notice) return;
@@ -85,7 +93,12 @@ export default function InviteFriends({
         {challengeId ? (
           <InviteBody
             challengeId={challengeId}
-            onCopied={() => toast.show({ message: 'Davet linki kopyalandı', kind: 'success' })}
+            invite={invite}
+            message={message}
+            onCopy={async (url) => {
+              if (await copyText(url)) toast.show({ message: 'Davet linki kopyalandı', kind: 'success' });
+              else toast.show({ message: 'Link kopyalanamadı. Paylaş ile gönderebilirsin.' });
+            }}
           />
         ) : challengeError ? (
           <View style={styles.state}>
@@ -97,8 +110,10 @@ export default function InviteFriends({
           </View>
         )}
 
-        {/* "Rehberden bul" (expo-contacts) bu listenin ilk satırı olacak */}
         <FriendList style={styles.list}>
+          {CONTACTS_SUPPORTED && (
+            <LinkRow title="Rehberden bul" onPress={() => setContactsOpen(true)} icon={ContactsIcon} divider />
+          )}
           <LinkRow title="Kullanıcı adıyla ara" onPress={() => setSearchOpen(true)} icon={UserSearchIcon} />
         </FriendList>
       </StepScreen>
@@ -106,16 +121,29 @@ export default function InviteFriends({
       {/* Onboarding'de alttaki iki butonun üstünde */}
       <ToastHost toast={toast} offset={onboarding ? m.toastAboveFooter : 0} />
       <UsernameSearchSheet visible={searchOpen} onClose={() => setSearchOpen(false)} />
+      {CONTACTS_SUPPORTED && (
+        <ContactsSheet visible={contactsOpen} onClose={() => setContactsOpen(false)} shareMessage={message} />
+      )}
     </View>
   );
 }
 
-function InviteBody({ challengeId, onCopied }: { challengeId: string; onCopied: () => void }) {
+function InviteBody({
+  challengeId,
+  invite,
+  message,
+  onCopy,
+}: {
+  challengeId: string;
+  invite: InviteCode;
+  /** Paylaşılan metin (link ve challenge hazırsa) */
+  message: string | null;
+  onCopy: (url: string) => void;
+}) {
   const { colors, scheme } = useTheme();
   const c = onboardingColors[scheme];
   const challenge = useChallenge(challengeId);
   const board = useChallengeBoard(challengeId);
-  const invite = useInviteCode(challengeId);
 
   if (challenge.isPending) {
     return (
@@ -135,7 +163,6 @@ function InviteBody({ challengeId, onCopied }: { challengeId: string; onCopied: 
   const ch = challenge.data;
   const members = board.data?.length ?? 1;
   const group = members <= 1 ? 'Grupta şimdilik sadece sen' : `Grupta ${members} kişi`;
-  const message = invite.url ? inviteMessage(ch.title, invite.url) : null;
 
   return (
     <>
@@ -182,9 +209,7 @@ function InviteBody({ challengeId, onCopied }: { challengeId: string; onCopied: 
             icon={CopyIcon}
             disabled={!invite.url}
             accessibilityLabel="Davet linkini kopyala"
-            onPress={async () => {
-              if (invite.url && (await copyText(invite.url))) onCopied();
-            }}
+            onPress={() => invite.url && onCopy(invite.url)}
           />
         </View>
         <View style={styles.shareRow}>
@@ -212,15 +237,17 @@ function InviteBody({ challengeId, onCopied }: { challengeId: string; onCopied: 
   );
 }
 
-/** Liste satırı: ikon karosu, ad, sağ ok */
+/** Liste satırı: ikon karosu, ad, sağ ok; `divider`: altında ayraç (listede son satır hariç) */
 function LinkRow({
   title,
   icon: Icon,
   onPress,
+  divider,
 }: {
   title: string;
   icon: ComponentType<IconProps>;
   onPress: () => void;
+  divider?: boolean;
 }) {
   const { colors, scheme } = useTheme();
   const c = onboardingColors[scheme];
@@ -228,7 +255,11 @@ function LinkRow({
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      style={({ pressed }) => [styles.row, pressed && { backgroundColor: colors.surfaceMuted }]}>
+      style={({ pressed }) => [
+        styles.row,
+        divider && { borderBottomWidth: borderWidth.thin, borderBottomColor: cardColors[scheme].rowDivider },
+        pressed && { backgroundColor: colors.surfaceMuted },
+      ]}>
       <View style={[styles.rowIcon, { backgroundColor: c.rowIconBg }]}>
         <Icon color={colors.text} size={m.rowIconSize} strokeWidth={m.rowIconStroke} />
       </View>

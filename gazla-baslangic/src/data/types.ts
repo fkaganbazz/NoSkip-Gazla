@@ -73,6 +73,11 @@ export type ChallengeTintKey = 'lilac' | 'rose' | 'green' | 'butter' | 'peach' |
 export type Session = {
   userId: string;
   email: string | null;
+  /**
+   * Giriş sağlayıcısından gelen ad (Google; Apple yalnızca ilk girişte verir ve kullanıcı
+   * meta verisine yazılır). Profile adımında görünen ad önerisi; yoksa null.
+   */
+  displayNameHint?: string | null;
 };
 
 /** Başkalarının da görebildiği profil (profiles) */

@@ -6,13 +6,20 @@
 import 'react-native-url-polyfill/auto';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createClient, type PostgrestError, type SupabaseClient } from '@supabase/supabase-js';
+import {
+  createClient,
+  FunctionsFetchError,
+  FunctionsHttpError,
+  FunctionsRelayError,
+  type PostgrestError,
+  type SupabaseClient,
+} from '@supabase/supabase-js';
 import * as Linking from 'expo-linking';
-import * as WebBrowser from 'expo-web-browser';
 import { AppState, Platform } from 'react-native';
 
 import { pokeText } from '../../content/pokes';
-import { ApiError, isNetworkError, NetworkError, type GazlaApi, type OAuthProvider } from '../api';
+import { ApiError, ApiErrorCode, isNetworkError, NetworkError, type GazlaApi, type OAuthProvider } from '../api';
+import { signInWithProvider, signOutNativeProviders } from './nativeAuth';
 import type {
   ActivityItem,
   AvatarTintKey,
@@ -197,8 +204,13 @@ export function createSupabaseApi(url: string, anonKey: string): GazlaApi {
     readAt: r.read_at,
   });
 
-  const toSession = (s: { user: { id: string; email?: string | null } } | null): Session | null =>
-    s ? { userId: s.user.id, email: s.user.email ?? null } : null;
+  const nameHint = (meta: Row | undefined): string | null => {
+    const value = [meta?.full_name, meta?.name, meta?.given_name].find((v) => typeof v === 'string' && v.trim());
+    return typeof value === 'string' ? value.trim() : null;
+  };
+
+  const toSession = (s: { user: { id: string; email?: string | null; user_metadata?: Row } } | null): Session | null =>
+    s ? { userId: s.user.id, email: s.user.email ?? null, displayNameHint: nameHint(s.user.user_metadata) } : null;
 
   let localeCache: Locale | null = null;
   async function locale(): Promise<Locale> {
@@ -228,25 +240,8 @@ export function createSupabaseApi(url: string, anonKey: string): GazlaApi {
       return () => data.subscription.unsubscribe();
     },
     async signInWithProvider(provider: OAuthProvider) {
-      const redirectTo = Linking.createURL('auth/callback');
-      if (Platform.OS === 'web') {
-        const { error } = await supabase.auth.signInWithOAuth({ provider, options: { redirectTo } });
-        if (error) fail(error);
-        return;
-      }
-      // Native: tarayıcıda oturum aç, dönüş adresindeki kodu oturuma çevir (PKCE).
-      // Not: App Store için Apple girişi ileride expo-apple-authentication + signInWithIdToken'a taşınmalı.
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: { redirectTo, skipBrowserRedirect: true },
-      });
-      if (error) fail(error);
-      const result = await WebBrowser.openAuthSessionAsync(data.url!, redirectTo);
-      if (result.type !== 'success') throw new ApiError('Giriş tamamlanmadı');
-      const code = Linking.parse(result.url).queryParams?.code;
-      if (typeof code !== 'string') throw new ApiError('Giriş tamamlanmadı');
-      const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-      if (exchangeError) fail(exchangeError);
+      // iOS'ta Apple ve Google native (signInWithIdToken); native yoksa OAuth tarayıcı akışı (nativeAuth.ts)
+      await signInWithProvider(supabase, provider, fail);
     },
     async signInWithEmail(email) {
       const { error } = await supabase.auth.signInWithOtp({
@@ -256,14 +251,29 @@ export function createSupabaseApi(url: string, anonKey: string): GazlaApi {
       if (error) fail(error);
     },
     async signOut() {
+      await signOutNativeProviders();
       const { error } = await supabase.auth.signOut();
       if (error) fail(error);
     },
     async deleteAccount() {
-      // Edge Function: Storage dosyalarını siler, auth.admin.deleteUser çağırır (supabase/README.md)
+      // Edge Function supabase/functions/delete-account: JWT'den kullanıcı, Storage dosyaları
+      // (proofs/{uid}, avatars/{uid}), auth.admin.deleteUser. Hata gövdesindeki `error` Türkçe metindir.
       const { error } = await supabase.functions.invoke('delete-account', { method: 'POST' });
-      if (error) fail(error);
-      await supabase.auth.signOut();
+      if (error) {
+        if (error instanceof FunctionsHttpError) {
+          const body = await (error.context as Response).json().catch(() => null);
+          throw new ApiError(
+            typeof body?.error === 'string' ? body.error : 'Hesap silinemedi. Biraz sonra tekrar dene.',
+            String((error.context as Response).status),
+          );
+        }
+        if (error instanceof FunctionsFetchError) throw new NetworkError();
+        if (error instanceof FunctionsRelayError) throw new ApiError('Hesap şu an silinemiyor. Biraz sonra tekrar dene.');
+        fail(error);
+      }
+      // Kullanıcı ve oturumları sunucuda silindi: yalnızca cihazdaki oturumu kapat
+      await signOutNativeProviders();
+      await supabase.auth.signOut({ scope: 'local' });
     },
 
     // Profil ve ayarlar -------------------------------------------------------------------------
@@ -322,6 +332,11 @@ export function createSupabaseApi(url: string, anonKey: string): GazlaApi {
     },
     async registerPushToken(token, platform) {
       await rpc('register_push_token', { p_token: token, p_platform: platform });
+    },
+    async unregisterPushToken(token) {
+      const id = await uid();
+      const { error } = await supabase.from('push_tokens').delete().eq('user_id', id).eq('token', token);
+      if (error) fail(error);
     },
 
     // Bugün ve seri -----------------------------------------------------------------------------
@@ -394,6 +409,13 @@ export function createSupabaseApi(url: string, anonKey: string): GazlaApi {
     },
     async rescueWithFreeRight(challengeId, missedDate) {
       await rpc('rescue_streak', { p_challenge: challengeId, p_missed_date: missedDate });
+    },
+    async rescueWithAd(challengeId, missedDate) {
+      // Ödülü sunucu doğrular (admob-ssv → grant_ad_rescue); burada yalnızca sonuç okunur:
+      // 'granted' | 'pending' ya da reddin hatası (süre geçti …)
+      const result = await rpc<string>('ad_rescue_result', { p_challenge: challengeId, p_missed_date: missedDate });
+      if (result === 'granted') return;
+      throw new ApiError('Reklam ödülü henüz doğrulanmadı. Birazdan tekrar dene.', ApiErrorCode.adRewardPending);
     },
     async declineRescue(challengeId, missedDate) {
       await rpc('decline_rescue', { p_challenge: challengeId, p_missed_date: missedDate });
@@ -631,6 +653,17 @@ export function createSupabaseApi(url: string, anonKey: string): GazlaApi {
     },
     async searchProfiles(query) {
       const rows = await rpc<Row[]>('search_profiles', { p_query: query, p_limit: 20 });
+      return rows.map((r) => ({
+        ...toLite(r),
+        isFriend: r.is_friend,
+        requestPending: r.request_pending,
+        mutualCount: r.mutual_count,
+      }));
+    },
+    async findContacts(emailHashes) {
+      const hashes = [...new Set(emailHashes.map((h) => h.trim().toLowerCase()))];
+      if (hashes.length === 0) return [];
+      const rows = await rpc<Row[]>('find_contacts', { p_email_hashes: hashes });
       return rows.map((r) => ({
         ...toLite(r),
         isFriend: r.is_friend,

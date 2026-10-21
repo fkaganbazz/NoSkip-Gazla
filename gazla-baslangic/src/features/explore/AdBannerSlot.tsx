@@ -1,47 +1,55 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 
-import { typography, useTheme } from '@/theme';
+import { AdBanner, useAdsState } from '@/ads';
+import { spacing, useTheme } from '@/theme';
 import { exploreColors, exploreMetrics as m, exploreTypography } from '@/theme/explore';
 
-// Keşfet banner reklam alanı (Explore.dc.html, 320 × 50).
-// TODO(AdMob): react-native-google-mobile-ads kurulunca burada BannerAd (UMP izin durumuna göre)
-// gösterilecek. Şimdilik yalnızca yer ayrılıyor; çizgili yer tutucu sadece geliştirme sürümünde görünür.
+type Load = 'loading' | 'loaded' | 'failed';
+
+// Keşfet banner reklamı (Explore.dc.html: 320 × 50, "REKLAM" etiketli). Yalnızca reklam izni tamamsa
+// istenir. Yüklenene kadar hiçbir şey çizilmez (yer tutucu yok); yüklenemezse alan tamamen kapanır.
+// Web'de reklam yok: bileşen hiç çizilmez.
 export default function AdBannerSlot() {
   const { scheme } = useTheme();
   const c = exploreColors[scheme];
+  const ads = useAdsState();
+  const [load, setLoad] = useState<Load>('loading');
 
-  if (!__DEV__) {
-    return <View style={styles.slot} />;
-  }
+  if (Platform.OS === 'web' || ads.phase !== 'ready' || load === 'failed') return null;
 
+  const loaded = load === 'loaded';
   return (
     <View
-      accessibilityElementsHidden
-      importantForAccessibility="no-hide-descendants"
-      style={[styles.slot, styles.placeholder, { borderColor: c.adBorder, backgroundColor: c.adBg }]}>
-      <View style={[styles.tag, { backgroundColor: c.adTagBg }]}>
-        <Text style={[exploreTypography.adTag, { color: c.adTagText }]}>REKLAM</Text>
-      </View>
-      <Text style={[typography.meta, { color: c.adText }]}>Banner alanı · 320 × 50</Text>
+      style={loaded ? styles.slot : styles.pending}
+      accessibilityElementsHidden={!loaded}
+      importantForAccessibility={loaded ? 'auto' : 'no-hide-descendants'}>
+      {loaded && (
+        <View style={[styles.tag, { backgroundColor: c.adTagBg }]}>
+          <Text style={[exploreTypography.adTag, { color: c.adTagText }]}>REKLAM</Text>
+        </View>
+      )}
+      <AdBanner
+        nonPersonalized={ads.nonPersonalized}
+        onLoaded={() => setLoad('loaded')}
+        onFailed={() => setLoad('failed')}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  // Yüklenirken banner 0 × 0: alan yer kaplamaz
+  pending: {
+    alignSelf: 'center',
+  },
   slot: {
     marginTop: m.adMarginTop,
-    height: m.adHeight,
-  },
-  placeholder: {
-    borderRadius: m.adRadius,
-    borderWidth: m.adBorderWidth,
-    borderStyle: 'dashed',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: m.adGap,
+    alignSelf: 'center',
+    gap: spacing.xxs,
   },
   tag: {
+    alignSelf: 'flex-start',
     paddingVertical: m.adTagPaddingY,
     paddingHorizontal: m.adTagPaddingX,
     borderRadius: m.adTagRadius,

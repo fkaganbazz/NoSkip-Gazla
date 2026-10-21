@@ -65,6 +65,21 @@ export const seedProfiles: Profile[] = [
   person('u-onur', 'onur.b', 'Onur', 'peach'),
 ];
 
+/**
+ * Rehberden bul (find_contacts): kişilerin e-postaları ve SHA-256 özetleri (kırpılmış, küçük harf;
+ * `hashEmail` ile aynı). Elif keşfedilemez (discoverability 'nobody'), Onur engelli: eşleşmezler.
+ * Simülatörün rehberine bu adreslerle kişi ekleyince "Rehberden bul" sonuç verir.
+ */
+export const seedContactEmails: { userId: string; email: string; sha256: string; discoverable: boolean }[] = [
+  { userId: 'u-ece', email: 'ece@example.com', sha256: 'e4601139032ed1df0e561016961ab6621398e75461f2d4f64d7a2537a3c0ee95', discoverable: true },
+  { userId: 'u-kerem', email: 'kerem@example.com', sha256: '5c0d3a2972ade61f2a80365b0ee561587131ceb2f998d07d24db34e33bba9c0a', discoverable: true },
+  { userId: 'u-zeynep', email: 'zeynep@example.com', sha256: '1ea7fc9bc8254cc9e656175dae6890ff1f64c3155d893d0d42295b4dda28c02f', discoverable: true },
+  { userId: 'u-baris', email: 'baris@example.com', sha256: '1d69f462e84fa86c2e55674cca20fad127af2341d81fed87a1c51a2ca8658970', discoverable: true },
+  { userId: 'u-elif', email: 'elif@example.com', sha256: '0b281a0c915f44e1bccba813e3b9567bcef76185b5fc5ae8c06aafe728b48dc1', discoverable: false },
+  { userId: 'u-onur', email: 'onur@example.com', sha256: '27fb26df683e5bafc9e8f09790040a8a337f435b9819ecb9ccaf986577a877ea', discoverable: true },
+  { userId: ME_ID, email: 'deniz@example.com', sha256: 'a2e4d360e4f99305dcf2db5503f6bd0aa6de983de5ad13ea8d23a5c979edaa4a', discoverable: true },
+];
+
 /** Engeller: Deniz → Onur */
 export const seedBlocks: { blockerId: string; blockedId: string; createdAt: string }[] = [
   { blockerId: ME_ID, blockedId: 'u-onur', createdAt: minutesAgo(60 * 24 * 21) },

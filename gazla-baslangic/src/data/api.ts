@@ -84,6 +84,22 @@ export function isNetworkError(error: unknown): boolean {
 
 export type OAuthProvider = 'apple' | 'google';
 
+/** Özel `ApiError.code` değerleri (SQLSTATE dışı) */
+export const ApiErrorCode = {
+  /** Kullanıcı Apple/Google giriş penceresini kapattı: gösterilecek hata değil */
+  cancelled: 'CANCELLED',
+  /** Reklam ödülü henüz sunucuda doğrulanmadı (AdMob SSV gelmedi): kısa aralıklarla yeniden dene */
+  adRewardPending: 'AD_REWARD_PENDING',
+} as const;
+
+/** Kullanıcı girişi iptal etti (`ApiError` kodu 'CANCELLED') */
+export const isCancelledError = (error: unknown): boolean =>
+  error instanceof ApiError && error.code === ApiErrorCode.cancelled;
+
+/** Reklam ödülü doğrulaması bekleniyor (`ApiError` kodu 'AD_REWARD_PENDING') */
+export const isAdRewardPendingError = (error: unknown): boolean =>
+  error instanceof ApiError && error.code === ApiErrorCode.adRewardPending;
+
 export interface GazlaApi {
   /** 'mock' ya da 'supabase' — geliştirme ekranında gösterilir */
   readonly kind: 'mock' | 'supabase';
@@ -91,7 +107,11 @@ export interface GazlaApi {
   // Oturum (Supabase Auth) ---------------------------------------------------------------------
   getSession(): Promise<Session | null>;
   onSessionChange(listener: (session: Session | null) => void): () => void;
-  /** auth.signInWithOAuth / signInWithIdToken */
+  /**
+   * iOS'ta Apple: expo-apple-authentication + `auth.signInWithIdToken` (nonce); Google: google-signin
+   * idToken + `auth.signInWithIdToken`. Native modül yoksa (web, Android'de Apple) `auth.signInWithOAuth`
+   * tarayıcı akışı. Kullanıcı pencereyi kapatırsa `ApiError` kodu 'CANCELLED' (`isCancelledError`).
+   */
   signInWithProvider(provider: OAuthProvider): Promise<void>;
   /** auth.signInWithOtp (e-posta bağlantısı) */
   signInWithEmail(email: string): Promise<void>;
@@ -111,8 +131,10 @@ export interface GazlaApi {
   /** user_settings (kendi satırı) */
   getMySettings(): Promise<UserSettings>;
   updateSettings(update: SettingsUpdate): Promise<UserSettings>;
-  /** register_push_token */
+  /** register_push_token (Expo push token; aynı token başka hesaptaysa bu hesaba geçer) */
   registerPushToken(token: string, platform: 'ios' | 'android'): Promise<void>;
+  /** push_tokens delete (kendi satırı) — çıkışta bu cihazın token'ı silinir */
+  unregisterPushToken(token: string): Promise<void>;
 
   // Bugün ve seri -------------------------------------------------------------------------------
   /** my_today */
@@ -129,6 +151,13 @@ export interface GazlaApi {
   undoCheckin(challengeId: string, localDate?: LocalDate): Promise<void>;
   /** rescue_streak (ücretsiz hak) */
   rescueWithFreeRight(challengeId: string, missedDate: LocalDate): Promise<void>;
+  /**
+   * Reklamla kurtarma. Ödül AdMob SSV ile sunucuda doğrulanır (Edge Function `admob-ssv` →
+   * `grant_ad_rescue`); bu çağrı yalnızca sonucu okur: gün 'ad' yöntemiyle kurtarıldıysa başarı,
+   * doğrulama henüz gelmediyse `ApiError` kodu 'AD_REWARD_PENDING' (`isAdRewardPendingError`),
+   * sunucu ödülü reddettiyse (süre geçti …) o hata. Mock'ta hemen kurtarır.
+   */
+  rescueWithAd(challengeId: string, missedDate: LocalDate): Promise<void>;
   /** decline_rescue — StreakLost "Baştan başla": bekleyen kurtarma kapanır, seri sıfırdan devam */
   declineRescue(challengeId: string, missedDate: LocalDate): Promise<void>;
   /** my_unseen_finished — Bugün açılışında bir kez gösterilecek bitmiş challenge'lar */
@@ -181,6 +210,12 @@ export interface GazlaApi {
   getFriendRequests(): Promise<FriendRequest[]>;
   /** search_profiles */
   searchProfiles(query: string): Promise<SearchResult[]>;
+  /**
+   * find_contacts — rehberdeki e-postaların SHA-256 özetleri (küçük harf hex; e-posta kırpılıp
+   * küçük harfe çevrilerek, `hashEmail`). Yalnızca keşfedilebilir (`discoverability`) kullanıcılar;
+   * engelliler ve kendin hariç. En fazla 500 özet gönderilir, en çok 100 sonuç.
+   */
+  findContacts(emailHashes: string[]): Promise<SearchResult[]>;
   /** send_friend_request */
   sendFriendRequest(userId: string): Promise<void>;
   /** accept_friend_request */

@@ -9,12 +9,15 @@ import SpeechBubble from '@/components/SpeechBubble';
 import { Button, ToastHost, useToast } from '@/components/ui';
 import { useOnboarding } from '@/features/onboarding/OnboardingProvider';
 import StepScreen from '@/features/onboarding/StepScreen';
+import { useEnablePushNotifications } from '@/notifications';
 import { borderWidth, componentMetrics, typography, useTheme } from '@/theme';
 import { onboardingColors, onboardingMetrics as m, onboardingTypography as t } from '@/theme/onboarding';
 
 // Seni dürtmeme izin ver — design/NotifPermission.dc.html (adım 4/4). İki buton da onboarding'i
-// bitirir; uygulama açılınca kök düzen sekmelere geçer. Geri: davet adımına (challenge varsa) ya da challenge
-// seçimine; davetle katılan kişi için önceki adım yok (davet adımı atlandı, profil tamamlandı).
+// bitirir; uygulama açılınca kök düzen sekmelere geçer. "Bildirimlere izin ver": sistem izni, verildiyse Expo push
+// token'ı kaydedilir (src/notifications; simülatörde ve web'de token yok), sonuç ne olursa olsun Bugün açılır.
+// Geri: davet adımına (challenge varsa) ya da challenge seçimine; davetle katılan kişi için önceki adım yok
+// (davet adımı atlandı, profil tamamlandı).
 export default function NotifPermissionScreen() {
   const router = useRouter();
   const { colors, scheme } = useTheme();
@@ -23,6 +26,7 @@ export default function NotifPermissionScreen() {
     useOnboarding();
   const toast = useToast();
   const { show } = toast;
+  const push = useEnablePushNotifications();
 
   // Bekleyen davete katılılamadıysa (geçersiz kod, grup dolu …) burada söylenir
   useEffect(() => {
@@ -34,11 +38,9 @@ export default function NotifPermissionScreen() {
   // finish() sonrası kök düzendeki Stack.Protected (onboarding) grubunu kaldırır, sekmeler açılır
   const done = () => finish();
 
-  const allow = () => {
-    // TODO(bildirim): expo-notifications kurulunca burada izin istenecek:
-    //   const { status } = await Notifications.requestPermissionsAsync();
-    //   if (status === 'granted') registerPushToken((await Notifications.getExpoPushTokenAsync()).data, Platform.OS)
-    // (api.registerPushToken → register_push_token RPC; kancası henüz yok)
+  // Reddedilse ya da token alınamasa da akış durmaz; izin sonradan verilirse token açılışta kaydedilir
+  const allow = async () => {
+    await push.enable();
     done();
   };
 
@@ -51,8 +53,8 @@ export default function NotifPermissionScreen() {
         backgroundColor={c.permissionBg}
         footer={
           <>
-            <Button title="Bildirimlere izin ver" onPress={allow} />
-            <Button title="Şimdi değil" variant="text" onPress={done} />
+            <Button title="Bildirimlere izin ver" onPress={allow} loading={push.pending} />
+            <Button title="Şimdi değil" variant="text" onPress={done} disabled={push.pending} />
           </>
         }>
         <OnboardingHeader step={4} tone="permission" onBack={joinedViaInvite ? undefined : goBack} />

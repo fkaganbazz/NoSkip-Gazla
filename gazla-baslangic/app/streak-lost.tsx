@@ -1,17 +1,21 @@
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { getAdsState, refreshAds, useRewardedAd } from '@/ads';
 import { AvatarStack } from '@/components/Avatar';
 import Diken from '@/components/Diken';
 import { CheckIcon, ClockIcon, SolidDropIcon } from '@/components/icons';
 import { Button, ErrorState, IconButton, LoadingState, Toast } from '@/components/ui';
 import {
+  adRescueSsvOptions,
+  isAdRewardPendingError,
   useAuth,
   useChallengeBoard,
   useDeclineRescueMutation,
   usePendingRescues,
+  useRescueWithAdMutation,
   useRescueWithFreeRightMutation,
   type PendingRescue,
 } from '@/data';
@@ -25,6 +29,9 @@ type Saved = { item: PendingRescue; via: 'ad' | 'free' };
 
 // Seri koptu — design/StreakLost.dc.html. Bekleyen kurtarma (my_pending_rescues) için 24 saatlik süre:
 // rewarded reklam ya da ayda 1 ücretsiz hak. Reklam yüklenemezse ücretsiz hak önerilir (CLAUDE.md).
+// Reklam: AdMob rewarded, ödül sunucuda SSV ile doğrulanır; 8 sn içinde yüklenmezse ya da hata/web'de
+// "yüklenemedi" yolu. Kurtarma yalnızca EARNED_REWARD olayında istenir; ödülsüz kapanışta hiçbir şey olmaz.
+// Reklam izni akışı (6.2) hiç tamamlanmadıysa önce ön ekran açılır, dönünce reklam başlar.
 // Koyu tasarımı yok; en yakın koyu rollere bağlandı (src/theme/moments.ts).
 // "Baştan başla" kurtarmadan vazgeçer (decline_rescue); başka bekleyen kurtarma varsa ona geçer, yoksa kapanır.
 export default function StreakLostScreen() {
@@ -42,6 +49,65 @@ export default function StreakLostScreen() {
   // Vazgeçilen kurtarma: liste yenilenip ekran kapanana kadar aynı kart görünür (boş hali yanıp sönmesin)
   const [declined, setDeclined] = useState<PendingRescue | null>(null);
   const [adFailed, setAdFailed] = useState(false);
+
+  const ad = useRewardedAd();
+  const rescueAd = useRescueWithAdMutation();
+  // Ödül kazanıldı ama sunucu doğrulaması gecikti ('AD_REWARD_PENDING'): bir sonraki basış yeni reklam
+  // açmadan doğrulamayı bir kez daha dener
+  const [verifyAgain, setVerifyAgain] = useState<PendingRescue | null>(null);
+  // Reklam izni ön ekranı buradan açıldı: dönünce reklam başlasın
+  const resumeAfterConsent = useRef<PendingRescue | null>(null);
+
+  const verifyAdRescue = (item: PendingRescue, retried: boolean) => {
+    rescueAd.mutate(
+      { challengeId: item.challengeId, missedDate: item.missedDate },
+      {
+        onSuccess: () => {
+          setAdFailed(false);
+          setVerifyAgain(null);
+          setSaved({ item, via: 'ad' });
+        },
+        onError: (e) => setVerifyAgain(!retried && isAdRewardPendingError(e) ? item : null),
+      },
+    );
+  };
+
+  const startAd = (item: PendingRescue) => {
+    const userId = session?.userId;
+    if (!userId) {
+      setAdFailed(true);
+      return;
+    }
+    setAdFailed(false);
+    setVerifyAgain(null);
+    rescueAd.reset();
+    ad.watch({
+      ssv: adRescueSsvOptions(userId, item.challengeId, item.missedDate),
+      onEarned: () => verifyAdRescue(item, false),
+      onFailed: () => setAdFailed(true),
+      onNeedsConsent: () => {
+        resumeAfterConsent.current = item;
+        router.push('/ad-consent');
+      },
+    });
+  };
+  const startAdRef = useRef(startAd);
+  startAdRef.current = startAd;
+
+  useFocusEffect(
+    useCallback(() => {
+      const item = resumeAfterConsent.current;
+      if (!item) return;
+      resumeAfterConsent.current = null;
+      if (getAdsState().phase === 'ready') {
+        startAdRef.current(item);
+      } else {
+        // Ön ekran kapatıldı ya da izin formu açılamadı: ücretsiz hak öne çıkar; durum sonraki basış için tazelenir
+        setAdFailed(true);
+        void refreshAds();
+      }
+    }, []),
+  );
 
   const current = saved?.item ?? declined ?? rescues.data?.[0];
   const board = useChallengeBoard(current?.challengeId);
@@ -97,13 +163,16 @@ export default function StreakLostScreen() {
       : `Ücretsiz hakkını kullandın. Serin ${current.streakBefore}. günden devam ediyor.`;
 
   const onWatchAd = () => {
-    // TODO(AdMob): react-native-google-mobile-ads kurulunca: izin yoksa önce '/ad-consent' (UMP/ATT),
-    // sonra rewarded reklam yükle ve göster; ödül sunucuda doğrulanınca (SSV) seri kurtarılır ve
-    // setSaved({ item: current, via: 'ad' }). Şimdilik reklam hiç yüklenemiyor sayılır → ücretsiz hak önerilir.
-    setAdFailed(true);
+    if (verifyAgain && verifyAgain.challengeId === current.challengeId && verifyAgain.missedDate === current.missedDate) {
+      setVerifyAgain(null);
+      verifyAdRescue(current, true);
+      return;
+    }
+    startAd(current);
   };
 
   const onFree = () => {
+    ad.cancel();
     rescue.mutate(
       { challengeId: current.challengeId, missedDate: current.missedDate },
       {
@@ -116,6 +185,7 @@ export default function StreakLostScreen() {
   };
 
   const onRestart = () => {
+    ad.cancel();
     const item = current;
     setDeclined(item);
     decline.mutate(
@@ -132,7 +202,9 @@ export default function StreakLostScreen() {
           // Liste yenilendi: sıradaki kurtarma gösterilir
           setDeclined(null);
           setAdFailed(false);
+          setVerifyAgain(null);
           rescue.reset();
+          rescueAd.reset();
           decline.reset();
         },
         onError: () => setDeclined(null),
@@ -146,6 +218,7 @@ export default function StreakLostScreen() {
     if (next.length > 0) {
       setSaved(null);
       rescue.reset();
+      rescueAd.reset();
     } else {
       close();
     }
@@ -204,16 +277,18 @@ export default function StreakLostScreen() {
         <View style={styles.actions}>
           {lost ? (
             <>
-              {(adFailed || rescue.error || decline.error) && (
+              {(adFailed || rescue.error || decline.error || rescueAd.error) && (
                 <Toast
                   message={
                     decline.error
                       ? decline.error.message
                       : rescue.error
                         ? rescue.error.message
-                        : current.freeRescueAvailable
-                          ? 'Reklam şu an yüklenemedi. Ücretsiz hakkını kullanabilirsin.'
-                          : 'Reklam şu an yüklenemedi. Biraz sonra tekrar dene.'
+                        : rescueAd.error
+                          ? rescueAd.error.message
+                          : current.freeRescueAvailable
+                            ? 'Reklam şu an yüklenemedi. Ücretsiz hakkını kullanabilirsin.'
+                            : 'Reklam şu an yüklenemedi. Biraz sonra tekrar dene.'
                   }
                 />
               )}
@@ -221,6 +296,8 @@ export default function StreakLostScreen() {
                 title="Reklam izle, Diken'i sula"
                 accessibilityLabel="Reklam izle, Diken'i sula, 30 saniye"
                 onPress={onWatchAd}
+                loading={ad.status !== 'idle' || rescueAd.isPending}
+                disabled={rescue.isPending || decline.isPending}
                 style={styles.adButton}
                 icon={<SolidDropIcon color={c.adDrop} size={m.adDropSize} />}
                 trailing={
@@ -237,7 +314,7 @@ export default function StreakLostScreen() {
                 }
                 variant="secondary"
                 highlighted={adFailed}
-                disabled={!current.freeRescueAvailable || decline.isPending}
+                disabled={!current.freeRescueAvailable || decline.isPending || rescueAd.isPending}
                 loading={rescue.isPending}
                 onPress={onFree}
               />
@@ -246,7 +323,7 @@ export default function StreakLostScreen() {
                 variant="text"
                 size="md"
                 loading={decline.isPending}
-                disabled={rescue.isPending}
+                disabled={rescue.isPending || rescueAd.isPending}
                 onPress={onRestart}
               />
             </>

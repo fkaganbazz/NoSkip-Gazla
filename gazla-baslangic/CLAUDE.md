@@ -57,6 +57,9 @@ profiles, friendships, blocks, reports, challenge_templates, challenges, challen
 - `npm run android` / `npm run ios`: development build'i derleyip kurar (`expo run:*`). Sonraki açılışlarda `npm start` (dev client).
 - Bulut derleme: `npx eas-cli build --profile development` (iOS simülatör için `development-simulator`).
 - Paket eklerken `npx expo install <paket>` kullan. Bitirmeden önce `npm run typecheck`.
+- Yapılandırma `app.config.ts` (app.json yok): config plugin'leri (Apple girişi, Google Sign-In, bildirim, kamera, galeri, rehber, ATT, AdMob + SKAdNetwork), Türkçe izin metinleri, bundle id / paket `app.gazla` (`APP_ID`), evrensel link (`applinks:<alan>`, Android App Links `https://<alan>/d/*`; alan `EXPO_PUBLIC_INVITE_BASE_URL`/`EXPO_PUBLIC_WEB_BASE_URL`'den). Değerler `.env`'den (tümü açıklamalı `.env.example`'da); boşsa AdMob test uygulama kimlikleri, Google iOS URL şeması yoksa Google plugin'i eklenmez (tarayıcı akışı). Kontrol: `EXPO_OFFLINE=1 node node_modules/expo/bin/cli config --type prebuild`. EAS'te `.env` gitmez: aynı adlarla `eas env:create`.
+- Push için EAS proje kimliği: `npx eas-cli init`, çıkan kimliği `.env` `EAS_PROJECT_ID`'ye yaz (`extra.eas.projectId`; yoksa uygulama push kaydını uyarıyla atlar).
+- Evrensel link için web alanında `/.well-known/apple-app-site-association` (appID `<TeamID>.app.gazla`, yol `/d/*`) ve `/.well-known/assetlinks.json` (paket `app.gazla`, imza SHA-256'sı) yayımlanmalı.
 
 ## Tema kullanımı
 - `import { useTheme, typography, spacing, radius, layout, borderWidth, iconMetrics, palette } from '@/theme'`.
@@ -76,6 +79,10 @@ profiles, friendships, blocks, reports, challenge_templates, challenges, challen
 - Hata: `ApiError.message` kullanıcıya gösterilecek Türkçe metindir.
 - Yazmalar (mutasyonlar) çevrimdışıyken beklemeye alınmaz (`networkMode: 'always'`, DataProvider): istek hemen gider, ağ yoksa `NetworkError` ("İnternet bağlantısı yok…") ile düşer; ekran `mutation.error.message` gösterir, ayrıca `isOnline()` kontrolü yazma. İşaretleme/geri alma çevrimdışı kuyruğa girer.
 - Yeni alan/RPC gerekirse: önce migration, sonra `types.ts` → `api.ts` → iki uygulama → kanca.
+- Giriş: `useSignInWithProviderMutation()` → iOS'ta Apple native (expo-apple-authentication, nonce), Google native (google-signin idToken; `src/config/auth.ts` istemci kimlikleri), yoksa (web, Android'de Apple) OAuth tarayıcı akışı (`supabase/nativeAuth.ts`). Pencereyi kapatmak hata değil: sonuç `'cancelled'` (api düzeyinde `ApiError` kodu `'CANCELLED'`, `isCancelledError`). Apple adı ilk girişte kullanıcı meta verisine yazılır → `session.displayNameHint`.
+- Push token: `useRegisterPushTokenMutation().mutate({ token, platform })` cihazda saklar; `useSignOutMutation` çıkıştan önce sunucudaki satırı siler (`api.unregisterPushToken`).
+- Rehberden bul: `useFindContactsMutation().mutate(await hashContactEmails(emails))` (kırp + küçük harf + SHA-256 hex; en çok 500) → `SearchResult[]`. Mock'ta `ece@example.com`, `kerem@example.com`, `zeynep@example.com`, `baris@example.com` eşleşir (`mock/seed.ts` `seedContactEmails`).
+- Reklamla kurtarma: reklam `serverSideVerificationOptions: adRescueSsvOptions(userId, challengeId, missedDate)` ile; ödülden sonra `useRescueWithAdMutation().mutate({ challengeId, missedDate })` — sunucu SSV'yi doğrulayana kadar `'AD_REWARD_PENDING'` ile artan aralıklarla (~30 sn) yeniden dener (`isAdRewardPendingError`). Mock'ta hemen kurtarır.
 
 ## Ortak bileşenler (`src/components`)
 Spesifikasyon `docs/EKRANLAR.md` "0. Ortak bileşenler"; ilerleme `docs/ILERLEME.md`. Ekranlar bunların kopyasını yazmaz; eksik bir parça önce ortak bileşen olarak eklenir. Hepsi `/dev/components` geliştirme ekranında.
@@ -91,9 +98,11 @@ Spesifikasyon `docs/EKRANLAR.md` "0. Ortak bileşenler"; ilerleme `docs/ILERLEME
 - Karartma `componentColors[scheme].scrim`, alt sayfa köşesi/tutamaç `componentMetrics.sheet*`.
 
 ## Supabase
-- Şema `supabase/migrations/` (11 dosya), testler `supabase/tests/` (pgTAP). Ayrıntı, kararlar ve açık sorular: `supabase/README.md`.
+- Şema `supabase/migrations/` (14 dosya), testler `supabase/tests/` (pgTAP, 7 dosya). Ayrıntı, kararlar, kurulum ve açık sorular: `supabase/README.md`.
+- Edge Function'lar `supabase/functions/` (Deno, tek dosya + `deno.json` içe aktarma haritası; kökteki `tsc` de denetler): `admob-ssv` (AdMob SSV imzası → `grant_ad_rescue`; `--no-verify-jwt`), `delete-account` (JWT → Storage `proofs/{uid}`, `avatars/{uid}` → `auth.admin.deleteUser`), `push` (Expo push: arkadaş bildirimleri notifications tetikleyicisinden, Diken bildirimleri 15 dakikada bir pg_cron'dan; `x-gazla-secret`, `--no-verify-jwt`). Dağıtım, sırlar (Vault `gazla_project_url`, `gazla_push_secret`; `PUSH_WEBHOOK_SECRET`), pg_cron/pg_net ve AdMob SSV adresi: README "Sunucu tarafı işler → Kurulum".
+- Zamanlanmış işler pg_cron'da (`app.install_cron_jobs()`; uzantı yoksa sessizce atlanır): `finish_due_challenges` saatlik, Diken push 15 dakikada bir. Diken kuralları (saatler, günde 2, sessiz saatler) SQL'de (`app.queue_diken_notifications`), metinleri `app.diken_text`.
 - Migration'lar yayımlanmadan önce yerinde düzenlenebilir; yayımlandıktan sonra her değişiklik yeni migration.
-- İstemci tablolara yalnızca politikası olan yerlerde doğrudan yazar (profil/ayar güncelleme, engel, arkadaşlık silme, dürtme geri alma, bildirim token'ı silme). Diğer her şey `public.*` RPC'leri: `checkin`, `send_poke`, `create_challenge`, `submit_report` …
+- İstemci tablolara yalnızca politikası olan yerlerde doğrudan yazar (profil/ayar güncelleme, engel, arkadaşlık silme, dürtme geri alma, bildirim token'ı silme). Diğer her şey `public.*` RPC'leri: `checkin`, `send_poke`, `create_challenge`, `submit_report`, `find_contacts`, `ad_rescue_result` …
 - Seri, gün numarası, hedef, sıra ve kurtarma hakkı sunucudan okunur (`my_today`, `my_streak`, `my_pending_rescues`, `challenge_board`, `friends_today`, `my_garden`); istemcide yeniden hesaplanmaz.
 - Yerel gün kullanıcının `user_settings.timezone`'una göre; istemci saat dilimini cihazdan alıp değişince günceller. `checkin`'e tarih verilmezse bugün; tolerans içinde dün için `p_local_date`.
 - `my_today` işaretlenebilen her gün için satır döner (gece 00:00–02:00 arası dün de, `local_date` ile); işaretlerken `p_local_date` gönder.
