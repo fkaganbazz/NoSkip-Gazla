@@ -28,7 +28,7 @@ export default function ShareScreen() {
     return (
       <View style={[styles.screen, { paddingTop: top }]}>
         <View style={styles.header}>
-          <IconButton icon="close" />
+          <IconButton icon="close" accessibilityLabel="Kapat" />
         </View>
         <LoadingState />
       </View>
@@ -39,7 +39,7 @@ export default function ShareScreen() {
     return (
       <View style={[styles.screen, { paddingTop: top }]}>
         <View style={styles.header}>
-          <IconButton icon="close" />
+          <IconButton icon="close" accessibilityLabel="Kapat" />
         </View>
         <ErrorState message={challenge.error?.message} onRetry={() => challenge.refetch()} />
       </View>
@@ -70,7 +70,7 @@ export default function ShareScreen() {
   return (
     <View style={[styles.screen, { paddingTop: top, paddingBottom: bottom }]}>
       <View style={styles.header}>
-        <IconButton icon="close" />
+        <IconButton icon="close" accessibilityLabel="Kapat" />
       </View>
 
       <View style={styles.previewArea}>

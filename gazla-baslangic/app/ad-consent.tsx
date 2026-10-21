@@ -23,7 +23,7 @@ export default function AdConsentScreen() {
         { paddingTop: insets.top + layout.screenTopGap, paddingBottom: insets.bottom + m.adPaddingBottom },
       ]}>
       <View style={styles.closeRow}>
-        <IconButton icon="close" onPress={close} />
+        <IconButton icon="close" accessibilityLabel="Kapat" onPress={close} />
       </View>
 
       <View style={styles.hero}>

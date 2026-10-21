@@ -12,6 +12,7 @@ type Row = { title: string; detail: string; href?: Href; onPress?: () => void };
 const DESIGN: Row[] = [
   { href: '/dev/tokens', title: 'Renk ve yazı', detail: 'Tokens.dc.html · yazı ölçeği, renkler, boşluk' },
   { href: '/dev/diken', title: 'Diken', detail: 'Diken.dc.html · tüm ifadeler, aşamalar, aksesuarlar' },
+  { href: '/dev/components', title: 'Bileşenler', detail: 'Components.dc.html · buton, ikon butonu, seçim, tost, onboarding başlığı' },
 ];
 
 const SCREENS: Row[] = [

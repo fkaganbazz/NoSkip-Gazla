@@ -19,7 +19,8 @@ export function flatShadowStyle(offset: number, color: string | undefined): View
 type UnderlayProps = {
   offset: number;
   color: string | undefined;
-  size: number;
+  /** Kare/daire buton ölçüsü; verilmezse çerçeveyi doldurur (tam genişlik butonlar) */
+  size?: number;
   radius: number;
 };
 
@@ -32,7 +33,8 @@ export function FlatShadowUnderlay({ offset, color, size, radius }: UnderlayProp
     <View
       style={[
         styles.underlay,
-        { top: offset, width: size, height: size, borderRadius: radius, backgroundColor: color },
+        size === undefined ? styles.fill : { width: size, height: size },
+        { top: offset, borderRadius: radius, backgroundColor: color },
       ]}
     />
   );
@@ -43,5 +45,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     pointerEvents: 'none',
+  },
+  fill: {
+    right: 0,
+    height: '100%',
   },
 });

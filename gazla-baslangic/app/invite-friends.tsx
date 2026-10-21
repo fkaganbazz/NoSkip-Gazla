@@ -57,7 +57,7 @@ function Fallback({ onClose, children }: { onClose: () => void; children: ReactN
   return (
     <View style={[styles.screen, { backgroundColor: colors.background, paddingTop: insets.top + layout.screenTopGap }]}>
       <View style={styles.header}>
-        <IconButton icon="close" onPress={onClose} />
+        <IconButton icon="close" accessibilityLabel="Kapat" onPress={onClose} />
       </View>
       {children}
     </View>

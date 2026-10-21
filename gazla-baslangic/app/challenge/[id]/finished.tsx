@@ -47,7 +47,7 @@ export default function FinishedScreen() {
     return (
       <View style={[styles.screen, { paddingTop: top, backgroundColor: c.bg }]}>
         <View style={styles.closeRow}>
-          <IconButton icon="close" onPress={close} />
+          <IconButton icon="close" accessibilityLabel="Kapat" onPress={close} />
         </View>
         <LoadingState />
       </View>
@@ -58,7 +58,7 @@ export default function FinishedScreen() {
     return (
       <View style={[styles.screen, { paddingTop: top, backgroundColor: c.bg }]}>
         <View style={styles.closeRow}>
-          <IconButton icon="close" onPress={close} />
+          <IconButton icon="close" accessibilityLabel="Kapat" onPress={close} />
         </View>
         <ErrorState message={challenge.error?.message} onRetry={() => challenge.refetch()} />
       </View>

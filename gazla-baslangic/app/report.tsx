@@ -83,7 +83,7 @@ export default function ReportScreen() {
 
   const header = (
     <View style={styles.header}>
-      <IconButton icon="close" onPress={close} />
+      <IconButton icon="close" accessibilityLabel="Kapat" onPress={close} />
       <Text style={[componentTypography.button, styles.headerTitle, { color: colors.text }]}>Şikayet et</Text>
       <View style={styles.headerSide} />
     </View>

@@ -71,7 +71,7 @@ export default function InviteFriends({
           <StepHeader step={3} />
         ) : (
           <View style={styles.modalHeader}>
-            <IconButton icon="close" onPress={onClose} />
+            <IconButton icon="close" accessibilityLabel="Kapat" onPress={onClose} />
           </View>
         )}
         <StepIntro

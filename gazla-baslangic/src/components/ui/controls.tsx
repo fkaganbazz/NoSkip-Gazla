@@ -1,50 +1,105 @@
 /**
  * Küçük ortak kontroller — design/Components.dc.html: yuvarlak ikon butonu, ekran başlığı, çip,
- * seçim kutusu (segment), anahtar, seçim düğmesi, onay kutusu, bölüm etiketi, ilerleme çubuğu, kart.
+ * seçim kutusu (segment), anahtar, seçim düğmesi, onay kutusu, bölüm etiketi, kart.
  */
 import { useRouter } from 'expo-router';
-import type { ReactNode } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { BackIcon, CheckIcon, CloseIcon } from '@/components/icons';
+import { BackIcon, CheckIcon, CloseIcon, DotsIcon, type IconProps } from '@/components/icons';
 import {
   borderWidth,
   componentColors,
   componentMetrics as cm,
   componentTypography as ct,
+  layout,
   radius,
-  spacing,
   typography,
   useTheme,
 } from '@/theme';
 
 // Yuvarlak ikon butonu ve ekran başlığı ---------------------------------------------------------
 
+export type IconButtonIcon = 'back' | 'close' | 'options';
+
+/**
+ * default: beyaz, 1 px #EFE6DC kenar (çoğu ekran). onColor: renkli zeminde beyaz, kenarsız (ChallengePreview,
+ * StreakLost). onDark: koyu ekranda #2B1E47 (PhotoProof). onBrand: yeşil kutlama zemininde yarı saydam kum
+ * (Completion). ink: gece moru dolgu, kum ikon (Friends "Arkadaş ekle").
+ */
+export type IconButtonTone = 'default' | 'onColor' | 'onDark' | 'onBrand' | 'ink';
+
 type IconButtonProps = {
-  icon: 'back' | 'close';
+  /** Hazır ikon (geri, kapat, seçenekler) ya da ortak ikon bileşeni (ör. `BellIcon`) */
+  icon: IconButtonIcon | ComponentType<IconProps>;
+  /** Ekran okuyucu etiketi: "Geri", "Kapat", "Challenge seçenekleri" … */
+  accessibilityLabel: string;
+  /** Verilmezse geri gider (yığın boşsa ana sayfaya) */
   onPress?: () => void;
-  accessibilityLabel?: string;
+  tone?: IconButtonTone;
+  /** Özel ikon ölçüsü (varsayılan 22, çizgi 2.2 — Today aktivite zili) */
+  iconSize?: number;
+  iconStrokeWidth?: number;
+  /** İkonun üstüne çizilen öğe (ör. okunmamış sayısı rozeti) */
+  children?: ReactNode;
+  disabled?: boolean;
+  style?: StyleProp<ViewStyle>;
 };
 
-/** 44 px yuvarlak geri / kapat butonu (Settings.dc.html, Create.dc.html) */
-export function IconButton({ icon, onPress, accessibilityLabel }: IconButtonProps) {
-  const { colors } = useTheme();
+/** 44 px yuvarlak ikon butonu: geri, kapat, seçenekler (üç nokta) ya da verilen ikon */
+export function IconButton({
+  icon,
+  accessibilityLabel,
+  onPress,
+  tone = 'default',
+  iconSize = cm.iconButtonIconSize,
+  iconStrokeWidth = cm.iconButtonIconStroke,
+  children,
+  disabled,
+  style,
+}: IconButtonProps) {
+  const { colors, scheme } = useTheme();
+  const c = componentColors[scheme];
   const router = useRouter();
+
+  const look = {
+    default: { bg: colors.surface, fg: colors.text },
+    onColor: { bg: c.iconButtonOnColorBg, fg: c.iconButtonOnColorIcon },
+    onDark: { bg: c.iconButtonOnDarkBg, fg: c.iconButtonOnDarkIcon },
+    onBrand: { bg: c.iconButtonOnBrandBg, fg: c.iconButtonOnBrandIcon },
+    ink: { bg: c.chipSelectedBg, fg: c.chipSelectedText },
+  }[tone];
+  const bordered = tone === 'default';
+
+  let glyph: ReactNode;
+  if (icon === 'back') {
+    glyph = <BackIcon color={look.fg} size={cm.backIconSize} strokeWidth={cm.backIconStroke} />;
+  } else if (icon === 'close') {
+    glyph = <CloseIcon color={look.fg} size={cm.closeIconSize} strokeWidth={cm.closeIconStroke} />;
+  } else if (icon === 'options') {
+    glyph = <DotsIcon color={look.fg} size={cm.optionsIconSize} />;
+  } else {
+    const Icon = icon;
+    glyph = <Icon color={look.fg} size={iconSize} strokeWidth={iconStrokeWidth} />;
+  }
+
   return (
     <Pressable
       onPress={onPress ?? (() => (router.canGoBack() ? router.back() : router.replace('/')))}
+      disabled={disabled}
       accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel ?? (icon === 'back' ? 'Geri' : 'Kapat')}
-      hitSlop={4}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityState={disabled ? { disabled } : undefined}
       style={({ pressed }) => [
         styles.iconButton,
-        { backgroundColor: pressed ? colors.surfaceMuted : colors.surface, borderColor: colors.border },
+        { backgroundColor: bordered && pressed ? colors.surfaceMuted : look.bg },
+        bordered && { borderWidth: borderWidth.thin, borderColor: colors.border },
+        !bordered && pressed && styles.pressed,
+        disabled && styles.disabled,
+        style,
       ]}>
-      {icon === 'back' ? (
-        <BackIcon color={colors.text} size={cm.backIconSize} strokeWidth={cm.backIconStroke} />
-      ) : (
-        <CloseIcon color={colors.text} size={cm.closeIconSize} strokeWidth={cm.closeIconStroke} />
-      )}
+      {glyph}
+      {children}
     </Pressable>
   );
 }
@@ -64,7 +119,9 @@ export function ScreenHeader({ title, leading = 'back', onLeadingPress, trailing
   const { colors } = useTheme();
   return (
     <View style={[styles.header, style]}>
-      {leading !== 'none' && <IconButton icon={leading} onPress={onLeadingPress} />}
+      {leading !== 'none' && (
+        <IconButton icon={leading} accessibilityLabel={leading === 'back' ? 'Geri' : 'Kapat'} onPress={onLeadingPress} />
+      )}
       <Text accessibilityRole="header" numberOfLines={2} style={[typography.screenTitle, styles.headerTitle, { color: colors.text }]}>
         {title}
       </Text>
@@ -75,41 +132,69 @@ export function ScreenHeader({ title, leading = 'back', onLeadingPress, trailing
 
 // Çip ve segment -------------------------------------------------------------------------------
 
+export type ChipSize = 'md' | 'lg';
+
 type ChipProps = {
   label: string;
+  /** Seçili: gece moru zemin, kum metin (koyuda ters) */
   selected?: boolean;
   /** Yeşil durum çipi ("Durum") */
   status?: boolean;
   onPress?: () => void;
-  icon?: ReactNode;
+  /** Metnin solundaki ikon; fonksiyon verilirse çip metninin rengiyle çağrılır */
+  icon?: ReactNode | ((color: string) => ReactNode);
+  /** md 38 / 14 (Components.dc.html), lg 40 / 16 köşe 20 (Explore.dc.html kategori çipi) */
+  size?: ChipSize;
+  accessibilityLabel?: string;
+  style?: StyleProp<ViewStyle>;
 };
 
 /** Tam yuvarlak çip: seçili (koyu), varsayılan (kenarlı), durum (yeşil) */
-export function Chip({ label, selected = false, status = false, onPress, icon }: ChipProps) {
+export function Chip({
+  label,
+  selected = false,
+  status = false,
+  onPress,
+  icon,
+  size = 'md',
+  accessibilityLabel,
+  style,
+}: ChipProps) {
   const { colors, scheme } = useTheme();
   const c = componentColors[scheme];
+  const lg = size === 'lg';
+  const height = lg ? cm.chipHeightLg : cm.chipHeight;
   const bg = selected ? c.chipSelectedBg : status ? c.statusChipBg : colors.surface;
   const fg = selected ? c.chipSelectedText : status ? c.statusChipText : colors.text;
+  // Components'ta seçili/durum çipi kenarsız; Keşfet'te seçili çipin kenarı zeminle aynı renk (ölçü değişmez)
+  const bordered = lg || (!selected && !status);
   return (
     <Pressable
       onPress={onPress}
       disabled={!onPress}
       accessibilityRole={onPress ? 'button' : undefined}
+      accessibilityLabel={accessibilityLabel}
       accessibilityState={onPress ? { selected } : undefined}
+      hitSlop={onPress ? { top: (layout.minTouchTarget - height) / 2, bottom: (layout.minTouchTarget - height) / 2 } : undefined}
       style={[
         styles.chip,
         {
+          height,
+          borderRadius: lg ? cm.chipRadiusLg : cm.chipRadius,
           backgroundColor: bg,
-          borderColor: c.chipBorder,
-          borderWidth: selected || status ? 0 : borderWidth.thin,
-          paddingHorizontal: status ? 12 : cm.chipPaddingX,
+          borderColor: selected || status ? bg : c.chipBorder,
+          borderWidth: bordered ? borderWidth.thin : 0,
+          paddingHorizontal: status ? cm.statusChipPaddingX : lg ? cm.chipPaddingXLg : cm.chipPaddingX,
         },
+        style,
       ]}>
-      {icon}
+      {typeof icon === 'function' ? icon(fg) : icon}
       <Text style={[typography.chip, { color: fg }]}>{label}</Text>
     </Pressable>
   );
 }
+
+export type SegmentedSize = 'md' | 'lg';
 
 type SegmentedProps<T extends string> = {
   options: { value: T; label: string }[];
@@ -117,27 +202,52 @@ type SegmentedProps<T extends string> = {
   onChange: (value: T) => void;
   /** Seçili hücrenin metin rengi (ör. "Laf sok" turuncu) */
   selectedColor?: (value: T) => string | undefined;
+  /** md 42 / 15 (Components, ChallengePreview), lg 44 / 16 (Poke "Gaz ver / Laf sok") */
+  size?: SegmentedSize;
+  /** Ekran okuyucu: sekmeler (Poke mesaj türü) ya da tek seçim (süre, tema) */
+  role?: 'tabs' | 'radio';
+  accessibilityLabel?: string;
+  style?: StyleProp<ViewStyle>;
 };
 
-/** İki ya da daha çok seçenekli seçim kutusu (Gaz ver / Laf sok) */
-export function Segmented<T extends string>({ options, value, onChange, selectedColor }: SegmentedProps<T>) {
+/** İki ya da daha çok seçenekli seçim kutusu: #EFE6DC kap, seçili beyaz hap */
+export function Segmented<T extends string>({
+  options,
+  value,
+  onChange,
+  selectedColor,
+  size = 'md',
+  role = 'tabs',
+  accessibilityLabel,
+  style,
+}: SegmentedProps<T>) {
   const { colors, scheme } = useTheme();
   const c = componentColors[scheme];
+  const lg = size === 'lg';
   return (
-    <View accessibilityRole="tablist" style={[styles.segmentTrack, { backgroundColor: c.segmentTrack }]}>
+    <View
+      accessibilityRole={role === 'tabs' ? 'tablist' : 'radiogroup'}
+      accessibilityLabel={accessibilityLabel}
+      style={[styles.segmentTrack, { backgroundColor: c.segmentTrack }, style]}>
       {options.map((o) => {
         const active = o.value === value;
         return (
           <Pressable
             key={o.value}
             onPress={() => onChange(o.value)}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: active }}
+            accessibilityRole={role === 'tabs' ? 'tab' : 'radio'}
+            accessibilityState={role === 'tabs' ? { selected: active } : { checked: active }}
             style={[
               styles.segment,
+              { height: lg ? cm.segmentHeightLg : cm.segmentHeight },
               active && { backgroundColor: c.segmentThumb, boxShadow: `0 1px 3px ${c.segmentShadow}` },
             ]}>
-            <Text style={[ct.segment, { color: active ? (selectedColor?.(o.value) ?? colors.text) : colors.textSecondary }]}>
+            <Text
+              numberOfLines={1}
+              style={[
+                lg ? ct.segmentLg : ct.segment,
+                { color: active ? (selectedColor?.(o.value) ?? colors.text) : colors.textSecondary },
+              ]}>
               {o.label}
             </Text>
           </Pressable>
@@ -204,19 +314,38 @@ export function Checkbox({ checked }: { checked: boolean }) {
           ? { backgroundColor: colors.action }
           : { borderWidth: cm.radioOffBorder, borderColor: componentColors[scheme].radioOff },
       ]}>
-      {checked && <CheckIcon color={colors.onAction} size={14} strokeWidth={3.4} />}
+      {checked && <CheckIcon color={colors.onAction} size={cm.checkIconSize} strokeWidth={cm.checkIconStroke} />}
     </View>
   );
 }
 
-// Bölüm etiketi, kart, ilerleme ---------------------------------------------------------------------
+// Bölüm etiketi, kart (ilerleme çubuğu: src/components/ProgressBar.tsx) -------------------------------
 
-/** Büyük harf bölüm etiketi: "İSTEKLER · 1" */
-export function SectionLabel({ children, style }: { children: string; style?: StyleProp<ViewStyle> }) {
-  const { colors } = useTheme();
+/** Türkçe büyük harf (i → İ, ı → I) */
+const upperTrText = (text: string) => text.replace(/i/g, 'İ').replace(/ı/g, 'I').toUpperCase();
+
+/** default: ikincil mor; orange: bugün bekleyenler; green: bugünü tamamlayanlar (Friends.dc.html) */
+export type SectionLabelTone = 'default' | 'green' | 'orange';
+
+type SectionLabelProps = {
+  /** Metin büyük harfe çevrilir */
+  children: string;
+  tone?: SectionLabelTone;
+  /** Sona " · n" eklenir ("İSTEKLER · 1") */
+  count?: number;
+  style?: StyleProp<ViewStyle>;
+};
+
+/** Büyük harf bölüm etiketi: 13 / 800, aralık 0.6 — "BUGÜN BEKLEYENLER · 2" */
+export function SectionLabel({ children, tone = 'default', count, style }: SectionLabelProps) {
+  const { colors, scheme } = useTheme();
+  const c = componentColors[scheme];
+  const color = tone === 'green' ? c.sectionLabelGreen : tone === 'orange' ? c.sectionLabelOrange : colors.textSecondary;
   return (
     <View style={style}>
-      <Text style={[ct.sectionLabel, { color: colors.textSecondary }]}>{children}</Text>
+      <Text accessibilityRole="header" style={[ct.sectionLabel, { color }]}>
+        {upperTrText(count === undefined ? children : `${children} · ${count}`)}
+      </Text>
     </View>
   );
 }
@@ -233,24 +362,19 @@ export function Card({ children, style, onPress }: { children: ReactNode; style?
   );
 }
 
-/** İnce ilerleme çubuğu (0–1) */
-export function ProgressBar({ value, color, style }: { value: number; color?: string; style?: StyleProp<ViewStyle> }) {
-  const { colors, scheme } = useTheme();
-  return (
-    <View style={[styles.track, { backgroundColor: componentColors[scheme].progressTrack }, style]}>
-      <View style={[styles.fill, { width: `${Math.max(0, Math.min(1, value)) * 100}%`, backgroundColor: color ?? colors.brand }]} />
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   iconButton: {
     width: cm.iconButton,
     height: cm.iconButton,
     borderRadius: cm.iconButton / 2,
-    borderWidth: borderWidth.thin,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  pressed: {
+    opacity: 0.8,
+  },
+  disabled: {
+    opacity: 0.5,
   },
   header: {
     flexDirection: 'row',
@@ -261,11 +385,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   chip: {
-    height: cm.chipHeight,
-    borderRadius: cm.chipRadius,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs - 2,
+    gap: cm.chipGap,
   },
   segmentTrack: {
     flexDirection: 'row',
@@ -275,7 +397,6 @@ const styles = StyleSheet.create({
   },
   segment: {
     flex: 1,
-    height: cm.segmentHeight,
     borderRadius: cm.segmentRadius,
     alignItems: 'center',
     justifyContent: 'center',
@@ -307,14 +428,5 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: radius.card,
     borderWidth: borderWidth.thin,
-  },
-  track: {
-    height: cm.progressHeight,
-    borderRadius: cm.progressHeight / 2,
-    overflow: 'hidden',
-  },
-  fill: {
-    height: cm.progressHeight,
-    borderRadius: cm.progressHeight / 2,
   },
 });

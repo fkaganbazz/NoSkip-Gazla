@@ -3,11 +3,11 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { FriendBubble, InviteBubble } from '@/components/FriendRow';
+import { TaskCard } from '@/components/TaskCard';
 import EmptyToday from '@/features/today/EmptyToday';
-import FriendsRow from '@/features/today/FriendsRow';
 import HeroCard from '@/features/today/HeroCard';
 import SectionHeader from '@/features/today/SectionHeader';
-import TaskCard from '@/features/today/TaskCard';
 import TodayHeader from '@/features/today/TodayHeader';
 import {
   formatDayLabel,
@@ -159,9 +159,8 @@ export default function TodayScreen() {
             <TaskCard
               key={row.id}
               task={row}
-              done={row.done}
-              onToggle={onTask}
-              onOpen={() => router.push({ pathname: '/challenge/[id]', params: { id: row.challengeId } })}
+              onPressAction={() => onTask(row.id)}
+              onPressBody={() => router.push({ pathname: '/challenge/[id]', params: { id: row.challengeId } })}
             />
           ))}
         </View>
@@ -174,11 +173,18 @@ export default function TodayScreen() {
               detailColor={todayColors[scheme].waitingText}
               style={styles.friendsHeader}
             />
-            <FriendsRow
-              friends={friendRows}
-              onPoke={(id) => router.push({ pathname: '/poke/[userId]', params: { userId: id } })}
-              onInvite={() => router.push('/invite-friends')}
-            />
+            {/* Arkadaş şeridi: bitirenler yeşil halka + tik, bekleyenler kesikli halka + Dürt, sonda davet */}
+            <View style={styles.friends}>
+              {friendRows.map((f) => (
+                <FriendBubble
+                  key={f.id}
+                  person={f}
+                  done={f.doneToday}
+                  onPoke={() => router.push({ pathname: '/poke/[userId]', params: { userId: f.id } })}
+                />
+              ))}
+              <InviteBubble onPress={() => router.push('/invite-friends')} />
+            </View>
           </>
         )}
       </ScrollView>
@@ -208,5 +214,10 @@ const styles = StyleSheet.create({
   },
   friendsHeader: {
     marginTop: m.friendsHeaderMarginTop,
+  },
+  friends: {
+    marginTop: m.sectionListMarginTop,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
 });

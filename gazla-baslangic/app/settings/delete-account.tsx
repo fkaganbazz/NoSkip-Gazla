@@ -38,7 +38,7 @@ export default function DeleteAccountScreen() {
           { paddingTop: insets.top + layout.screenTopGap, paddingBottom: insets.bottom + m.deletePaddingBottom },
         ]}>
         <View style={styles.header}>
-          <IconButton icon="back" />
+          <IconButton icon="back" accessibilityLabel="Geri" />
           <Text accessibilityRole="header" style={[t.headerTitle, { color: colors.text }]}>
             Hesabı sil
           </Text>

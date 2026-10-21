@@ -95,7 +95,7 @@ export default function ChallengeDetailScreen() {
     return (
       <View style={[styles.screen, { paddingTop: top }]}>
         <View style={styles.headerRow}>
-          <IconButton icon="back" />
+          <IconButton icon="back" accessibilityLabel="Geri" />
         </View>
         <LoadingState />
       </View>
@@ -106,7 +106,7 @@ export default function ChallengeDetailScreen() {
     return (
       <View style={[styles.screen, { paddingTop: top }]}>
         <View style={styles.headerRow}>
-          <IconButton icon="back" />
+          <IconButton icon="back" accessibilityLabel="Geri" />
         </View>
         <ErrorState message={challenge.error?.message} onRetry={refetchAll} />
       </View>
@@ -171,7 +171,7 @@ export default function ChallengeDetailScreen() {
         ]}
         refreshControl={<RefreshControl refreshing={challenge.isRefetching || board.isRefetching} onRefresh={refetchAll} />}>
         <View style={styles.headerRow}>
-          <IconButton icon="back" />
+          <IconButton icon="back" accessibilityLabel="Geri" />
           <Pressable
             onPress={() => setMenuOpen(true)}
             accessibilityRole="button"

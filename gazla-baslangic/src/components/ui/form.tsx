@@ -1,11 +1,10 @@
 /**
  * Form ve geri bildirim — design/Components.dc.html: metin alanı (varsayılan, odakta, hata),
- * avatar, bilgi tostu (çevrimdışı), geri al tostu, sayı rozeti, yükleniyor / hata durumları.
+ * bilgi tostu (çevrimdışı), geri al tostu, sayı rozeti, yükleniyor / hata durumları.
  */
 import { useState } from 'react';
 import {
   ActivityIndicator,
-  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -16,19 +15,18 @@ import {
   type ViewStyle,
 } from 'react-native';
 
-import type { AvatarTintKey } from '@/data';
 import {
-  avatarTints,
   borderWidth,
   componentColors,
   componentMetrics as cm,
   componentTypography as ct,
-  fonts,
   layout,
   spacing,
   typography,
   useTheme,
 } from '@/theme';
+
+import { CheckIcon, WifiOffIcon } from '@/components/icons';
 
 import Button from './Button';
 
@@ -86,67 +84,55 @@ export function TextField({ label, error, hint, style, onFocus, onBlur, ...input
   );
 }
 
-// Avatar -----------------------------------------------------------------------------------------
-
-/** Türkçe büyük harf (i → İ, ı → I) */
-export const upperTr = (ch: string) => (ch === 'i' ? 'İ' : ch === 'ı' ? 'I' : ch.toUpperCase());
-
-type AvatarProps = {
-  name: string;
-  tint: AvatarTintKey;
-  url?: string | null;
-  size?: number;
-  style?: StyleProp<ViewStyle>;
-};
-
-/** Baş harfli (ya da fotoğraflı) yuvarlak avatar; renk veriye bağlı (avatarTints) */
-export function Avatar({ name, tint, url, size = cm.avatarSm, style }: AvatarProps) {
-  const { scheme } = useTheme();
-  const t = avatarTints[tint][scheme];
-  return (
-    <View
-      accessible
-      accessibilityLabel={name}
-      style={[{ width: size, height: size, borderRadius: size / 2, backgroundColor: t.bg }, styles.avatar, style]}>
-      {url ? (
-        <Image source={{ uri: url }} style={{ width: size, height: size, borderRadius: size / 2 }} />
-      ) : (
-        <Text style={{ fontFamily: fonts.extraBold, fontSize: Math.round(size * 0.36), color: t.ink }}>
-          {upperTr(name.charAt(0))}
-        </Text>
-      )}
-    </View>
-  );
-}
+// Avatar ve upperTr: src/components/Avatar.tsx
 
 // Tost ve rozet ------------------------------------------------------------------------------------
 
+/** info: koyu, ikonsuz; offline: koyu + çevrimdışı ikonu; success: yeşil + tik (Components.dc.html GERİ BİLDİRİM) */
+export type ToastKind = 'info' | 'success' | 'offline';
+
+export type ToastAction = { label: string; onPress: () => void };
+
 type ToastProps = {
   message: string;
-  /** Geri al tostu: yeşil zemin ve sağda buton */
-  action?: { label: string; onPress: () => void };
+  /** Verilmezse: `action` varsa success (geri al tostu), yoksa info */
+  kind?: ToastKind;
+  /** Sağda beyaz buton ("Geri al") */
+  action?: ToastAction;
   style?: StyleProp<ViewStyle>;
 };
 
-export function Toast({ message, action, style }: ToastProps) {
+/** Tost kutusu (yalnızca görünüm). Zamanlama ve ekran altına yerleşim: `useToast` + `ToastHost` (toast.tsx). */
+export function Toast({ message, kind, action, style }: ToastProps) {
   const { colors, scheme } = useTheme();
   const c = componentColors[scheme];
-  if (action) {
-    return (
-      <View accessibilityLiveRegion="polite" style={[styles.toast, styles.undoToast, { backgroundColor: c.undoToastBg }, style]}>
-        <Text style={[ct.toastStrong, styles.toastText, { color: c.undoToastText }]}>{message}</Text>
+  const k = kind ?? (action ? 'success' : 'info');
+  const success = k === 'success';
+  return (
+    <View
+      accessibilityLiveRegion="polite"
+      style={[
+        styles.toast,
+        action && styles.toastWithAction,
+        { backgroundColor: success ? c.undoToastBg : c.toastBg },
+        style,
+      ]}>
+      {k === 'offline' && (
+        <WifiOffIcon color={c.toastOfflineIcon} size={cm.toastIconSize} strokeWidth={cm.toastOfflineIconStroke} />
+      )}
+      {success && <CheckIcon color={colors.actionText} size={cm.toastIconSize} strokeWidth={cm.toastSuccessIconStroke} />}
+      <Text style={[success ? ct.toastStrong : ct.toast, styles.toastText, { color: success ? c.undoToastText : c.toastText }]}>
+        {message}
+      </Text>
+      {action && (
         <Pressable
           onPress={action.onPress}
           accessibilityRole="button"
-          style={[styles.undoButton, { backgroundColor: c.undoButtonBg }]}>
+          hitSlop={(layout.minTouchTarget - cm.toastButtonHeight) / 2}
+          style={({ pressed }) => [styles.toastButton, { backgroundColor: c.undoButtonBg }, pressed && styles.toastButtonPressed]}>
           <Text style={[ct.toastStrong, { color: colors.actionText }]}>{action.label}</Text>
         </Pressable>
-      </View>
-    );
-  }
-  return (
-    <View accessibilityLiveRegion="polite" style={[styles.toast, { backgroundColor: c.toastBg }, style]}>
-      <Text style={[ct.toast, styles.toastText, { color: c.toastText }]}>{message}</Text>
+      )}
     </View>
   );
 }
@@ -205,32 +191,30 @@ const styles = StyleSheet.create({
     paddingBottom: 14,
     textAlignVertical: 'top',
   },
-  avatar: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
   toast: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: 14,
+    gap: cm.toastGap,
+    paddingVertical: cm.toastPaddingY,
+    paddingHorizontal: cm.toastPaddingX,
     borderRadius: cm.toastRadius,
   },
-  undoToast: {
-    paddingVertical: 10,
-    paddingRight: 10,
+  toastWithAction: {
+    paddingVertical: cm.toastActionPadding,
+    paddingRight: cm.toastActionPadding,
   },
   toastText: {
     flex: 1,
   },
-  undoButton: {
-    height: 36,
-    paddingHorizontal: spacing.sm,
-    borderRadius: spacing.sm,
+  toastButton: {
+    height: cm.toastButtonHeight,
+    paddingHorizontal: cm.toastButtonPaddingX,
+    borderRadius: cm.toastButtonRadius,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  toastButtonPressed: {
+    opacity: 0.8,
   },
   badge: {
     minWidth: cm.countBadge,

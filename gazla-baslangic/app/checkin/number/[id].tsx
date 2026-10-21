@@ -108,7 +108,7 @@ export default function NumberEntryScreen() {
                 : `${task.dayIndex}. gün · Bugünkü hedef ${formatNumber(target)} ${unit}`}
             </Text>
           </View>
-          <IconButton icon="close" onPress={() => router.back()} />
+          <IconButton icon="close" accessibilityLabel="Kapat" onPress={() => router.back()} />
         </View>
 
         <View style={styles.stepper}>

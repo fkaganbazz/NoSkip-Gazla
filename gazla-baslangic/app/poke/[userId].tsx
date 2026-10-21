@@ -113,7 +113,7 @@ export default function PokeSheet() {
             </Text>
             {!!sub && <Text style={[typography.meta, { color: colors.textSecondary }]}>{sub}</Text>}
           </View>
-          <IconButton icon="close" onPress={close} />
+          <IconButton icon="close" accessibilityLabel="Kapat" onPress={close} />
         </View>
 
         {harsh && (

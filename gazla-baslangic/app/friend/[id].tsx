@@ -38,7 +38,7 @@ export default function FriendProfileScreen() {
 
   const header = (trailing?: boolean) => (
     <View style={styles.topRow}>
-      <IconButton icon="back" />
+      <IconButton icon="back" accessibilityLabel="Geri" />
       {trailing && (
         <Pressable
           onPress={() => setMenuOpen(true)}

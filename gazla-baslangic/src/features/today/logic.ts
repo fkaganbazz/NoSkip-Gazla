@@ -116,15 +116,22 @@ export function toTaskRow(task: TodayTask, now: Date): TaskRow {
     id: `${task.challengeId}|${task.localDate}`,
     challengeId: task.challengeId,
     done: task.done,
-    type: task.taskType,
+    taskType: task.taskType,
     title: task.title,
     meta: taskMeta(task, now),
-    progress: Math.round((Math.min(task.dayIndex, task.durationDays) / task.durationDays) * 100),
+    // Tasarımdaki gibi tam yüzdeye yuvarlanır (Gün 4/30 → %13)
+    progress: task.durationDays > 0 ? Math.round((Math.min(task.dayIndex, task.durationDays) / task.durationDays) * 100) / 100 : 0,
     tint: task.tint,
     icon: task.icon,
   };
 }
 
 export function toFriendRow(friend: FriendToday): TodayFriend {
-  return { id: friend.id, name: friend.displayName, tint: friend.avatarTint, doneToday: !!friend.doneToday };
+  return {
+    id: friend.id,
+    displayName: friend.displayName,
+    avatarTint: friend.avatarTint,
+    avatarUrl: friend.avatarUrl,
+    doneToday: !!friend.doneToday,
+  };
 }

@@ -1,10 +1,13 @@
 /**
- * Çizgi ikonlar (viewBox 24×24). Kaynak: TabBar.dc.html, Create.dc.html, Today.dc.html.
+ * Çizgi ikonlar (viewBox 24×24). Kaynak: TabBar.dc.html, Create.dc.html, Today.dc.html ve ekranlarda
+ * tekrar eden ikonlar (her birinin yorumunda kaynak dosya). Path'ler dc.html'den birebir.
  * Boyut ve çizgi kalınlığı çağıran yerden, tema token'larından gelir.
  */
 import type { ReactNode } from 'react';
 import type { ColorValue } from 'react-native';
-import Svg, { Circle, G, Path } from 'react-native-svg';
+import Svg, { Circle, Ellipse, G, Path } from 'react-native-svg';
+
+import { dikenColors } from '@/theme';
 
 export type IconProps = {
   color: ColorValue;
@@ -133,7 +136,10 @@ export function BellIcon(props: IconProps) {
   );
 }
 
-/** Seri çipi — filiz (alt menüdeki filizden biraz farklı) */
+/**
+ * Seri çipi ve logo filizi — alt menüdeki filizden biraz farklı (Today.dc.html, Components.dc.html,
+ * Main.dc.html logo: 26, çizgi 2.4). onboarding/icons LogoSproutIcon ile aynı çizim.
+ */
 export function StreakIcon(props: IconProps) {
   return (
     <LineIcon {...props}>
@@ -209,6 +215,181 @@ export function LockIcon(props: IconProps) {
   );
 }
 
+/** Açılır seçim — aşağı ok (Profile.dc.html yıl seçici: 20, çizgi 2.4) */
+export function ChevronDownIcon(props: IconProps) {
+  return (
+    <LineIcon {...props}>
+      <Path d="M6 9 L12 15 L18 9" />
+    </LineIcon>
+  );
+}
+
+/** Azalt — eksi (NumberEntry.dc.html: 26, çizgi 3; tasarımda stroke-linejoin yok) */
+export function MinusIcon(props: IconProps) {
+  return (
+    <LineIcon {...props} rounded={false}>
+      <Path d="M5.5 12 H18.5" />
+    </LineIcon>
+  );
+}
+
+/** Başlangıç günü — takvim. Tasarımda karşılığı yok (Create'teki tasarım dışı satır); kilit/saat çizgi dilinde. */
+export function CalendarIcon(props: IconProps) {
+  return (
+    <LineIcon {...props}>
+      <Path d="M5 6.5 H19 V19.5 H5 Z" />
+      <Path d="M5 10.5 H19 M9 4 V8 M15 4 V8" />
+    </LineIcon>
+  );
+}
+
+// Paylaşım ve iletişim ikonları
+
+/** Paylaş — kutudan çıkan ok (ChallengePreview.dc.html, Finished.dc.html, InviteFriends.dc.html) */
+export function ShareIcon(props: IconProps) {
+  return (
+    <LineIcon {...props}>
+      <Path d="M12 3.5 V15" />
+      <Path d="M7.5 8 L12 3.5 L16.5 8" />
+      <Path d="M5 12 V19.5 H19 V12" />
+    </LineIcon>
+  );
+}
+
+/** Gönder — kağıt uçak (Poke.dc.html, PhotoProof.dc.html: 20, çizgi 2.6) */
+export function SendIcon(props: IconProps) {
+  return (
+    <LineIcon {...props}>
+      <Path d="M4 12 L20 4 L14 20 L11 13 Z" />
+    </LineIcon>
+  );
+}
+
+/** Kopyala — üst üste iki kare (InviteFriends.dc.html: 16, çizgi 2.4) */
+export function CopyIcon(props: IconProps) {
+  return (
+    <LineIcon {...props}>
+      <Path d="M9 9 H19 V19 H9 Z" />
+      <Path d="M5 15 V5 H15" />
+    </LineIcon>
+  );
+}
+
+/** Mesaj — konuşma balonu (InviteFriends.dc.html "Mesajla"; Activity.dc.html dürtme rozeti) */
+export function MessageIcon(props: IconProps) {
+  return (
+    <LineIcon {...props}>
+      <Path d="M4 5 H20 V15 H11 L7 19 V15 H4 Z" />
+    </LineIcon>
+  );
+}
+
+/** E-posta — zarf (SignIn.dc.html: 20, çizgi 2.2) */
+export function MailIcon(props: IconProps) {
+  return (
+    <LineIcon {...props}>
+      <Path d="M4 6 H20 V18 H4 Z" />
+      <Path d="M4.5 6.5 L12 12.5 L19.5 6.5" />
+    </LineIcon>
+  );
+}
+
+/** Dürt — işaret eden el (Detail.dc.html: 20, çizgi 2.6; FriendProfile.dc.html: 22, çizgi 2.2) */
+export function HandIcon(props: IconProps) {
+  return (
+    <LineIcon {...props}>
+      <Path d="M8 13 V6.5 C8 5.7 8.7 5 9.5 5 C10.3 5 11 5.7 11 6.5 V12 M11 11 V4.5 C11 3.7 11.7 3 12.5 3 C13.3 3 14 3.7 14 4.5 V11 M14 11 V6 C14 5.2 14.7 4.5 15.5 4.5 C16.3 4.5 17 5.2 17 6 V14 C17 18 14.5 21 11 21 C8 21 6.5 19.5 5 17 L3.5 14 C3 13 3.4 12 4.3 11.6 C5.2 11.2 6.2 11.6 6.7 12.4 L8 14.5" />
+    </LineIcon>
+  );
+}
+
+/** Yıldız (ChallengePreview.dc.html, Activity.dc.html bitirme rozeti, Garden.dc.html) */
+export function StarIcon(props: IconProps) {
+  return (
+    <LineIcon {...props}>
+      <Path d="M12 3 L14.6 8.6 L20.5 9.3 L16.1 13.4 L17.3 19.3 L12 16.3 L6.7 19.3 L7.9 13.4 L3.5 9.3 L9.4 8.6 Z" />
+    </LineIcon>
+  );
+}
+
+/** Çevrimdışı — üstü çizili wifi (Components.dc.html bilgi tostu: 20, çizgi 2.2) */
+export function WifiOffIcon(props: IconProps) {
+  return (
+    <LineIcon {...props}>
+      <Path d="M2.5 9 C8 3.8 16 3.8 21.5 9" />
+      <Path d="M6 12.5 C9.5 9.5 14.5 9.5 18 12.5" />
+      <Path d="M9.5 16 C11 14.8 13 14.8 14.5 16" />
+      <Path d="M3 3 L21 21" />
+    </LineIcon>
+  );
+}
+
+// Dolu ikonlar (çizgisiz; strokeWidth verilse de kullanılmaz, imza diğerleriyle uyumlu kalsın diye isteğe bağlı)
+
+type FilledIconProps = Omit<IconProps, 'strokeWidth'> & { strokeWidth?: number };
+
+/** Seçenekler — üç nokta (Detail.dc.html, FriendProfile.dc.html: 20) */
+export function DotsIcon({ color, size }: FilledIconProps) {
+  return (
+    <Svg width={size} height={size} viewBox={VIEW_BOX}>
+      <G fill={color}>
+        <Circle cx={5} cy={12} r={2} />
+        <Circle cx={12} cy={12} r={2} />
+        <Circle cx={19} cy={12} r={2} />
+      </G>
+    </Svg>
+  );
+}
+
+/** Kenarsız dolu damla — kurtarılan gün, "Diken'i sula" (Detail.dc.html, ChallengePreview.dc.html, StreakLost.dc.html) */
+export function SolidDropIcon({ color, size }: FilledIconProps) {
+  return (
+    <Svg width={size} height={size} viewBox={VIEW_BOX}>
+      <Path
+        d="M12 3 C15.4 7.4 17.6 10.6 17.6 14 C17.6 17.3 15.1 20 12 20 C8.9 20 6.4 17.3 6.4 14 C6.4 10.6 8.6 7.4 12 3 Z"
+        fill={color}
+      />
+    </Svg>
+  );
+}
+
+/**
+ * Diken'in yüzü — uygulama ikonunun küçük hali (viewBox 100×100; NotifPermission.dc.html, ShareCard.dc.html,
+ * InviteLanding.dc.html, Activity.dc.html). Gövde kutunun altına taşar; zemin rengi ve köşe çağıran yerin
+ * kapsayıcısından (`overflow: hidden`). Renkler maskot paletinden, iki modda aynı.
+ */
+export function DikenFaceIcon({ size }: { size: number }) {
+  const ink = dikenColors.outline;
+  const white = dikenColors.eyeWhite;
+  return (
+    <Svg width={size} height={size} viewBox="0 0 100 100">
+      <Path d="M16 110 V58 C16 36 31 20 50 20 C69 20 84 36 84 58 V110 Z" fill={dikenColors.body} />
+      <Path d="M58 21.5 C73 25 84 40 84 58 V110 H72 V60 C72 44 67 30 58 21.5 Z" fill={dikenColors.bodyShade} />
+      <Path
+        d="M50 20.5 L44 10 M50 20 L50 7 M50 20.5 L56 10"
+        fill="none"
+        stroke={dikenColors.body}
+        strokeWidth={4.5}
+        strokeLinecap="round"
+      />
+      <Ellipse cx={38} cy={61} rx={8.5} ry={10} fill={white} stroke={ink} strokeWidth={3} />
+      <Circle cx={41} cy={64} r={4.5} fill={ink} />
+      <Path d="M27.5 61 A10.5 12 0 0 1 48.5 61 Z" fill={dikenColors.body} />
+      <Path d="M29 61 H47" fill="none" stroke={ink} strokeWidth={3.5} strokeLinecap="round" />
+      <Ellipse cx={62} cy={60} rx={9} ry={10.5} fill={white} stroke={ink} strokeWidth={3} />
+      <Circle cx={65} cy={62} r={4.8} fill={ink} />
+      <Circle cx={66.7} cy={60} r={1.6} fill={white} />
+      <Path
+        d="M29 49.5 L46 52 M54 45 Q62 36 71 42 M41 79 Q52 82 61 73"
+        fill="none"
+        stroke={ink}
+        strokeWidth={4}
+        strokeLinecap="round"
+      />
+    </Svg>
+  );
+}
+
 // Challenge ikonları (görev kartındaki karo)
 
 /** Telefonsuz — üstü çizili telefon */
@@ -277,12 +458,13 @@ export function ToothbrushIcon(props: IconProps) {
   );
 }
 
-/** Şekersiz — şeker. Tasarımda çizimi yok; aynı çizgi diliyle sarılı şeker. */
+/** Şekersiz — sarılı şeker (InviteLanding.dc.html "10 gün şekersiz" karosu; 28, çizgi 2) */
 export function CandyIcon(props: IconProps) {
   return (
     <LineIcon {...props}>
-      <Path d="M16 12 A4 4 0 1 1 8 12 A4 4 0 1 1 16 12 Z" />
-      <Path d="M8.3 10.5 L4 8.5 V15.5 L8.3 13.5 M15.7 10.5 L20 8.5 V15.5 L15.7 13.5" />
+      <Path d="M8 12 C8 9.8 9.8 8 12 8 C14.2 8 16 9.8 16 12 C16 14.2 14.2 16 12 16 C9.8 16 8 14.2 8 12 Z" />
+      <Path d="M8.4 10 L4 7.8 V16.2 L8.4 14" />
+      <Path d="M15.6 10 L20 7.8 V16.2 L15.6 14" />
     </LineIcon>
   );
 }
