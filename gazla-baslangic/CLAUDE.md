@@ -26,7 +26,7 @@ Arkadaşlarla 7/10/30 günlük challenge. Maskot: Diken (kaktüs). Gelir: reward
 - Diken her ekranda değil: Bugün, tamamlama anı, seri koptu, boş durum, izin ekranları.
 
 ## İş kuralları
-- Gün, kullanıcının saat dilimine göre `local_date` ile kaydedilir; gece yarısından sonra 2 saat tolerans.
+- Gün, kullanıcının saat dilimine göre `local_date` ile kaydedilir; gece yarısından sonra tolerans kullanıcı ayarı (0/1/2 saat, varsayılan 2; `user_settings.day_end_grace_hours`).
 - Seri hesabı sunucuda (SQL fonksiyonu), istemcide değil.
 - Seri koptuğunda 24 saat kurtarma süresi: rewarded reklam veya ayda 1 ücretsiz hak. Reklam yüklenmezse ücretsiz hak önerilir.
 - Dürt mesajları hazır listeden seçilir, serbest metin yok. "Laf sok" sadece alıcının sert modu açıksa.
@@ -87,7 +87,7 @@ Spesifikasyon `docs/EKRANLAR.md` "0. Ortak bileşenler"; ilerleme `docs/ILERLEME
 - Karartma `componentColors[scheme].scrim`, alt sayfa köşesi/tutamaç `componentMetrics.sheet*`.
 
 ## Supabase
-- Şema `supabase/migrations/` (10 dosya), testler `supabase/tests/` (pgTAP). Ayrıntı, kararlar ve açık sorular: `supabase/README.md`.
+- Şema `supabase/migrations/` (11 dosya), testler `supabase/tests/` (pgTAP). Ayrıntı, kararlar ve açık sorular: `supabase/README.md`.
 - Migration'lar yayımlanmadan önce yerinde düzenlenebilir; yayımlandıktan sonra her değişiklik yeni migration.
 - İstemci tablolara yalnızca politikası olan yerlerde doğrudan yazar (profil/ayar güncelleme, engel, arkadaşlık silme, dürtme geri alma, bildirim token'ı silme). Diğer her şey `public.*` RPC'leri: `checkin`, `send_poke`, `create_challenge`, `submit_report` …
 - Seri, gün numarası, hedef, sıra ve kurtarma hakkı sunucudan okunur (`my_today`, `my_streak`, `my_pending_rescues`, `challenge_board`, `friends_today`, `my_garden`); istemcide yeniden hesaplanmaz.
