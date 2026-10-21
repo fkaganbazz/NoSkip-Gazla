@@ -4,24 +4,29 @@ import { StyleSheet, View } from 'react-native';
 
 import OnboardingHeader from '@/components/OnboardingHeader';
 import { Button, ErrorState, LoadingState } from '@/components/ui';
-import { useTemplates } from '@/data';
-import { onboardingTemplates } from '@/features/onboarding/logic';
+import { useAuth, useTemplates } from '@/data';
+import { nextStepAfterProfile, onboardingTemplates } from '@/features/onboarding/logic';
 import { useOnboarding } from '@/features/onboarding/OnboardingProvider';
 import StepScreen, { StepIntro } from '@/features/onboarding/StepScreen';
 import TemplateTile from '@/features/onboarding/TemplateTile';
 import { onboardingMetrics as m } from '@/theme/onboarding';
 
 // İlk challenge'ını seç — design/PickChallenge.dc.html (adım 1/4). Seçim girişten sonra
-// oluşturulmak üzere onboarding durumunda saklanır.
+// oluşturulmak üzere onboarding durumunda saklanır. "Kendim oluşturacağım" profil adımından sonra Create'i açar.
+// Profil tamamlandıktan sonra da (davet adımından geri) açılır: seçim değiştirilip doğrudan devam edilir.
 export default function PickChallengeScreen() {
   const router = useRouter();
-  const { pickedTemplateId, pickTemplate } = useOnboarding();
+  const { status } = useAuth();
+  const onboarding = useOnboarding();
+  const { pickedTemplateId, pickTemplate, chooseCustom } = onboarding;
   const templates = useTemplates();
+  const signedUp = status === 'ready';
 
   const list = useMemo(() => onboardingTemplates(templates.data ?? []), [templates.data]);
   const [choice, setChoice] = useState<string | null>(pickedTemplateId);
-  // Seçim yoksa ilk şablon seçili gelir (tasarımda bir kart hep seçili)
-  const selectedId = choice && list.some((t) => t.id === choice) ? choice : (list[0]?.id ?? null);
+  // Seçim yoksa 2. şablon seçili gelir (tasarımda bir kart hep seçili; EKRANLAR.md 1.2 kabul)
+  const selectedId =
+    choice && list.some((t) => t.id === choice) ? choice : (list[DEFAULT_INDEX]?.id ?? list[0]?.id ?? null);
 
   const rows = useMemo(() => {
     const out: (typeof list)[] = [];
@@ -29,7 +34,13 @@ export default function PickChallengeScreen() {
     return out;
   }, [list]);
 
-  const goBack = () => (router.canGoBack() ? router.back() : router.replace('/(onboarding)'));
+  // Profil tamamlandıysa giriş adımlarına dönülmez: geri = geldiği adıma (davet ya da Create) dön
+  const goBack = () =>
+    signedUp
+      ? router.replace(nextStepAfterProfile(onboarding))
+      : router.canGoBack()
+        ? router.back()
+        : router.replace('/(onboarding)');
 
   return (
     <StepScreen
@@ -40,16 +51,16 @@ export default function PickChallengeScreen() {
             disabled={!selectedId}
             onPress={() => {
               pickTemplate(selectedId);
-              router.push('/(onboarding)/sign-in');
+              router.push(signedUp ? '/(onboarding)/invite' : '/(onboarding)/sign-in');
             }}
           />
           <Button
             title="Kendim oluşturacağım"
             variant="text"
             onPress={() => {
-              // Kendi challenge'ı uygulama açılınca Bugün'deki boş durumdan oluşturulur
-              pickTemplate(null);
-              router.push('/(onboarding)/sign-in');
+              // Kendi challenge'ı hesap açılıp profil tamamlanınca Create'te oluşturulur
+              chooseCustom();
+              router.push(signedUp ? '/(onboarding)/create' : '/(onboarding)/sign-in');
             }}
           />
         </>
@@ -83,6 +94,9 @@ export default function PickChallengeScreen() {
     </StepScreen>
   );
 }
+
+/** Varsayılan seçili karo: 2. (PickChallenge.png) */
+const DEFAULT_INDEX = 1;
 
 const styles = StyleSheet.create({
   grid: {

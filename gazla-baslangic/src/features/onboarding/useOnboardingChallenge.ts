@@ -6,8 +6,9 @@ import { errorMessage } from './logic';
 import { useOnboarding } from './OnboardingProvider';
 
 /**
- * Profil tamamlandıktan sonra PickChallenge'da seçilen şablondan challenge oluşturur (bir kez) ve
- * `setCreatedChallenge` ile saklar. Davet adımı bu challenge'a davet eder.
+ * Profil tamamlandıktan sonra PickChallenge'da seçilen şablondan challenge oluşturur (şablon başına bir kez) ve
+ * `setCreatedChallenge` ile saklar. Davet adımı bu challenge'a davet eder. "Kendim oluşturacağım"da ya da
+ * davetle katılınca challenge zaten hazırdır (`createdChallengeId`).
  *
  * Oluşturma Profil ekranında değil burada: mock'ta profil tamamlanınca oturum yenilenip gezinme
  * yeniden kuruluyor, Profil ekranı yarıda kapanabiliyor. Davet ekranı açılınca başlar, hatada
@@ -17,11 +18,12 @@ export function useOnboardingChallenge() {
   const { pickedTemplateId, createdChallengeId, setCreatedChallenge } = useOnboarding();
   const { mutateAsync } = useCreateChallengeMutation();
   const [error, setError] = useState<string | null>(null);
-  const started = useRef(false);
+  /** Oluşturması başlatılan şablon (seçim davet adımından geri dönülüp değişirse yenisi oluşturulur) */
+  const started = useRef<string | null>(null);
 
   const create = useCallback(() => {
     if (!pickedTemplateId) return;
-    started.current = true;
+    started.current = pickedTemplateId;
     setError(null);
     mutateAsync({ templateId: pickedTemplateId })
       .then((challenge) => setCreatedChallenge(challenge.id))
@@ -29,7 +31,7 @@ export function useOnboardingChallenge() {
   }, [pickedTemplateId, mutateAsync, setCreatedChallenge]);
 
   useEffect(() => {
-    if (pickedTemplateId && !createdChallengeId && !started.current) create();
+    if (pickedTemplateId && !createdChallengeId && started.current !== pickedTemplateId) create();
   }, [pickedTemplateId, createdChallengeId, create]);
 
   return { challengeId: createdChallengeId, error, retry: create };

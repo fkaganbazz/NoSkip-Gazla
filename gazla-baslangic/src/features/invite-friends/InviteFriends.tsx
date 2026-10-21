@@ -1,4 +1,4 @@
-import type { ComponentType } from 'react';
+import { useEffect, useState, type ComponentType } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { CategoryTile } from '@/components/CategoryTile';
@@ -8,11 +8,12 @@ import OnboardingHeader from '@/components/OnboardingHeader';
 import { Button, Card, ErrorState, IconButton, LoadingState, ToastHost, useToast } from '@/components/ui';
 import { useChallenge, useChallengeBoard } from '@/data';
 import StepScreen, { StepIntro } from '@/features/onboarding/StepScreen';
-import { borderWidth, componentTypography as ct, typography, useTheme } from '@/theme';
+import { borderWidth, componentMetrics, componentTypography as ct, typography, useTheme } from '@/theme';
 import { onboardingColors, onboardingMetrics as m, onboardingTypography as t } from '@/theme/onboarding';
 
 import { UserSearchIcon } from './icons';
 import { copyText, inviteMessage, sendAsMessage, shareText, useInviteCode } from './share';
+import UsernameSearchSheet from './UsernameSearchSheet';
 
 type Props = {
   /** Onboarding adımı (3/4, altta Devam) ya da uygulama içi modal (kapat butonu) */
@@ -24,25 +25,39 @@ type Props = {
   onRetryChallenge?: () => void;
   /** Onboarding: "Devam" ve "Şimdilik atla" */
   onContinue?: () => void;
+  /** Onboarding: geri (challenge seçimine) */
+  onBack?: () => void;
   /** Modal: kapat */
   onClose?: () => void;
-  /** Modal: "Kullanıcı adıyla ara" */
-  onSearchUsername?: () => void;
+  /** Açılınca bir kez tost olarak gösterilecek bilgi (ör. bekleyen davete katılılamadı); gösterilince `onNoticeShown` */
+  notice?: string | null;
+  onNoticeShown?: () => void;
 };
 
 // Arkadaşlarını çağır — design/InviteFriends.dc.html. Onboarding'in 3. adımı ve uygulama içinden
-// açılan davet modalı aynı ekranı kullanır. Davet linki create_invite kodundan; paylaşım RN Share.
+// açılan davet modalı aynı ekranı kullanır. Davet linki create_invite kodundan (`inviteLink`, https://<alan>/d/<kod>);
+// paylaşım RN Share. "Kullanıcı adıyla ara" iki halde de aynı alt sayfayı açar.
 export default function InviteFriends({
   variant,
   challengeId,
   challengeError,
   onRetryChallenge,
   onContinue,
+  onBack,
   onClose,
-  onSearchUsername,
+  notice,
+  onNoticeShown,
 }: Props) {
   const onboarding = variant === 'onboarding';
   const toast = useToast();
+  const { show } = toast;
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  useEffect(() => {
+    if (!notice) return;
+    show({ message: notice, durationMs: componentMetrics.toastActionDurationMs });
+    onNoticeShown?.();
+  }, [notice, onNoticeShown, show]);
 
   return (
     <View style={styles.root}>
@@ -56,8 +71,7 @@ export default function InviteFriends({
           ) : undefined
         }>
         {onboarding ? (
-          // Profil tamamlandı; geri dönülecek adım yok
-          <OnboardingHeader step={3} />
+          <OnboardingHeader step={3} onBack={onBack} />
         ) : (
           <View style={styles.modalHeader}>
             <IconButton icon="close" accessibilityLabel="Kapat" onPress={onClose} />
@@ -83,15 +97,15 @@ export default function InviteFriends({
           </View>
         )}
 
-        {!onboarding && onSearchUsername && (
-          <FriendList style={styles.list}>
-            <LinkRow title="Kullanıcı adıyla ara" onPress={onSearchUsername} icon={UserSearchIcon} />
-          </FriendList>
-        )}
+        {/* "Rehberden bul" (expo-contacts) bu listenin ilk satırı olacak */}
+        <FriendList style={styles.list}>
+          <LinkRow title="Kullanıcı adıyla ara" onPress={() => setSearchOpen(true)} icon={UserSearchIcon} />
+        </FriendList>
       </StepScreen>
 
       {/* Onboarding'de alttaki iki butonun üstünde */}
       <ToastHost toast={toast} offset={onboarding ? m.toastAboveFooter : 0} />
+      <UsernameSearchSheet visible={searchOpen} onClose={() => setSearchOpen(false)} />
     </View>
   );
 }

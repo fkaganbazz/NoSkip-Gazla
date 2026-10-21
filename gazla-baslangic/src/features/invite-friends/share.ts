@@ -2,10 +2,8 @@ import * as Linking from 'expo-linking';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, Share } from 'react-native';
 
+import { inviteLink } from '@/config/links';
 import { ApiError, useCreateInviteCodeMutation } from '@/data';
-
-/** Davet linki: gazla://invite/KOD (web'de site adresi). Açan kişi InviteLanding'e düşer. */
-export const inviteUrl = (code: string) => Linking.createURL(`invite/${code}`);
 
 /** Paylaşılan metin */
 export const inviteMessage = (title: string, url: string) =>
@@ -37,7 +35,8 @@ export function useInviteCode(challengeId: string | null) {
     }
   }, [challengeId, load]);
 
-  return { code, url: code ? inviteUrl(code) : null, error, retry: load };
+  // https://<alan>/d/<kod> (src/config/links.ts); açan kişi InviteLanding'e düşer
+  return { code, url: code ? inviteLink(code) : null, error, retry: load };
 }
 
 type ClipboardLike = { writeText: (text: string) => Promise<void> };

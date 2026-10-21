@@ -1,50 +1,87 @@
 import { ApiError, type AuthStatus, type ChallengeCategory, type Template } from '@/data';
 
 /** (onboarding) grubundaki ekranlar (dosya adları) */
-export type OnboardingScreen = 'index' | 'pick-challenge' | 'sign-in' | 'profile' | 'invite' | 'notifications';
+export type OnboardingScreen =
+  | 'index'
+  | 'pick-challenge'
+  | 'sign-in'
+  | 'profile'
+  | 'create'
+  | 'invite'
+  | 'notifications';
 
-type RedirectTarget =
+export type OnboardingTarget =
   | '/(onboarding)'
   | '/(onboarding)/sign-in'
   | '/(onboarding)/profile'
+  | '/(onboarding)/create'
   | '/(onboarding)/invite'
   | '/(onboarding)/notifications';
 
-/** Girişten önceki adımlar (oturum açılınca geri dönülmez) */
-const BEFORE_PROFILE: OnboardingScreen[] = ['index', 'pick-challenge', 'sign-in', 'profile'];
+/** Yönlendirmenin baktığı onboarding durumu (OnboardingProvider) */
+export type OnboardingFlow = {
+  pickedTemplateId: string | null;
+  /** "Kendim oluşturacağım": profilden sonra Create adımı */
+  customChallenge: boolean;
+  createdChallengeId: string | null;
+  /** createdChallengeId bekleyen davetle katılınan challenge: davet adımı atlanır */
+  joinedViaInvite: boolean;
+  /** Profil tamamlandıktan sonra bekleyen davet kodu kontrol edildi (ve varsa katılım bitti) */
+  inviteChecked: boolean;
+};
+
+/**
+ * Profil hazır olduktan sonraki adım: davetle katıldıysa doğrudan bildirim izni; challenge (seçilen şablon ya da
+ * oluşturulan) varsa davet; "Kendim oluşturacağım" seçildiyse Create; hiçbiri yoksa bildirim izni.
+ */
+export function nextStepAfterProfile(flow: OnboardingFlow): OnboardingTarget {
+  if (flow.joinedViaInvite) return '/(onboarding)/notifications';
+  if (flow.createdChallengeId || flow.pickedTemplateId) return '/(onboarding)/invite';
+  if (flow.customChallenge) return '/(onboarding)/create';
+  return '/(onboarding)/notifications';
+}
 
 /**
  * Oturum durumuna göre kullanıcının olması gereken adım; zaten doğru yerdeyse null.
  * - Oturum yok: profil ve sonrası açılmaz.
  * - Oturum var, profil yok: her zaman Profil.
- * - Profil hazır (onboarding sürüyor): davet (şablon seçildiyse) ya da bildirim izni.
+ * - Profil hazır (onboarding sürüyor): bekleyen davet kontrolü bitene kadar yerinde kalır; sonra
+ *   `nextStepAfterProfile`. Giriş ve profil adımlarına dönülmez; challenge seçimi (davet adımından geri)
+ *   değiştirilebilir.
  */
 export function onboardingRedirect({
   status,
   screen,
-  pickedTemplateId,
-  createdChallengeId,
-}: {
-  status: AuthStatus;
-  screen: OnboardingScreen;
-  pickedTemplateId: string | null;
-  createdChallengeId: string | null;
-}): RedirectTarget | null {
+  ...flow
+}: OnboardingFlow & { status: AuthStatus; screen: OnboardingScreen }): OnboardingTarget | null {
   switch (status) {
     case 'loading':
       return null;
     case 'signedOut':
       if (screen === 'profile') return '/(onboarding)/sign-in';
-      if (screen === 'invite' || screen === 'notifications') return '/(onboarding)';
+      if (screen === 'create' || screen === 'invite' || screen === 'notifications') return '/(onboarding)';
       return null;
     case 'needsProfile':
       return screen === 'profile' ? null : '/(onboarding)/profile';
     case 'ready': {
-      // "Kendim oluşturacağım": davet edilecek challenge yok, davet adımı atlanır
-      const hasChallenge = !!pickedTemplateId || !!createdChallengeId;
-      if (BEFORE_PROFILE.includes(screen)) return hasChallenge ? '/(onboarding)/invite' : '/(onboarding)/notifications';
-      if (screen === 'invite' && !hasChallenge) return '/(onboarding)/notifications';
-      return null;
+      if (!flow.inviteChecked) return null;
+      const next = nextStepAfterProfile(flow);
+      switch (screen) {
+        case 'index':
+        case 'sign-in':
+        case 'profile':
+          return next;
+        case 'pick-challenge':
+          // Davetle katılan kişi challenge seçmez
+          return flow.joinedViaInvite ? next : null;
+        case 'create':
+          // Oluşturulunca (ya da seçim değiştiyse) sıradaki adıma
+          return next === '/(onboarding)/create' ? null : next;
+        case 'invite':
+          return next === '/(onboarding)/invite' ? null : next;
+        case 'notifications':
+          return null;
+      }
     }
   }
 }

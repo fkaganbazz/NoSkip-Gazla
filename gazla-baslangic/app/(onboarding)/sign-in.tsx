@@ -1,11 +1,13 @@
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import * as WebBrowser from 'expo-web-browser';
+import { useState, type ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import Diken from '@/components/Diken';
 import { CheckIcon, MailIcon } from '@/components/icons';
 import OnboardingHeader from '@/components/OnboardingHeader';
 import { Button, Chip, TextField } from '@/components/ui';
+import { legalLinks, type LegalLink as LegalLinkKind } from '@/config/links';
 import { type OAuthProvider, useSignInWithEmailMutation, useSignInWithProviderMutation, useTemplates } from '@/data';
 import { errorMessage } from '@/features/onboarding/logic';
 import { useOnboarding } from '@/features/onboarding/OnboardingProvider';
@@ -129,12 +131,10 @@ export default function SignInScreen() {
               {error}
             </Text>
           )}
-          {/* TODO: Koşullar, gizlilik ve KVKK metinlerinin adresleri gelince bağlantıya çevrilecek */}
           <Text style={[t.legal, styles.legal, { color: c.legalText }]}>
-            Devam ederek <Text style={[t.legalLink, { color: c.legalLink }]}>Kullanım Koşulları</Text>'nı ve{' '}
-            <Text style={[t.legalLink, { color: c.legalLink }]}>Gizlilik Politikası</Text>'nı kabul edersin. Verilerini
-            nasıl işlediğimizi <Text style={[t.legalLink, { color: c.legalLink }]}>KVKK Aydınlatma Metni</Text>'nde
-            anlatıyoruz.
+            Devam ederek <LegalLink kind="terms">Kullanım Koşulları</LegalLink>'nı ve{' '}
+            <LegalLink kind="privacy">Gizlilik Politikası</LegalLink>'nı kabul edersin. Verilerini nasıl işlediğimizi{' '}
+            <LegalLink kind="kvkk">KVKK Aydınlatma Metni</LegalLink>'nde anlatıyoruz.
           </Text>
         </>
       }>
@@ -163,6 +163,21 @@ export default function SignInScreen() {
         body="Arkadaşların seni bulabilsin. Telefon değiştirsen de serin ve bahçen seninle gelsin."
       />
     </StepScreen>
+  );
+}
+
+/** Yasal metindeki bağlantı: altı çizili, uygulama içi tarayıcıda açılır */
+function LegalLink({ kind, children }: { kind: LegalLinkKind; children: ReactNode }) {
+  const { scheme } = useTheme();
+  return (
+    <Text
+      accessibilityRole="link"
+      onPress={() => {
+        WebBrowser.openBrowserAsync(legalLinks[kind]).catch(() => {});
+      }}
+      style={[t.legalLink, { color: onboardingColors[scheme].legalLink }]}>
+      {children}
+    </Text>
   );
 }
 

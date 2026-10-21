@@ -226,8 +226,11 @@ export const onboardingMetrics = {
   rowIconSize: 20,
   rowIconStroke: 2.2,
   rowChevronStroke: 2.4,
-  /** "Kopyalandı" tostu onboarding'de alttaki iki butonun üstünde durur */
-  toastAboveFooter: 120,
+  /**
+   * Tost onboarding'de alttaki iki butonun 8 üstünde durur: alt boşluk 32 + metin butonu 48 + aralık 4 + ana buton 56
+   * + 8 − ToastHost'un kendi alt boşluğu 20 (InviteFriends "Kopyalandı", NotifPermission davet uyarısı)
+   */
+  toastAboveFooter: 128,
 
   // NotifPermission
   permissionCardMarginTop: 28,
@@ -256,9 +259,9 @@ export const onboardingTypography = {
   lead: { fontFamily: fonts.semiBold, fontSize: 16, lineHeight: 16 * 1.45 },
   /** Challenge kartı başlığı · Nunito 800 · 15 · 1.25 */
   tileTitle: { fontFamily: fonts.extraBold, fontSize: 15, lineHeight: 15 * 1.25 },
-  /** Yasal metin · Nunito 600 · 13 · 1.5 (bağlantılar 800) */
+  /** Yasal metin · Nunito 600 · 13 · 1.5 (bağlantılar 800, altı çizili: tasarımda `<a>`) */
   legal: { fontFamily: fonts.semiBold, fontSize: 13, lineHeight: 13 * 1.5 },
-  legalLink: { fontFamily: fonts.extraBold },
+  legalLink: { fontFamily: fonts.extraBold, textDecorationLine: 'underline' },
   /** Avatar satırı notu · Nunito 600 · 14 */
   avatarNote: { fontFamily: fonts.semiBold, fontSize: 14 },
   /** Form değeri · Nunito 700 · 16 */

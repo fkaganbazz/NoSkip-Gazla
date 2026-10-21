@@ -33,6 +33,8 @@ function TemplateTile({ template, selected, onPick }: Props) {
       onPress={() => onPick(template.id)}
       accessibilityRole="radio"
       accessibilityState={{ selected, checked: selected }}
+      // Web: seçim aria-checked olarak çıkar (accessibilityState web'de yansımıyor)
+      aria-checked={selected}
       accessibilityLabel={`${template.title}, ${meta}`}
       style={({ pressed }) => [
         styles.tile,

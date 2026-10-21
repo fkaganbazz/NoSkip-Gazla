@@ -10,7 +10,7 @@ import { StepIntro } from '@/features/onboarding/StepScreen';
 import { layout, spacing, useTheme } from '@/theme';
 
 // Arkadaşlarını çağır (modal) — design/InviteFriends.dc.html. `challengeId` verilmezse bugünkü ilk
-// challenge'a davet edilir. Kapatınca geri döner.
+// challenge'a davet edilir. Kapatınca geri döner. "Kullanıcı adıyla ara" onboarding'deki gibi alt sayfada.
 export default function InviteFriendsModal() {
   const router = useRouter();
   const { challengeId: param } = useLocalSearchParams<{ challengeId?: string }>();
@@ -41,14 +41,7 @@ export default function InviteFriendsModal() {
     );
   }
 
-  return (
-    <InviteFriends
-      variant="modal"
-      challengeId={challengeId}
-      onClose={close}
-      onSearchUsername={() => router.dismissTo('/friends')}
-    />
-  );
+  return <InviteFriends variant="modal" challengeId={challengeId} onClose={close} />;
 }
 
 function Fallback({ onClose, children }: { onClose: () => void; children: ReactNode }) {

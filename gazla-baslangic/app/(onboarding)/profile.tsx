@@ -3,7 +3,13 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import OnboardingHeader from '@/components/OnboardingHeader';
 import { Button, TextField } from '@/components/ui';
-import { useCompleteProfileMutation, useSignOutMutation, useUpdateProfileMutation, useUsernameAvailable } from '@/data';
+import {
+  useAuth,
+  useCompleteProfileMutation,
+  useSignOutMutation,
+  useUpdateProfileMutation,
+  useUsernameAvailable,
+} from '@/data';
 import AvatarPicker from '@/features/onboarding/AvatarPicker';
 import BirthYearField from '@/features/onboarding/BirthYearField';
 import { deviceTimezone, errorMessage, normalizeUsername } from '@/features/onboarding/logic';
@@ -15,10 +21,13 @@ import { typography, useTheme } from '@/theme';
 import { onboardingMetrics as m } from '@/theme/onboarding';
 
 // Seni nasıl çağıralım? — design/Profile.dc.html (adım 2/4). Ad, kullanıcı adı (boşta mı, yazarken
-// kontrol edilir), doğum yılı ve isteğe bağlı fotoğraf. Profil tamamlanınca (onboarding)/_layout
-// davet adımına geçirir; seçilen şablonun challenge'ı orada oluşturulur.
+// kontrol edilir), doğum yılı ve isteğe bağlı fotoğraf. Profil tamamlanınca (onboarding)/_layout sıradaki
+// adıma geçirir: bekleyen davet varsa önce katılınır (OnboardingProvider) ve doğrudan bildirim iznine; yoksa
+// seçilen şablonun challenge'ı davet adımında, "Kendim oluşturacağım" ise Create'te oluşturulur.
+// 13 yaş altı kaydı sunucu reddeder; mesajı (nötr, yaş sınırını söylemez) olduğu gibi gösterilir.
 export default function ProfileScreen() {
   const { colors } = useTheme();
+  const { status } = useAuth();
   const { start } = useOnboarding();
   const completeProfile = useCompleteProfileMutation();
   const updateProfile = useUpdateProfileMutation();
@@ -51,6 +60,8 @@ export default function ProfileScreen() {
   // Kontrol hata verdiyse yine gönderilebilir; kararı sunucu verir
   const usernameOk = usernameState === 'available' || usernameState === 'error';
   const canSubmit = !!name.trim() && usernameOk && birthYear !== null;
+  // Profil kaydedildi; bekleyen davet kontrol edilirken sıradaki adıma geçilmeyi bekler
+  const finishing = status === 'ready';
 
   const submit = async () => {
     if (birthYear === null) return;
@@ -82,11 +93,21 @@ export default function ProfileScreen() {
               {error}
             </Text>
           )}
-          <Button title="Devam" onPress={submit} disabled={!canSubmit} loading={completeProfile.isPending} />
+          <Button
+            title="Devam"
+            onPress={submit}
+            disabled={!canSubmit && !finishing}
+            loading={completeProfile.isPending || finishing}
+          />
         </>
       }>
       {/* Geri: hesabı değiştirmek için oturum kapanır, giriş ekranına dönülür */}
-      <OnboardingHeader step={2} onBack={signOut.isPending ? undefined : () => signOut.mutate()} />
+      <OnboardingHeader
+        step={2}
+        onBack={() => {
+          if (!signOut.isPending && !finishing) signOut.mutate();
+        }}
+      />
       <StepIntro title="Seni nasıl çağıralım?" body="Arkadaşların seni kullanıcı adınla bulur." />
 
       <AvatarPicker name={name} uri={avatarUri} onChange={setAvatarUri} />
