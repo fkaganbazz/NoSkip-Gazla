@@ -1,11 +1,15 @@
 /**
  * Veri sağlayıcı: TanStack Query istemcisi ve oturum durumu. Kök düzende (`app/_layout.tsx`)
  * tüm uygulamayı sarar. Oturum değişince önbellek temizlenir (başka kullanıcının verisi kalmasın).
+ * Bağlantı durumu `network.ts` ile onlineManager'a bağlıdır; oturum hazırken çevrimdışı
+ * işaretleme kuyruğu (`offlineQueue.ts`) açılışta ve bağlantı gelince boşaltılır.
  */
 import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { api } from './client';
+import './network';
+import { useCheckinQueueSync } from './offlineQueue';
 import type { Profile, Session } from './types';
 
 export type AuthStatus =
@@ -63,6 +67,8 @@ function AuthGate({ children }: { children: ReactNode }) {
     if (!profileQuery.data) return { status: 'needsProfile', session, profile: null };
     return { status: 'ready', session, profile: profileQuery.data };
   }, [session, profileQuery.isPending, profileQuery.data]);
+
+  useCheckinQueueSync(api, state.status === 'ready' ? state.session!.userId : null);
 
   return <AuthContext.Provider value={state}>{children}</AuthContext.Provider>;
 }

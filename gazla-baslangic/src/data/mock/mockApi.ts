@@ -4,9 +4,13 @@
  * gün bitişi toleransı, "Arkadaşlarım" görünürlüğü, kurtarmadan vazgeçme…).
  * Seri motorunun tamamı burada yok: genel seri sabit taban + bugün tamamsa 1. Rozet kuralları da
  * yok: kazanılanlar tasarımdaki gibi sabit (seedEarnedBadges).
+ * Çevrimdışıyken (cihaz ya da `mockDev.setOffline(true)`) her çağrı gerçek ağ gibi `NetworkError`
+ * ile düşer; işaretlemeler çevrimdışı kuyruğa girer.
  */
-import { ApiError, type GazlaApi, type OAuthProvider } from '../api';
+import { ApiError, NetworkError, type GazlaApi, type OAuthProvider } from '../api';
 import { clearAllFlags } from '../flags';
+import { isOnline, isSimulatedOffline, setSimulatedOffline } from '../network';
+import { clearCheckinQueue } from '../offlineQueue';
 import { clearPendingInvite } from '../pendingInvite';
 import type {
   ActivityItem,
@@ -89,7 +93,12 @@ const RESERVED = ['diken', 'gazla', 'noskip', 'admin', 'destek', 'support', 'yar
 /** Yaş sınırı ekranda ve hata metninde söylenmez (sunucuyla aynı nötr metin) */
 const AGE_REJECTED = 'Şu an hesabını oluşturamıyoruz.';
 
-const wait = () => new Promise((resolve) => setTimeout(resolve, LATENCY_MS));
+/** Ağ gecikmesi; çevrimdışıyken istek gitmez, yoldayken bağlantı koparsa cevap gelmez */
+const wait = async () => {
+  if (!isOnline()) throw new NetworkError();
+  await new Promise((resolve) => setTimeout(resolve, LATENCY_MS));
+  if (!isOnline()) throw new NetworkError();
+};
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
 export function stageFor(streak: number): DikenStage {
@@ -475,11 +484,22 @@ export const mockDev = {
       });
     }
   },
-  /** Örnek veriyi baştan kur (cihazdaki tek seferlik bayraklar ve bekleyen davet kodu da silinir) */
+  /**
+   * Çevrimdışı benzetimi: açıkken onlineManager çevrimdışı olur (sorgular duraklar) ve her mock
+   * çağrısı ağ hatasıyla düşer; işaretlemeler kuyruğa girer. Kapatınca kuyruk boşaltılır.
+   */
+  setOffline(offline: boolean) {
+    setSimulatedOffline(offline);
+  },
+  isOffline() {
+    return isSimulatedOffline();
+  },
+  /** Örnek veriyi baştan kur (tek seferlik bayraklar, bekleyen davet kodu ve çevrimdışı kuyruk da silinir) */
   reset() {
     store = new MockStore();
     void clearAllFlags();
     void clearPendingInvite();
+    clearCheckinQueue();
     notifySession();
   },
 };

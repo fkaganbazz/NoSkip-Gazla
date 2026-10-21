@@ -58,6 +58,30 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * İstek sunucuya ulaşmadı (çevrimdışı, bağlantı koptu, zaman aşımı). İş kuralı hatası değildir:
+ * çevrimdışı kuyruk bu hatada işlemi saklar ve bağlantı gelince yeniden dener. `ApiError`'dan
+ * türer ki ekranlar `message`'ı yine Türkçe gösterebilsin; ayırt etmek için `isNetworkError`.
+ */
+export class NetworkError extends ApiError {
+  constructor(message = 'İnternet bağlantısı yok. Bağlanınca tekrar dene.') {
+    super(message, 'NETWORK');
+    this.name = 'NetworkError';
+  }
+}
+
+/** fetch'in ağ hatası metinleri: RN, Chrome, Safari, Firefox */
+const FETCH_FAILURE = /network request failed|failed to fetch|load failed|networkerror|network error|timed? ?out/i;
+
+/** Hata ağdan mı (yeniden denenebilir), yoksa sunucunun cevabı mı (ApiError) */
+export function isNetworkError(error: unknown): boolean {
+  if (error instanceof NetworkError) return true;
+  if (error instanceof ApiError) return false;
+  if (!(error instanceof Error)) return false;
+  if (error.name === 'AbortError' || error.name === 'TimeoutError') return true;
+  return error instanceof TypeError && FETCH_FAILURE.test(error.message);
+}
+
 export type OAuthProvider = 'apple' | 'google';
 
 export interface GazlaApi {

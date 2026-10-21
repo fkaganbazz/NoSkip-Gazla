@@ -12,7 +12,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { AppState, Platform } from 'react-native';
 
 import { pokeText } from '../../content/pokes';
-import { ApiError, type GazlaApi, type OAuthProvider } from '../api';
+import { ApiError, isNetworkError, NetworkError, type GazlaApi, type OAuthProvider } from '../api';
 import type {
   ActivityItem,
   AvatarTintKey,
@@ -77,8 +77,19 @@ export function createSupabaseApi(url: string, anonKey: string): GazlaApi {
   // Yardımcılar ---------------------------------------------------------------------------------
 
   const fail = (error: PostgrestError | { message: string; code?: string } | null): never => {
+    if (isFetchFailure(error)) throw new NetworkError();
     throw new ApiError(error?.message ?? 'Bir şeyler ters gitti', (error as PostgrestError | null)?.code ?? null);
   };
+
+  /**
+   * İstek sunucuya ulaşmadı: postgrest fetch hatasını `code: ''` ve "TypeError: …" iletisiyle
+   * döndürür; Storage ise asıl hatayı `StorageUnknownError` içinde saklar.
+   */
+  function isFetchFailure(error: { message: string; code?: string; name?: string; originalError?: unknown } | null) {
+    if (!error) return false;
+    if (error.name === 'StorageUnknownError') return isNetworkError(error.originalError);
+    return !error.code && /^(TypeError|FetchError|AbortError|TimeoutError)\b/.test(error.message);
+  }
 
   async function rpc<T = any>(fn: string, args?: Row): Promise<T> {
     const { data, error } = await supabase.rpc(fn, args);

@@ -4,7 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { SectionLabel } from '@/components/ui';
-import { api, mockDev, useSignOutMutation } from '@/data';
+import { api, mockDev, useIsOnline, usePendingCheckins, useSignOutMutation } from '@/data';
 import { borderWidth, layout, radius, spacing, typography, useTheme } from '@/theme';
 
 type Row = { title: string; detail: string; href?: Href; onPress?: () => void };
@@ -35,6 +35,9 @@ export default function DevIndex() {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const signOut = useSignOutMutation();
+  const online = useIsOnline();
+  const pending = usePendingCheckins();
+  const offline = mockDev.isOffline();
 
   const DATA: Row[] = [
     { title: 'Oturumu kapat', detail: 'Onboarding baştan başlar', onPress: () => signOut.mutate() },
@@ -47,6 +50,11 @@ export default function DevIndex() {
               mockDev.simulateStreakLost();
               queryClient.invalidateQueries();
             },
+          },
+          {
+            title: `Çevrimdışı modu: ${offline ? 'açık' : 'kapalı'}`,
+            detail: `Mock: ${offline ? 'istekler ağ hatasıyla düşer, işaretleme kuyruğa girer' : 'dokun, bağlantı yokmuş gibi davransın'} · ${online ? 'çevrimiçi' : 'çevrimdışı'} · kuyrukta ${pending}`,
+            onPress: () => mockDev.setOffline(!offline),
           },
           {
             title: 'Örnek veriyi sıfırla',
