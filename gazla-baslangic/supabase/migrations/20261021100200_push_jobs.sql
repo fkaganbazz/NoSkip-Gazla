@@ -16,23 +16,42 @@
 --    Her biri günde bir kez (app.diken_schedule_log), hedef saatten sonraki 1 saat içinde; sessiz saatler
 --    (23:30–08:00) ve günde en çok 2 kuralı claim_diken_push'ta (atomik). Hakkı alınamayan bildirim satırı
 --    eklenmez (sonraki turda pencere içindeyse yeniden denenir).
---    Metinler design/Notifications.dc.html (src/features/settings/notificationCopy.ts); satırın
---    payload.text'inde saklanır, Aktivite de aynı metni gösterir.
+--    Metinler design/Notifications.dc.html (src/features/settings/notificationCopy.ts); alıcının dilinde
+--    (user_settings.locale: 'tr' Gazla, 'en' NoSkip) satırın payload.text'inde saklanır, Aktivite de aynı
+--    metni gösterir.
+-- Arkadaş bildirimlerinin metnini Edge Function alıcının diline göre kurar (claim_social_push `locale`
+-- ve o dildeki dürtme metnini döner).
 --
 -- pg_cron / pg_net / Vault yoksa (yerel test ortamı) tetikleyici ve iş kurulumu sessizce atlanır;
 -- uzantılar sonradan açılırsa `select app.install_cron_jobs();` yeniden çalıştırılır (supabase/README.md).
 
 -- Diken metinleri ve saatleri -----------------------------------------------------------------------
 
-create function app.diken_text(p_kind public.notification_kind, p_count integer default null, p_title text default null)
+-- Diken bildiriminin metni alıcının dilinde (p_locale 'en' İngilizce, diğerleri Türkçe)
+create function app.diken_text(
+  p_kind public.notification_kind, p_count integer default null, p_title text default null,
+  p_locale text default 'tr'
+)
 returns text
 language sql immutable parallel safe set search_path = '' as $$
-  select case p_kind
-    when 'daily_reminder' then
-      case when p_title is null then 'Su yok mu su? Bugünkü görevlerin seni bekliyor.'
-           else format('Su yok mu su? %s seni bekliyor.', p_title) end
-    when 'day_ending' then format('Gün bitiyor, %s görevin duruyor. Susuz kaldım burada.', coalesce(p_count, 1))
-    when 'streak_broken' then 'Dün kaçtı. Beni sulamak için 24 saatin var.'
+  select case when p_locale = 'en' then
+    case p_kind
+      when 'daily_reminder' then
+        case when p_title is null then 'Water, anyone? Today''s tasks are waiting for you.'
+             else format('Water, anyone? %s is waiting for you.', p_title) end
+      when 'day_ending' then
+        case when coalesce(p_count, 1) = 1 then 'The day''s almost over and 1 task is left. I''m getting thirsty here.'
+             else format('The day''s almost over and %s tasks are left. I''m getting thirsty here.', p_count) end
+      when 'streak_broken' then 'Yesterday slipped by. You have 24 hours to water me.'
+    end
+  else
+    case p_kind
+      when 'daily_reminder' then
+        case when p_title is null then 'Su yok mu su? Bugünkü görevlerin seni bekliyor.'
+             else format('Su yok mu su? %s seni bekliyor.', p_title) end
+      when 'day_ending' then format('Gün bitiyor, %s görevin duruyor. Susuz kaldım burada.', coalesce(p_count, 1))
+      when 'streak_broken' then 'Dün kaçtı. Beni sulamak için 24 saatin var.'
+    end
   end
 $$;
 
@@ -136,7 +155,7 @@ begin
   delete from app.diken_schedule_log l where l.local_date < (p_at at time zone 'UTC')::date - 3;
 
   for u in
-    select s.user_id, s.daily_reminder_time
+    select s.user_id, s.daily_reminder_time, s.locale
     from public.user_settings s
     join public.profiles p on p.id = s.user_id
     where exists (select 1 from public.push_tokens pt where pt.user_id = s.user_id)
@@ -161,7 +180,7 @@ begin
       limit 1;
     end if;
     if v_rescue is not null then
-      v_text := app.diken_text('streak_broken');
+      v_text := app.diken_text('streak_broken', null, null, u.locale);
       v_url := '/streak-lost/' || v_rescue;
       v_id := app.queue_diken(u.user_id, 'streak_broken', v_today, null,
                               jsonb_build_object('text', v_text, 'url', v_url), p_at);
@@ -175,7 +194,7 @@ begin
 
     -- Genel günlük hatırlatma
     if v_pending > 0 and app.in_diken_window(v_time, u.daily_reminder_time) then
-      v_text := app.diken_text('daily_reminder');
+      v_text := app.diken_text('daily_reminder', null, null, u.locale);
       v_url := '/';
       v_id := app.queue_diken(u.user_id, 'daily_reminder', v_today, null,
                               jsonb_build_object('text', v_text, 'url', v_url), p_at);
@@ -194,7 +213,7 @@ begin
         and dp.remind_at is distinct from u.daily_reminder_time
       order by dp.remind_at, dp.challenge_id
     loop
-      v_text := app.diken_text('daily_reminder', null, t.title);
+      v_text := app.diken_text('daily_reminder', null, t.title, u.locale);
       v_url := '/challenge/' || t.challenge_id;
       v_id := app.queue_diken(u.user_id, 'daily_reminder', v_today, t.challenge_id,
                               jsonb_build_object('text', v_text, 'url', v_url, 'title', t.title), p_at);
@@ -208,7 +227,7 @@ begin
 
     -- Gün bitiyor
     if v_pending > 0 and app.in_diken_window(v_time, app.day_ending_time()) then
-      v_text := app.diken_text('day_ending', v_pending);
+      v_text := app.diken_text('day_ending', v_pending, null, u.locale);
       v_url := '/';
       v_id := app.queue_diken(u.user_id, 'day_ending', v_today, null,
                               jsonb_build_object('text', v_text, 'url', v_url, 'pending', v_pending), p_at);
@@ -235,14 +254,17 @@ $$;
 -- Arkadaş bildirimleri ----------------------------------------------------------------------------
 
 -- Arkadaş bildiriminin push'u: gönderilecekse pushed_at'i işaretler ve metin için gerekenleri döner
--- (aktörün adı, dürtme metni, challenge adı, alıcının token'ları); gönderilmeyecekse null.
+-- (alıcının dili, aktörün adı, alıcının dilindeki dürtme metni, challenge adı, alıcının token'ları);
+-- gönderilmeyecekse null.
 create function app.claim_social_push(p_notification uuid, p_at timestamptz) returns jsonb
 language plpgsql security definer set search_path = '' as $$
 declare
   v record;
 begin
   select n.id, n.recipient_id, n.kind, n.actor_id, n.challenge_id, n.payload,
-         ap.display_name as actor_name, c.title as challenge_title, pm.text_tr as poke_text,
+         ap.display_name as actor_name, c.title as challenge_title,
+         coalesce(s.locale, 'tr') as locale,
+         case when s.locale = 'en' then coalesce(pm.text_en, pm.text_tr) else pm.text_tr end as poke_text,
          coalesce(s.poke_push_enabled, true) as poke_push_enabled
   into v
   from public.notifications n
@@ -267,6 +289,7 @@ begin
   return jsonb_build_object(
     'notification_id', v.id,
     'recipient_id', v.recipient_id,
+    'locale', v.locale,
     'kind', v.kind,
     'actor_id', v.actor_id,
     'actor_name', v.actor_name,
@@ -379,14 +402,14 @@ revoke execute on function public.queue_diken_notifications(), public.claim_soci
 grant execute on function public.queue_diken_notifications(), public.claim_social_push(uuid) to service_role;
 
 revoke execute on function
-  app.diken_text(public.notification_kind, integer, text), app.day_ending_time(), app.streak_broken_time(),
+  app.diken_text(public.notification_kind, integer, text, text), app.day_ending_time(), app.streak_broken_time(),
   app.diken_push_window(), app.in_diken_window(time, time), app.diken_pending_challenges(uuid, timestamptz),
   app.queue_diken(uuid, public.notification_kind, date, uuid, jsonb, timestamptz),
   app.queue_diken_notifications(timestamptz), app.claim_social_push(uuid, timestamptz),
   app.call_edge_function(text, jsonb), app.notifications_push_webhook(), app.install_cron_jobs()
 from public, anon, authenticated;
 grant execute on function
-  app.diken_text(public.notification_kind, integer, text), app.day_ending_time(), app.streak_broken_time(),
+  app.diken_text(public.notification_kind, integer, text, text), app.day_ending_time(), app.streak_broken_time(),
   app.diken_push_window(), app.in_diken_window(time, time), app.diken_pending_challenges(uuid, timestamptz),
   app.queue_diken(uuid, public.notification_kind, date, uuid, jsonb, timestamptz),
   app.queue_diken_notifications(timestamptz), app.claim_social_push(uuid, timestamptz),

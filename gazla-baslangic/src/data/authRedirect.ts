@@ -6,8 +6,10 @@
  * `error`, `error_code`, `error_description` ekler: PKCE'de sorgu dizgisinde, eski (implicit) akışta `#`
  * sonrasında gelir; ikisi de okunur.
  *
- * Auth hatalarının metni İngilizcedir; kullanıcıya `authError` ile Türkçe `ApiError` gösterilir.
+ * Auth hatalarının metni İngilizcedir ve kullanıcıya göre yazılmamıştır; kullanıcıya `authError` ile uygulama
+ * dilindeki `ApiError` gösterilir (`t.errors.auth`, hata oluştuğu anda okunur).
  */
+import { getT, type Messages } from '../i18n';
 import { ApiError, ApiErrorCode, NetworkError } from './api';
 
 export type AuthRedirectParams = {
@@ -66,44 +68,49 @@ export function parseAuthRedirect(url: string | null | undefined, search: Search
   return params;
 }
 
-export const AUTH_NOT_COMPLETED = 'Giriş tamamlanmadı. Tekrar dene.';
+type AuthMessageKey = keyof Messages['errors']['auth'];
 
-const LINK_EXPIRED = 'Bu giriş bağlantısının süresi dolmuş. Yeni bir bağlantı iste.';
-const LINK_INVALID = 'Bu bağlantı artık geçerli değil. Giriş bağlantısını bu cihazdan yeniden iste ve aynı cihazda aç.';
+/** "Giriş tamamlanmadı. Tekrar dene." (o anki dilde) */
+export const authNotCompleted = () => new ApiError(getT().errors.auth.notCompleted);
 
-/** Supabase Auth hata kodu → kullanıcıya gösterilecek metin */
-const AUTH_MESSAGES: Record<string, string> = {
-  otp_expired: LINK_EXPIRED,
-  flow_state_expired: LINK_EXPIRED,
-  flow_state_not_found: LINK_INVALID,
-  bad_code_verifier: LINK_INVALID,
-  over_email_send_rate_limit: 'Çok sık denedin. Birkaç dakika sonra tekrar dene.',
-  over_request_rate_limit: 'Çok sık denedin. Birkaç dakika sonra tekrar dene.',
-  email_address_invalid: 'Geçerli bir e-posta yaz',
-  email_address_not_authorized: 'Bu adrese şu an e-posta gönderilemiyor. Apple ya da Google ile devam et.',
-  email_provider_disabled: 'E-postayla giriş şu an kapalı. Apple ya da Google ile devam et.',
-  provider_disabled: 'Bu giriş yolu şu an kapalı. Başka bir yolla devam et.',
-  signup_disabled: 'Şu an yeni hesap açılamıyor. Biraz sonra tekrar dene.',
-  user_banned: 'Bu hesap kullanıma kapatıldı.',
+/** Kullanıcı girişten vazgeçti (`ApiErrorCode.cancelled`; ekran sessiz geçer) */
+export const authCancelled = () => new ApiError(getT().errors.auth.cancelled, ApiErrorCode.cancelled);
+
+/** Supabase Auth hata kodu → kullanıcıya gösterilecek metnin anahtarı (`t.errors.auth`) */
+const AUTH_MESSAGES: Record<string, AuthMessageKey> = {
+  otp_expired: 'linkExpired',
+  flow_state_expired: 'linkExpired',
+  flow_state_not_found: 'linkInvalid',
+  bad_code_verifier: 'linkInvalid',
+  over_email_send_rate_limit: 'tooManyAttempts',
+  over_request_rate_limit: 'tooManyAttempts',
+  email_address_invalid: 'emailInvalid',
+  email_address_not_authorized: 'emailNotAuthorized',
+  email_provider_disabled: 'emailProviderDisabled',
+  provider_disabled: 'providerDisabled',
+  signup_disabled: 'signupDisabled',
+  user_banned: 'userBanned',
 };
 
 type AuthErrorLike = { message?: string; code?: string | null; name?: string; status?: number } | null | undefined;
 
 /**
- * Supabase Auth hatası (ya da dönüş adresindeki hata kodu) → Türkçe `ApiError`.
+ * Supabase Auth hatası (ya da dönüş adresindeki hata kodu) → uygulama dilinde `ApiError`.
  * Ağ hatası `NetworkError`; OAuth `access_denied` (kodsuz) vazgeçmedir: `ApiErrorCode.cancelled`.
+ * `fallback`: tanınmayan hatanın metni (verilmezse "Giriş tamamlanmadı").
  */
-export function authError(error: AuthErrorLike, fallback = AUTH_NOT_COMPLETED): ApiError {
+export function authError(error: AuthErrorLike, fallback?: AuthMessageKey): ApiError {
   if (error instanceof ApiError) return error;
   if (error?.name === 'AuthRetryableFetchError' || error?.name === 'AuthNetworkError') return new NetworkError();
+  const t = getT().errors.auth;
   // Doğrulayıcı cihazda yok: bağlantı başka cihazda ya da tarayıcıda istenmiş
-  if (error?.name === 'AuthPKCECodeVerifierMissingError') return new ApiError(LINK_INVALID, 'bad_code_verifier');
+  if (error?.name === 'AuthPKCECodeVerifierMissingError') return new ApiError(t.linkInvalid, 'bad_code_verifier');
   const code = error?.code ?? null;
-  if (code === 'access_denied') return new ApiError('Giriş iptal edildi', ApiErrorCode.cancelled);
-  const message = code ? AUTH_MESSAGES[code] : undefined;
-  if (message) return new ApiError(message, code);
+  if (code === 'access_denied') return authCancelled();
+  const key = code ? AUTH_MESSAGES[code] : undefined;
+  if (key) return new ApiError(t[key], code);
   if (typeof __DEV__ !== 'undefined' && __DEV__) console.warn('[auth]', error);
-  return new ApiError(fallback, code);
+  return new ApiError(t[fallback ?? 'notCompleted'], code);
 }
 
 /** Dönüş adresindeki hata → `ApiError` (hata yoksa null) */

@@ -138,11 +138,11 @@ declare
   v_best jsonb;
 begin
   if not app.is_active_member(p_user, p_challenge) then
-    raise exception 'Bu challenge''da değilsin' using errcode = '42501';
+    raise exception 'Bu challenge''da değilsin' using errcode = '42501', hint = 'not_a_member';
   end if;
   select * into v_c from public.challenges c where c.id = p_challenge;
   if v_c.task_type <> 'number' then
-    raise exception 'Bu görev sayı ile işaretlenmiyor' using errcode = '22023';
+    raise exception 'Bu görev sayı ile işaretlenmiyor' using errcode = '22023', hint = 'not_number_task';
   end if;
 
   select jsonb_build_object('value', k.value, 'user_id', p.id, 'display_name', p.display_name,
@@ -333,7 +333,7 @@ declare
   v_sent integer;
 begin
   if p_recipient = p_sender then
-    raise exception 'Kendini dürtemezsin' using errcode = 'P0001';
+    raise exception 'Kendini dürtemezsin' using errcode = 'P0001', hint = 'poke_self';
   end if;
   if app.is_blocked(p_sender, p_recipient)
      or not (app.are_friends(p_sender, p_recipient)
@@ -346,7 +346,7 @@ begin
                  and a.status = 'active' and b.status = 'active'
                  and app.day_closes_at(p_recipient, c.end_date) > p_at
              )) then
-    raise exception 'Bu kişiyi dürtemezsin' using errcode = 'P0001';
+    raise exception 'Bu kişiyi dürtemezsin' using errcode = 'P0001', hint = 'poke_not_allowed';
   end if;
 
   -- do_send_poke ile aynı sayım (app.poke_log, alıcının bütün yerel günü)

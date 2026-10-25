@@ -12,7 +12,9 @@ export {
   isCancelledError,
   isNetworkError,
   NetworkError,
+  serverErrorMessage,
   type OAuthProvider,
+  type ServerErrorKey,
 } from './api';
 export { authError, parseAuthRedirect, type AuthRedirectParams } from './authRedirect';
 export { api } from './client';

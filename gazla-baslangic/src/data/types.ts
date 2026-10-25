@@ -43,6 +43,7 @@ export type Discoverability = Enums<'discoverability'>;
 /** 'filiz' | 'genc' | 'tam' | 'cicek' */
 export type DikenStage = Enums<'diken_stage'>;
 export type AvatarTintKey = 'peach' | 'lavender' | 'mint' | 'butter' | 'sky';
+/** Uygulama dili (`src/i18n` `Language`); sunucuda `user_settings.locale` */
 export type Locale = 'tr' | 'en';
 /** Create "Kimler görebilir": Davetliler / Arkadaşlarım (challenges.visibility: 'invited' | 'friends') */
 export type ChallengeVisibility = Enums<'challenge_visibility'>;
@@ -95,6 +96,10 @@ export type PersonLite = Pick<Profile, 'id' | 'displayName' | 'username' | 'avat
 export type UserSettings = {
   birthYear: number;
   timezone: string;
+  /**
+   * Sunucunun kullandığı dil (şablondan challenge başlığı ve birimi, rozet adları, push ve Diken metinleri).
+   * Uygulama dilini DataProvider buraya eşitler; ekranlar dili `src/i18n`'den okur.
+   */
   locale: Locale;
   pokePushEnabled: boolean;
   /** 'HH:MM'; null = günlük hatırlatma kapalı */
@@ -121,6 +126,7 @@ export type CompleteProfileInput = {
   displayName: string;
   birthYear: number;
   timezone: string;
+  /** @deprecated Yok sayılır: sunucuya o anki uygulama dili yazılır (`getLanguage()`) */
   locale?: Locale;
 };
 

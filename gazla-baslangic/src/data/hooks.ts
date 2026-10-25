@@ -30,7 +30,8 @@ import {
 import { useCallback, useMemo } from 'react';
 
 import { inviteLink } from '../config/links';
-import { POKE_MESSAGES } from '../content/pokes';
+import { POKE_MESSAGES, pokeMessageText } from '../content/pokes';
+import { localeTag, useLanguage, type Language } from '../i18n';
 import { AD_RESCUE_RETRY_DELAYS_MS } from './adRescue';
 import { isAdRewardPendingError, isCancelledError, isNetworkError, type OAuthProvider } from './api';
 import type { AuthRedirectParams } from './authRedirect';
@@ -52,7 +53,7 @@ import {
   reflectToday,
   type CheckinOp,
 } from './offlineQueue';
-import { profileQuery, recentDaysQuery } from './queries';
+import { profileQuery, recentDaysQuery, settingsQuery } from './queries';
 import { DAILY_KEYS, queryKeys } from './queryKeys';
 import { forgetPushToken, rememberPushToken, savedPushToken } from './pushToken';
 import type {
@@ -190,7 +191,7 @@ export const useUsernameCheck = (username: string) =>
     enabled: username.trim().length >= 3,
   });
 
-export const useMySettings = () => useQuery({ queryKey: queryKeys.settings, queryFn: () => api.getMySettings() });
+export const useMySettings = () => useQuery(settingsQuery);
 
 /** Ayar kaydet: `update(patch)`; sonuç ayarlar önbelleğine yazılır (iyimser görünüm ekranda, `useOptimisticPatch`) */
 export function useUpdateSettings() {
@@ -548,7 +549,8 @@ export type TemplateFilter = {
   sort?: 'popular';
 };
 
-const normalizeSearch = (s: string) => s.trim().toLocaleLowerCase('tr');
+/** Arama: uygulama dilinin küçük harf kuralıyla (Türkçede I → ı, İngilizcede I → i) */
+const normalizeSearch = (s: string) => s.trim().toLocaleLowerCase(localeTag());
 
 const byPopularity = (templates: Template[]) => [...templates].sort((a, b) => a.popularity - b.popularity);
 
@@ -690,23 +692,25 @@ export const useFindContacts = () =>
 export const useFriendProfile = (userId: string | undefined) =>
   useQuery({ queryKey: queryKeys.friendProfile(userId ?? ''), queryFn: () => api.getFriendProfile(userId!), enabled: !!userId });
 
-/** Hazır dürtme mesajları, sabit listeden (src/content/pokes.ts; id ile gönderilir, sunucu doğrular) */
-const POKE_MESSAGE_LIST: readonly PokeMessage[] = POKE_MESSAGES.map((m) => ({
-  key: m.id,
-  tone: m.tone,
-  sortOrder: POKE_MESSAGES.filter((x) => x.tone === m.tone).indexOf(m),
-  text: m.text,
-  isActive: true,
-}));
+/** Hazır dürtme mesajları, sabit listeden (src/content/pokes.ts; id ile gönderilir, sunucu doğrular); metin dilde */
+const pokeMessageList = (lang: Language): readonly PokeMessage[] =>
+  POKE_MESSAGES.map((m) => ({
+    key: m.id,
+    tone: m.tone,
+    sortOrder: POKE_MESSAGES.filter((x) => x.tone === m.tone).indexOf(m),
+    text: pokeMessageText(m, lang),
+    isActive: true,
+  }));
 
 /** `usePoke().send` girdisi: alıcı ve hazır mesajın id'si (ton mesajdan) */
 export type PokeSendInput = { toUserId: string; messageId: string; challengeId?: string };
 
 /**
  * Dürt: `send({ toUserId, messageId, challengeId? })` → gönderilen dürtme (`id` geri almak için),
- * `undo(pokeId)` 30 sn içinde geri al, `messages` hazır mesajlar. `userId` verilirse `status`: alıcıya bugün
- * gönderilen ve kalan hak (remaining 0 → gönder pasif), sert mod. Gönderince ve geri alınca kalan hak
- * (`['friends']` altında) yenilenir (geri alınan dürtme yine sayılır); gönderince rozetler de.
+ * `undo(pokeId)` 30 sn içinde geri al, `messages` hazır mesajlar (metinleri uygulama dilinde). `userId`
+ * verilirse `status`: alıcıya bugün gönderilen ve kalan hak (remaining 0 → gönder pasif), sert mod. Gönderince
+ * ve geri alınca kalan hak (`['friends']` altında) yenilenir (geri alınan dürtme yine sayılır); gönderince
+ * rozetler de.
  */
 export function usePoke(userId?: string) {
   const send = useAction(
@@ -724,7 +728,9 @@ export function usePoke(userId?: string) {
   );
   const undo = useAction(useWrite((pokeId: string) => api.undoPoke(pokeId), [['friends']]));
   const status = useQuery({ queryKey: queryKeys.pokeStatus(userId ?? ''), queryFn: () => api.getPokeStatus(userId!), enabled: !!userId });
-  return { ...actionHook({ send, undo }), messages: POKE_MESSAGE_LIST, status };
+  const lang = useLanguage();
+  const messages = useMemo(() => pokeMessageList(lang), [lang]);
+  return { ...actionHook({ send, undo }), messages, status };
 }
 
 /**

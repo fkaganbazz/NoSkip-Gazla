@@ -33,19 +33,33 @@ create table public.user_badges (
   primary key (user_id, badge_key)
 );
 
-insert into public.badges (key, sort_order, title_tr, description_tr, icon, tint) values
-  ('ilk_30_gun',     1, 'İlk 30 gün',    'Genel serin 30 güne ulaştı',                                'star',     'yellow'),
-  ('laf_ustasi',     2, 'Laf ustası',    '10 kez laf soktun',                                          'speech',   'orange'),
-  ('erkenci',        3, 'Erkenci',       '5 gün sabah 8''den önce işaretledin',                        'sun',      'mint'),
-  ('yuz_gun',        4, 'Yüz gün',       'Genel serin 100 güne ulaştı',                                'streak',   'yellow'),
-  ('maratoncu',      5, 'Maratoncu',     '3 kez 30 günlük bir challenge''ı bitirdin',                  'calendar', 'orange'),
-  ('bahcivan',       6, 'Bahçıvan',      'Bahçende 10 kaktüs var',                                     'sprout',   'mint'),
-  ('sampiyon',       7, 'Şampiyon',      'En az 3 kişilik bir grupta challenge''ı birinci bitirdin',   'trophy',   'yellow'),
-  ('gaz_pedali',     8, 'Gaz pedalı',    'Arkadaşlarına 25 kez gaz verdin',                            'hand',     'orange'),
-  ('son_dakika',     9, 'Son dakika',    'Serini kurtarma süresinin son saatinde kurtardın',           'clock',    'mint'),
-  ('gece_kusu',     10, 'Gece kuşu',     'Gece yarısından sonra dünün görevini tamamladın',            'moon',     'yellow'),
-  ('sosyal_kaktus', 11, 'Sosyal kaktüs', '10 arkadaşın oldu',                                          'friends',  'orange'),
-  ('objektif',      12, 'Objektif',      '30 fotoğraf kanıtı gönderdin',                               'camera',   'mint');
+-- İngilizce ad ve açıklama (NoSkip) src/data/mock/seedEn.ts `badgeEn` ile aynı. Ad, Bahçem'deki
+-- dar kutuya (4 sütun, 2 satır) sığacak kısalıkta; tek kelime ~9 harfi geçmez.
+insert into public.badges (key, sort_order, title_tr, description_tr, icon, tint, title_en, description_en) values
+  ('ilk_30_gun',     1, 'İlk 30 gün',    'Genel serin 30 güne ulaştı',                                'star',     'yellow',
+   'First 30 days',   'Your overall streak hit 30 days'),
+  ('laf_ustasi',     2, 'Laf ustası',    '10 kez laf soktun',                                          'speech',   'orange',
+   'Roast master',    'You sent 10 roasts'),
+  ('erkenci',        3, 'Erkenci',       '5 gün sabah 8''den önce işaretledin',                        'sun',      'mint',
+   'Early bird',      'You checked in before 8 a.m. on 5 days'),
+  ('yuz_gun',        4, 'Yüz gün',       'Genel serin 100 güne ulaştı',                                'streak',   'yellow',
+   '100 club',        'Your overall streak hit 100 days'),
+  ('maratoncu',      5, 'Maratoncu',     '3 kez 30 günlük bir challenge''ı bitirdin',                  'calendar', 'orange',
+   'Marathon runner', 'You finished a 30-day challenge 3 times'),
+  ('bahcivan',       6, 'Bahçıvan',      'Bahçende 10 kaktüs var',                                     'sprout',   'mint',
+   'Gardener',        'Your garden has 10 cacti'),
+  ('sampiyon',       7, 'Şampiyon',      'En az 3 kişilik bir grupta challenge''ı birinci bitirdin',   'trophy',   'yellow',
+   'Champion',        'You finished first in a group of 3 or more'),
+  ('gaz_pedali',     8, 'Gaz pedalı',    'Arkadaşlarına 25 kez gaz verdin',                            'hand',     'orange',
+   'Hype machine',    'You hyped up friends 25 times'),
+  ('son_dakika',     9, 'Son dakika',    'Serini kurtarma süresinin son saatinde kurtardın',           'clock',    'mint',
+   'Last minute',     'You saved your streak with under an hour to go'),
+  ('gece_kusu',     10, 'Gece kuşu',     'Gece yarısından sonra dünün görevini tamamladın',            'moon',     'yellow',
+   'Night owl',       'You finished yesterday''s task after midnight'),
+  ('sosyal_kaktus', 11, 'Sosyal kaktüs', '10 arkadaşın oldu',                                          'friends',  'orange',
+   'Social cactus',   'You made 10 friends'),
+  ('objektif',      12, 'Objektif',      '30 fotoğraf kanıtı gönderdin',                               'camera',   'mint',
+   'Paparazzi',       'You sent 30 photo proofs');
 
 -- Kurallar ----------------------------------------------------------------------------------
 

@@ -14,7 +14,7 @@
 --
 -- Run:  supabase test db   (or the local testbed: ./test.sh supabase/tests/04_challenge_rpcs.test.sql)
 begin;
-select plan(230);
+select plan(233);
 -- This file tests behaviour, not privileges (01_rls_privileges does). Expected values are computed
 -- with app.* helpers, sometimes while signed in, so the helpers are opened inside this transaction.
 grant execute on all functions in schema app to authenticated;
@@ -202,12 +202,16 @@ select results_eq(
   $$values ('number'::text, 10, 'sn'::text, 60::numeric, 5::numeric, 5::numeric, 600::numeric)$$,
   'number template: unit, base target, daily increment, step and max are copied');
 
--- English locale: English text when the template has it, Turkish fallback otherwise
+-- English locale: English text (title, short title, number unit) when the template has it, Turkish
+-- fallback otherwise (seed values are set here so the test does not depend on the catalog's English copy)
 update public.challenge_templates set title_en = '7 days without coffee', short_title_en = 'no coffee'
 where id = :'t_kahve';
+update public.challenge_templates set title_en = null, short_title_en = null where id = :'t_iltifat';
+update public.challenge_templates set title_en = 'Plank: +5 seconds a day', number_unit_en = 'sec' where id = :'t_plank';
 select tests.authenticate_as('lale');
 select id as ch_en  from public.create_challenge(p_template => :'t_kahve') \gset
 select id as ch_en2 from public.create_challenge(p_template => :'t_iltifat') \gset
+select id as ch_en3 from public.create_challenge(p_template => :'t_plank') \gset
 reset role;
 select results_eq(
   format($$select title, short_title from public.challenges where id = %L$$, :'ch_en'),
@@ -217,6 +221,21 @@ select results_eq(
   format($$select title, short_title from public.challenges where id = %L$$, :'ch_en2'),
   $$values ('Her gün birine iltifat et'::text, 'iltifat'::text)$$,
   'template: an en user falls back to Turkish when the template has no English text');
+select results_eq(
+  format($$select title, number_unit from public.challenges where id = %L$$, :'ch_en3'),
+  $$values ('Plank: +5 seconds a day'::text, 'sec'::text)$$,
+  'number template: an en user gets the English unit');
+select tests.authenticate_as('olcay');
+select id as ch_plank_tr from public.create_challenge(p_template => :'t_plank') \gset
+reset role;
+select is((select number_unit from public.challenges where id = :'ch_plank_tr'), 'sn',
+  'number template: a tr user keeps the Turkish unit');
+delete from public.challenges where id = :'ch_plank_tr';
+select throws_ok(
+  $$insert into public.challenge_templates (slug, title_tr, category, difficulty, task_type, default_duration_days,
+      allowed_durations, icon, tint, number_unit_en) values ('birimsiz', 'Birimsiz', 'quirky', 'easy', 'check', 7, '{7}',
+      'check', 'green', 'sec')$$,
+  '23514', null, 'challenge_templates: an English unit only on number templates');
 
 -- A later catalog edit does not change a running challenge
 update public.challenge_templates set title_tr = 'Kahve yasak', icon = 'cup' where id = :'t_kahve';

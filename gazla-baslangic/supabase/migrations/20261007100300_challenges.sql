@@ -21,6 +21,8 @@ create table public.challenge_templates (
   icon text not null,
   tint text not null,
   number_unit text,
+  -- Birimin İngilizcesi ('sn' → 'sec'); create_challenge kullanıcının diline göre kopyalar (yoksa number_unit)
+  number_unit_en text,
   number_base_target numeric,
   number_daily_increment numeric not null default 0,
   number_step numeric,
@@ -50,6 +52,7 @@ create table public.challenge_templates (
   constraint challenge_templates_number check (
     case when task_type = 'number' then
       number_unit is not null and char_length(number_unit) between 1 and 20
+      and (number_unit_en is null or char_length(number_unit_en) between 1 and 20)
       and number_base_target >= 0 and number_step > 0
       and number_daily_increment >= 0 and (number_max is null or number_max >= number_base_target)
       -- Üst sınır ve en çok 4 ondalık: NaN ve sonsuz da bu karşılaştırmalarda elenir
@@ -58,7 +61,7 @@ create table public.challenge_templates (
       and number_daily_increment <= 1000000000 and scale(number_daily_increment) <= 4
       and (number_max is null or (number_max <= 1000000000 and scale(number_max) <= 4))
     else
-      number_unit is null and number_base_target is null and number_step is null
+      number_unit is null and number_unit_en is null and number_base_target is null and number_step is null
       and number_max is null and number_daily_increment = 0
     end
   )

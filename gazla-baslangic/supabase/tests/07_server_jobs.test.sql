@@ -6,11 +6,13 @@
 --   D. Diken push'u: queue_diken_notifications (yerel saat, pencere, günde bir, günde en çok 2,
 --      sessiz saatler, işaretlenmiş gün, token'sız kullanıcı, seri koptu)
 --   E. pg_cron / pg_net yokken iş kurulumu ve Edge Function çağrısı sessizce atlanır
+--   F. Dil: her `raise exception`'da kararlı anahtar (hint; istemci sözlüğü serverErrors), reklam reddinin
+--      anahtarı, alıcının dilinde Diken ve arkadaş push'u (user_settings.locale)
 --
 -- Zaman: B now()'a göre kurulur (grant_ad_rescue now() kullanır); D sabit anlarla app.* sürümünü
 -- çağırır (p_at). Her şey işlem içinde oluşturulur ve geri alınır.
 begin;
-select plan(70);
+select plan(88);
 
 -- ------------------------------------------------------------------------------------------------
 -- Yardımcılar
@@ -268,11 +270,12 @@ values (:'soff', 'friend_request', :'ssel', current_date) returning id as n_req 
 
 select tests.authenticate_as_service_role();
 select is(
-  (select jsonb_build_object('kind', j->>'kind', 'actor', j->>'actor_name', 'text', j->>'poke_text', 'tokens', j->'tokens')
+  (select jsonb_build_object('kind', j->>'kind', 'actor', j->>'actor_name', 'text', j->>'poke_text', 'tokens', j->'tokens',
+                             'locale', j->>'locale')
    from public.claim_social_push(:'n_hype') j),
   jsonb_build_object('kind', 'poke_hype', 'actor', 'Sp_Sel', 'text', 'Beraber bitireceğiz',
-                     'tokens', jsonb_build_array('ExponentPushToken[rec-000001]')),
-  'claim_social_push: poke push data (actor name, message text, tokens)');
+                     'tokens', jsonb_build_array('ExponentPushToken[rec-000001]'), 'locale', 'tr'),
+  'claim_social_push: poke push data (recipient locale, actor name, message text, tokens)');
 select is(public.claim_social_push(:'n_hype'), null, 'claim_social_push: a notification is pushed once');
 select is(public.claim_social_push(:'n_off'), null, 'claim_social_push: no poke push when the recipient turned poke pushes off');
 select is((select j->>'kind' from public.claim_social_push(:'n_req') j), 'friend_request',
@@ -429,6 +432,114 @@ select lives_ok(format($$insert into public.notifications (recipient_id, kind, a
                          values (%L, 'friend_request', %L, current_date)$$, :'dali', :'dbea'),
                 'the webhook trigger never breaks the insert');
 select has_trigger('auth', 'users', 'gazla_sync_email_hash', 'auth.users → email hash trigger');
+
+-- ================================================================================================
+-- F. Dil: hata anahtarları (hint) ve alıcının dilinde push
+-- ================================================================================================
+
+-- Hatanın PostgREST'e giden `hint`'i (istemci t.serverErrors[hint] gösterir); hata yoksa null
+create function pg_temp.hint_of(p_sql text) returns text
+language plpgsql as $$
+declare
+  v_hint text;
+begin
+  execute p_sql;
+  return null;
+exception when others then
+  get stacked diagnostics v_hint = pg_exception_hint;
+  return v_hint;
+end
+$$;
+grant execute on function pg_temp.hint_of(text) to authenticated, service_role;
+
+select is(
+  array(select n.nspname || '.' || p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+        where n.nspname in ('public', 'app')
+          and (select count(*) from regexp_matches(p.prosrc, 'raise\s+exception', 'gi'))
+              <> (select count(*) from regexp_matches(p.prosrc, 'raise\s+exception\s+''(?:[^'']|'''')*''[^;]*\shint\s*=', 'gi'))
+        order by 1),
+  '{}'::text[],
+  'every raise exception in public/app functions carries a hint key');
+select is(
+  array(select distinct m[1] from pg_proc p join pg_namespace n on n.oid = p.pronamespace,
+               regexp_matches(p.prosrc, 'hint\s*=\s*''([^'']*)''', 'g') as m
+        where n.nspname in ('public', 'app') and m[1] !~ '^[a-z][a-z0-9_]{1,63}$'),
+  '{}'::text[],
+  'hint keys are snake_case');
+
+select tests.authenticate_as('sp_sel');
+select is(pg_temp.hint_of(format($$select public.send_poke(%L, 'hype', 'finish_together')$$, :'ssel')), 'poke_self',
+          'send_poke to yourself: hint poke_self');
+select is(pg_temp.hint_of(format($$select public.create_challenge(p_title => 'X', p_task_type => 'check',
+                                     p_duration_days => 7, p_start_date => %L)$$, current_date + 30)),
+          'start_date_out_of_range', 'create_challenge: hint start_date_out_of_range');
+reset role;
+select set_config('request.jwt.claims', '', true) as _r \gset
+select is(pg_temp.hint_of($$select app.assert_valid_timezone('Mars/Olympus')$$), 'invalid_timezone',
+          'a formatted message has a hint too (invalid_timezone)');
+
+-- Reklam reddi: anahtar saklanır, ad_rescue_result aynı anahtarla döner; anahtarı yoksa rescue_unavailable
+select tests.authenticate_as_service_role();
+select is(public.record_ad_rescue_failure(:'adu', :'a3', (:'lc'::date - 1), 'ssv-07-000010', 'Bu ödül zaten kullanıldı',
+                                          '23505', 'reward_used'),
+          true, 'record_ad_rescue_failure stores the hint');
+select is(public.record_ad_rescue_failure(:'adu', :'a1', :'lc', 'ssv-07-000011', 'x', 'P0001', 'Not a key'),
+          true, 'record_ad_rescue_failure accepts a malformed hint');
+reset role;
+select set_config('request.jwt.claims', '', true) as _r \gset
+select is((select hint from app.ad_rescue_failures where ad_reward_id = 'ssv-07-000011'), null,
+          'record_ad_rescue_failure: a malformed hint is not stored');
+select tests.authenticate_as('ad_u');
+select is(pg_temp.hint_of(format($$select public.ad_rescue_result(%L, %L)$$, :'a3', (:'lc'::date - 1))), 'reward_used',
+          'ad_rescue_result: the rejection comes back with its hint');
+reset role;
+select set_config('request.jwt.claims', '', true) as _r \gset
+update app.ad_rescue_failures set hint = null where ad_reward_id = 'ssv-07-000010';
+select tests.authenticate_as('ad_u');
+select is(pg_temp.hint_of(format($$select public.ad_rescue_result(%L, %L)$$, :'a3', (:'lc'::date - 1))),
+          'rescue_unavailable', 'ad_rescue_result: a rejection without a hint falls back to rescue_unavailable');
+reset role;
+select set_config('request.jwt.claims', '', true) as _r \gset
+
+-- Diken metinleri İngilizce (NoSkip)
+select is(app.diken_text('daily_reminder', null, null, 'en'), 'Water, anyone? Today''s tasks are waiting for you.',
+          'copy en: daily reminder');
+select is(app.diken_text('daily_reminder', null, 'plank', 'en'), 'Water, anyone? plank is waiting for you.',
+          'copy en: challenge reminder');
+select is(app.diken_text('day_ending', 1, null, 'en'), 'The day''s almost over and 1 task is left. I''m getting thirsty here.',
+          'copy en: day ending (1 task)');
+select is(app.diken_text('day_ending', 3, null, 'en'), 'The day''s almost over and 3 tasks are left. I''m getting thirsty here.',
+          'copy en: day ending (3 tasks)');
+select is(app.diken_text('streak_broken', null, null, 'en'), 'Yesterday slipped by. You have 24 hours to water me.',
+          'copy en: streak broken');
+
+-- gul: İngilizce; 12 Kasım 21:05'te genel hatırlatma İngilizce gider ve satırda İngilizce saklanır
+select pg_temp.mk_user('dk_gul') as dgul \gset
+update public.user_settings set locale = 'en' where user_id = :'dgul';
+select pg_temp.token(:'dgul', 'ExponentPushToken[gul-000001]') as _n \gset
+select pg_temp.add_member(:'dc1', :'dgul', date '2026-11-12') as _n \gset
+select results_eq(
+  format($$select kind::text, body from app.queue_diken_notifications('2026-11-12 18:05+00') where recipient_id = %L$$, :'dgul'),
+  $$values ('daily_reminder', 'Water, anyone? Today''s tasks are waiting for you.')$$,
+  'Diken: an en user gets the reminder in English');
+select is((select payload->>'text' from public.notifications where recipient_id = :'dgul' and kind = 'daily_reminder'),
+          'Water, anyone? Today''s tasks are waiting for you.', 'Diken: the row keeps the English text (Activity)');
+
+-- Arkadaş push'u İngilizce alıcıya: locale 'en' ve dürtme metninin İngilizcesi
+select pg_temp.mk_user('sp_en') as sen \gset
+update public.user_settings set locale = 'en' where user_id = :'sen';
+select pg_temp.friends(:'ssel', :'sen') as _n \gset
+select pg_temp.token(:'sen', 'ExponentPushToken[en-0000001]') as _n \gset
+update public.poke_messages set text_en = 'We''ll finish together' where key = 'finish_together' and tone = 'hype';
+insert into public.pokes (sender_id, recipient_id, tone, message_key) values (:'ssel', :'sen', 'hype', 'finish_together');
+select id as n_en from public.notifications where recipient_id = :'sen' and kind = 'poke_hype' \gset
+select tests.authenticate_as_service_role();
+select is(
+  (select jsonb_build_object('locale', j->>'locale', 'text', j->>'poke_text') from public.claim_social_push(:'n_en') j),
+  jsonb_build_object('locale', 'en', 'text', 'We''ll finish together'),
+  'claim_social_push: an en recipient gets locale en and the English poke text');
+reset role;
+select set_config('request.jwt.claims', '', true) as _r \gset
 
 select * from finish();
 rollback;

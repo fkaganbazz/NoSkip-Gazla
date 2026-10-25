@@ -7,8 +7,9 @@
  * 3. `auth.admin.deleteUser(uid)`: profil, ayarlar, işaretlemeler, arkadaşlıklar, token'lar … zincirleme
  *    silinir; şikayetler kişi alanları boşaltılarak kalır (supabase/README.md "Hesap silme").
  *
- * Dağıtım: `supabase functions deploy delete-account` (JWT doğrulaması açık kalır). Hata metinleri Türkçe;
- * uygulama `error.message`'ı gösterebilir.
+ * Dağıtım: `supabase functions deploy delete-account` (JWT doğrulaması açık kalır). Hata gövdesi
+ * `{ error, hint }`: `error` Türkçe metin, `hint` kararlı anahtar; uygulama `t.serverErrors[hint]`'i kendi dilinde
+ * gösterir (supabase/README.md "Dil").
  */
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
@@ -28,6 +29,18 @@ const json = (status: number, body: Record<string, unknown>) =>
     status,
     headers: { ...CORS_HEADERS, 'Content-Type': 'application/json; charset=utf-8' },
   });
+
+/** Hata yanıtı: Türkçe metin ve istemci sözlüğünün anahtarı (src/i18n/locales/{tr,en}/serverErrors.ts) */
+const ERRORS = {
+  request_not_supported: 'Bu istek desteklenmiyor.',
+  not_signed_in: 'Oturum açman gerekiyor',
+  session_invalid: 'Oturumun geçersiz. Yeniden giriş yapıp tekrar dene.',
+  delete_account_unavailable: 'Hesap şu an silinemiyor. Biraz sonra tekrar dene.',
+  delete_account_files_failed: 'Fotoğrafların silinemedi. Biraz sonra tekrar dene.',
+  delete_account_failed: 'Hesap silinemedi. Biraz sonra tekrar dene.',
+} as const;
+
+const fail = (status: number, hint: keyof typeof ERRORS) => json(status, { error: ERRORS[hint], hint });
 
 const PAGE_SIZE = 100;
 export const USER_BUCKETS = ['proofs', 'avatars'] as const;
@@ -75,10 +88,10 @@ export async function deleteUserFiles(storage: StorageApi, userId: string): Prom
 
 export async function handleDeleteAccount(request: Request, admin?: SupabaseClient): Promise<Response> {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: CORS_HEADERS });
-  if (request.method !== 'POST') return json(405, { error: 'Bu istek desteklenmiyor.' });
+  if (request.method !== 'POST') return fail(405, 'request_not_supported');
 
   const token = /^Bearer\s+(.+)$/i.exec(request.headers.get('Authorization') ?? '')?.[1]?.trim();
-  if (!token) return json(401, { error: 'Oturum açman gerekiyor.' });
+  if (!token) return fail(401, 'not_signed_in');
 
   let client = admin;
   if (!client) {
@@ -86,26 +99,26 @@ export async function handleDeleteAccount(request: Request, admin?: SupabaseClie
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     if (!url || !serviceKey) {
       console.error('delete-account: SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY tanımlı değil');
-      return json(500, { error: 'Hesap şu an silinemiyor. Biraz sonra tekrar dene.' });
+      return fail(500, 'delete_account_unavailable');
     }
     client = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
   }
 
   const { data, error: userError } = await client.auth.getUser(token);
   const userId = data?.user?.id;
-  if (userError || !userId) return json(401, { error: 'Oturumun geçersiz. Yeniden giriş yapıp tekrar dene.' });
+  if (userError || !userId) return fail(401, 'session_invalid');
 
   try {
     await deleteUserFiles(client.storage, userId);
   } catch (error) {
     console.error('delete-account: dosyalar silinemedi', error);
-    return json(500, { error: 'Fotoğrafların silinemedi. Biraz sonra tekrar dene.' });
+    return fail(500, 'delete_account_files_failed');
   }
 
   const { error: deleteError } = await client.auth.admin.deleteUser(userId);
   if (deleteError) {
     console.error('delete-account: deleteUser', deleteError.message);
-    return json(500, { error: 'Hesap silinemedi. Biraz sonra tekrar dene.' });
+    return fail(500, 'delete_account_failed');
   }
   return json(200, { ok: true });
 }

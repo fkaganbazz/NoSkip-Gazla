@@ -205,7 +205,10 @@ const json = (status: number, body: Record<string, unknown>) =>
 
 type Deps = {
   fetcher?: typeof fetch;
-  rpc?: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string; code?: string } | null }>;
+  rpc?: (
+    fn: string,
+    args: Record<string, unknown>,
+  ) => Promise<{ data: unknown; error: { message: string; code?: string; hint?: string | null } | null }>;
 };
 
 function adminRpc(): NonNullable<Deps['rpc']> {
@@ -215,7 +218,7 @@ function adminRpc(): NonNullable<Deps['rpc']> {
   const admin = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
   return async (fn, args) => {
     const { data, error } = await admin.rpc(fn, args);
-    return { data, error: error ? { message: error.message, code: error.code } : null };
+    return { data, error: error ? { message: error.message, code: error.code, hint: error.hint } : null };
   };
 }
 
@@ -262,6 +265,8 @@ export async function handleSsv(request: Request, deps: Deps = {}): Promise<Resp
       p_ad_reward_id: reward.transactionId,
       p_message: error.message,
       p_code: error.code,
+      // Hatanın kararlı anahtarı (SQL `raise … hint`): uygulama ad_rescue_result'ta kendi dilinde gösterir
+      p_hint: error.hint ?? null,
     });
     if (recorded.error) console.error('admob-ssv: ret kaydedilemedi', recorded.error.message);
     return json(200, { ok: false, reason: error.message });

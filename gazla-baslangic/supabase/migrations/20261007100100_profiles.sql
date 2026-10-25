@@ -66,11 +66,11 @@ create function app.profiles_guard() returns trigger
 language plpgsql security definer set search_path = '' as $$
 begin
   if app.is_reserved_username(new.username::text) then
-    raise exception 'Bu kullanıcı adı kullanılamaz' using errcode = '23514';
+    raise exception 'Bu kullanıcı adı kullanılamaz' using errcode = '23514', hint = 'username_reserved';
   end if;
   if (tg_op = 'INSERT' or new.display_name is distinct from old.display_name)
      and app.is_reserved_display_name(new.display_name) then
-    raise exception 'Bu görünen ad kullanılamaz' using errcode = '23514';
+    raise exception 'Bu görünen ad kullanılamaz' using errcode = '23514', hint = 'display_name_reserved';
   end if;
   return new;
 end
@@ -111,7 +111,7 @@ begin
   perform app.assert_valid_timezone(new.timezone);
   -- Yaş sınırı ekranda ve hata metninde söylenmez (docs/EKRANLAR.md 1.4: nötr mesaj)
   if new.birth_year > extract(year from now())::int - app.min_age() then
-    raise exception 'Şu an hesabını oluşturamıyoruz.' using errcode = '23514';
+    raise exception 'Şu an hesabını oluşturamıyoruz.' using errcode = '23514', hint = 'account_unavailable';
   end if;
   if tg_op = 'UPDATE' and (new.timezone is distinct from old.timezone
                            or new.day_end_grace_hours is distinct from old.day_end_grace_hours) then

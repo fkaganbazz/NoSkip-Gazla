@@ -6,9 +6,18 @@
  * yok: kazanılanlar tasarımdaki gibi sabit (seedEarnedBadges).
  * Çevrimdışıyken (cihaz ya da `mockDev.setOffline(true)`) her çağrı gerçek ağ gibi `NetworkError`
  * ile düşer; işaretlemeler çevrimdışı kuyruğa girer.
+ *
+ * Dil: iş kuralı hataları sunucuyla aynı anahtarlarla (`serverError('group_full')` = SQL `hint`), metin çağrı
+ * anındaki dilde. Dil İngilizceyken şablon ve rozet metinleri `seedEn.ts`'ten (yoksa Türkçe), dürtme metinleri
+ * `src/content/pokes.ts`'ten; şablondan oluşturulan challenge başlığı ve birimi oluşturma anındaki dilde
+ * (sunucudaki create_challenge gibi). Örnek verideki şablonlu challenge'lar da örnek veri kurulurken (açılışta,
+ * `mockDev.reset()`) o anki dilde "oluşturulmuş" sayılır; sonradan dil değişince adları değişmez (sunucuda da
+ * challenge adı oluşturulduğu dilde kalır). Şablonsuz challenge, kişi adları ve davet mesajları Türkçe kalır.
  */
-import { ApiError, NetworkError, type GazlaApi, type OAuthProvider } from '../api';
-import { AUTH_NOT_COMPLETED, redirectError } from '../authRedirect';
+import { pokeText, POKE_MESSAGES, pokeMessageText } from '../../content/pokes';
+import { getLanguage, getT, localeTag, type Language } from '../../i18n';
+import { ApiError, NetworkError, serverError, type GazlaApi, type OAuthProvider } from '../api';
+import { authNotCompleted, redirectError } from '../authRedirect';
 import { clearAllFlags } from '../flags';
 import { isOnline, isSimulatedOffline, setSimulatedOffline } from '../network';
 import { clearCheckinQueue } from '../offlineQueue';
@@ -78,14 +87,16 @@ import {
   seedMembers,
   seedOtherFriendships,
   seedPersonalReminders,
-  seedPokeMessages,
   seedProfiles,
   seedSettings,
   seedStreakBase,
   seedTemplateActive,
   seedTemplates,
+  type SeedActivityItem,
   type SeedChallenge,
+  type SeedTemplate,
 } from './seed';
+import { badgeEn, templateEn } from './seedEn';
 
 const LATENCY_MS = 120;
 const POKE_DAILY_LIMIT = 3;
@@ -93,8 +104,6 @@ const POKE_UNDO_MS = 30_000;
 const MAX_MEMBERS = 20;
 const ACTIVITY_PAGE_SIZE = 30;
 const RESERVED = ['diken', 'gazla', 'noskip', 'admin', 'destek', 'support', 'yardim', 'moderator'];
-/** Yaş sınırı ekranda ve hata metninde söylenmez (sunucuyla aynı nötr metin) */
-const AGE_REJECTED = 'Şu an hesabını oluşturamıyoruz.';
 
 /** Ağ gecikmesi; çevrimdışıyken istek gitmez, yoldayken bağlantı koparsa cevap gelmez */
 const wait = async () => {
@@ -103,6 +112,46 @@ const wait = async () => {
   if (!isOnline()) throw new NetworkError();
 };
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
+
+/** Şablonun metinleri dilde (İngilizcede seedEn.ts `templateEn[id]`, yoksa Türkçe) */
+function localizedTemplate(t: SeedTemplate, lang: Language = getLanguage()): SeedTemplate {
+  const en = lang === 'en' ? templateEn[t.id] : undefined;
+  if (!en) return t;
+  return {
+    ...t,
+    title: en.title,
+    shortTitle: en.shortTitle ?? t.shortTitle,
+    description: en.description ?? t.description,
+    number: t.number ? { ...t.number, unit: en.numberUnit ?? t.number.unit } : null,
+  };
+}
+
+/**
+ * Örnek verideki şablonlu challenge, örnek veri kurulduğu dilde: başlığı şablonun Türkçe başlığıyla aynıysa
+ * (kullanıcı değiştirmediyse) şablonun o dildeki başlığı, kısa adı ve birimi.
+ */
+function localizedSeedChallenge(c: SeedChallenge, lang: Language): SeedChallenge {
+  const source = c.templateId ? seedTemplates.find((t) => t.id === c.templateId) : undefined;
+  if (lang !== 'en' || !source || source.title !== c.title) return c;
+  const t = localizedTemplate(source, lang);
+  const number = c.number && t.number ? { ...c.number, unit: t.number.unit } : c.number;
+  return { ...c, title: t.title, shortTitle: t.shortTitle, number };
+}
+
+/** Örnek verideki şablon başlığı (aktivite payload.title gibi) o dilde; şablon başlığı değilse olduğu gibi */
+function localizedSeedTitle(title: string, lang: Language): string {
+  const source = seedTemplates.find((t) => t.title === title);
+  return source ? localizedTemplate(source, lang).title : title;
+}
+
+/** Aktivite öğesi dilde: dürtme metni pokes.ts'ten, Diken metni (payload.text) örnek verinin o dildeki hali */
+function localizedActivity({ poke, text, ...item }: SeedActivityItem, lang: Language = getLanguage()): ActivityItem {
+  return {
+    ...item,
+    pokeText: poke ? (pokeText(poke.key, poke.tone, lang) ?? item.pokeText) : item.pokeText,
+    payload: text ? { ...item.payload, text: text[lang] } : item.payload,
+  };
+}
 
 export function stageFor(streak: number): DikenStage {
   if (streak >= 30) return 'cicek';
@@ -157,7 +206,7 @@ class MockStore {
   friendships: Friendship[] = [];
   blocks: { blockerId: string; blockedId: string; createdAt: string }[] = clone(seedBlocks);
   pokes: Poke[] = [];
-  activity: ActivityItem[] = [];
+  activity: SeedActivityItem[] = [];
   inviteCodes = clone(seedInviteCodes);
   pendingRescues: PendingRescue[] = [];
   rescueDeclines: { challengeId: string; missedDate: LocalDate }[] = [];
@@ -167,8 +216,10 @@ class MockStore {
 
   constructor() {
     const today = localDate();
+    // Örnek veri kurulduğu andaki dilde (şablonlu challenge adları; bkz. localizedSeedChallenge)
+    const lang = getLanguage();
     seedProfiles.forEach((p) => this.profiles.set(p.id, clone(p)));
-    seedChallenges.forEach((c) => this.challenges.set(c.id, clone(c)));
+    seedChallenges.forEach((c) => this.challenges.set(c.id, clone(localizedSeedChallenge(c, lang))));
     for (const m of seedMembers) {
       const c = this.challenges.get(m.challengeId)!;
       const joinedOn = c.startDate <= today ? c.startDate : today;
@@ -201,7 +252,14 @@ class MockStore {
     seedFriendRequests.forEach((r) =>
       this.friendships.push({ id: r.id, requesterId: r.fromId, addresseeId: r.toId, status: 'pending', createdAt: r.createdAt }),
     );
-    this.activity = seedActivity((id) => this.lite(id));
+    this.activity = seedActivity((id) => this.lite(id)).map((a) => {
+      const payloadTitle = typeof a.payload.title === 'string' ? localizedSeedTitle(a.payload.title, lang) : null;
+      return {
+        ...a,
+        challengeTitle: (a.challengeId && this.challenges.get(a.challengeId)?.title) || payloadTitle || a.challengeTitle,
+        payload: payloadTitle ? { ...a.payload, title: payloadTitle } : a.payload,
+      };
+    });
   }
 
   /** Geçmiş işaretlemeleri challenge'ın bugünkü başlangıcına göre yazar (son gün dahil, bittiyse) */
@@ -432,10 +490,13 @@ class MockStore {
       }));
   }
 
-  visibleActivity(uid: string) {
+  /** Görünen aktivite (engelliler hariç, en yeniden eskiye), metinler o anki dilde */
+  visibleActivity(uid: string): ActivityItem[] {
+    const lang = getLanguage();
     return this.activity
       .filter((a) => !a.actor || !this.isBlocked(uid, a.actor.id))
-      .sort((a, b) => (a.createdAt === b.createdAt ? b.id.localeCompare(a.id) : b.createdAt.localeCompare(a.createdAt)));
+      .sort((a, b) => (a.createdAt === b.createdAt ? b.id.localeCompare(a.id) : b.createdAt.localeCompare(a.createdAt)))
+      .map((a) => localizedActivity(a, lang));
   }
 }
 
@@ -447,19 +508,23 @@ const notifySession = () => {
 };
 
 const me = () => {
-  if (!store.signedIn) throw new ApiError('Oturum açman gerekiyor', '42501');
-  if (!store.profileCompleted) throw new ApiError('Önce profilini tamamla', 'P0001');
+  if (!store.signedIn) throw serverError('not_signed_in', '42501');
+  if (!store.profileCompleted) throw serverError('profile_required', 'P0001');
   return ME_ID;
 };
 
 const challengeOrThrow = (id: string) => {
   const c = store.challenges.get(id);
-  if (!c) throw new ApiError('Challenge bulunamadı', 'P0002');
+  if (!c) throw serverError('challenge_not_found', 'P0002');
   return c;
 };
 
-/** Keşfet popülerlik sırası: yapan sayısı, sonra onboarding sırası, sonra slug (template_popularity) */
+/**
+ * Keşfet popülerlik sırası: yapan sayısı, sonra onboarding sırası, sonra slug (template_popularity).
+ * Metinler çağrı anındaki dilde.
+ */
 function templatesWithPopularity(): Template[] {
+  const lang = getLanguage();
   const active = (id: string) => seedTemplateActive[id] ?? 0;
   const ranked = [...seedTemplates].sort(
     (a, b) =>
@@ -467,7 +532,11 @@ function templatesWithPopularity(): Template[] {
       (a.onboardingOrder ?? Number.MAX_SAFE_INTEGER) - (b.onboardingOrder ?? Number.MAX_SAFE_INTEGER) ||
       a.slug.localeCompare(b.slug),
   );
-  return seedTemplates.map((t) => ({ ...clone(t), activeCount: active(t.id), popularity: ranked.indexOf(t) + 1 }));
+  return seedTemplates.map((t) => ({
+    ...clone(localizedTemplate(t, lang)),
+    activeCount: active(t.id),
+    popularity: ranked.indexOf(t) + 1,
+  }));
 }
 
 /** Geliştirme menüsü için senaryo düğmeleri */
@@ -482,7 +551,7 @@ export const mockDev = {
     store.pendingRescues = [
       {
         challengeId: 'c-plank',
-        title: 'Plank: her gün +5 saniye',
+        title: store.challenges.get('c-plank')!.title,
         missedDate: addDays(today, -1),
         streakBefore: 12,
         expiresAt,
@@ -490,7 +559,7 @@ export const mockDev = {
       },
       {
         challengeId: 'c-read',
-        title: 'Her gün 20 sayfa oku',
+        title: store.challenges.get('c-read')!.title,
         missedDate: addDays(today, -1),
         streakBefore: 3,
         expiresAt,
@@ -557,7 +626,7 @@ export const mockApi: GazlaApi = {
   async signInWithEmail(email) {
     await wait();
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())) {
-      throw new ApiError('Geçerli bir e-posta yaz', '22023');
+      throw new ApiError(getT().errors.auth.emailInvalid, '22023');
     }
     // Gerçekte bağlantı e-postayla gelir; örnekte hemen oturum açılır.
     store.signedIn = true;
@@ -572,7 +641,7 @@ export const mockApi: GazlaApi = {
       store.signedIn = true;
       notifySession();
     }
-    if (!store.signedIn) throw new ApiError(AUTH_NOT_COMPLETED);
+    if (!store.signedIn) throw authNotCompleted();
   },
   async signOut() {
     await wait();
@@ -603,15 +672,19 @@ export const mockApi: GazlaApi = {
   },
   async completeProfile(input: CompleteProfileInput) {
     await wait();
-    if (!store.signedIn) throw new ApiError('Oturum açman gerekiyor', '42501');
-    if (input.birthYear > new Date().getFullYear() - 13) throw new ApiError(AGE_REJECTED, '23514');
-    if (!(await mockApi.isUsernameAvailable(input.username))) throw new ApiError('Bu kullanıcı adı alınmış', '23505');
+    if (!store.signedIn) throw serverError('not_signed_in', '42501');
+    // Yaş sınırı ekranda ve hata metninde söylenmez (sunucuyla aynı nötr metin)
+    if (input.birthYear > new Date().getFullYear() - 13) throw serverError('account_unavailable', '23514');
+    if (!(await mockApi.isUsernameAvailable(input.username))) {
+      throw new ApiError(getT().errors.validation.usernameTaken, '23505');
+    }
     const p = store.profiles.get(ME_ID)!;
     p.username = input.username.trim().replace(/^@/, '').toLowerCase();
     p.displayName = input.displayName.trim();
     store.settings.birthYear = input.birthYear;
     store.settings.timezone = input.timezone;
-    if (input.locale) store.settings.locale = input.locale;
+    // Sunucudaki gibi uygulama dili (supabaseApi.completeProfile)
+    store.settings.locale = getLanguage();
     store.profileCompleted = true;
     notifySession();
     return clone(p);
@@ -620,7 +693,9 @@ export const mockApi: GazlaApi = {
     await wait();
     const p = store.profiles.get(me())!;
     if (update.username !== undefined && update.username !== p.username) {
-      if (!(await mockApi.isUsernameAvailable(update.username))) throw new ApiError('Bu kullanıcı adı alınmış', '23505');
+      if (!(await mockApi.isUsernameAvailable(update.username))) {
+        throw new ApiError(getT().errors.validation.usernameTaken, '23505');
+      }
       p.username = update.username.trim().toLowerCase();
     }
     if (update.displayName !== undefined) p.displayName = update.displayName.trim();
@@ -638,7 +713,7 @@ export const mockApi: GazlaApi = {
     await wait();
     me();
     if (update.dayEndGraceHours !== undefined && ![0, 1, 2].includes(update.dayEndGraceHours)) {
-      throw new ApiError('Tolerans 0, 1 ya da 2 saat olabilir', '23514');
+      throw new ApiError(getT().errors.validation.graceHours, '23514');
     }
     Object.assign(store.settings, update);
     return clone(store.settings);
@@ -730,15 +805,15 @@ export const mockApi: GazlaApi = {
     await wait();
     const uid = me();
     const c = challengeOrThrow(input.challengeId);
-    if (store.membership(c.id, uid)?.status !== 'active') throw new ApiError("Bu challenge'da değilsin", '42501');
+    if (store.membership(c.id, uid)?.status !== 'active') throw serverError('not_a_member', '42501');
     const date = input.localDate ?? localDate();
-    if (!store.openDates().includes(date)) throw new ApiError('Bu gün artık işaretlenemez', 'P0001');
-    if (date < c.startDate || date > c.endDate) throw new ApiError('Challenge bu gün sürmüyor', 'P0001');
-    if (c.taskType === 'photo' && !input.photoFileUri) throw new ApiError('Fotoğraf kanıtı gerekli', '22023');
+    if (!store.openDates().includes(date)) throw serverError('day_closed', 'P0001');
+    if (date < c.startDate || date > c.endDate) throw serverError('day_out_of_range', 'P0001');
+    if (c.taskType === 'photo' && !input.photoFileUri) throw serverError('photo_required', '22023');
     if (c.taskType === 'number') {
       const v = input.value;
       if (v === undefined || !(v >= 0) || (c.number?.max != null && v > c.number.max)) {
-        throw new ApiError('Geçersiz değer', '22023');
+        throw serverError('invalid_value', '22023');
       }
     }
     const value = input.value === undefined ? null : Math.round(input.value * 10000) / 10000;
@@ -748,7 +823,7 @@ export const mockApi: GazlaApi = {
     await wait();
     const uid = me();
     const day = date ?? localDate();
-    if (!store.openDates().includes(day)) throw new ApiError('Geçmiş günler değiştirilemez', 'P0001');
+    if (!store.openDates().includes(day)) throw serverError('past_day_locked', 'P0001');
     store.checkins.delete(store.key(uid, challengeId, day));
   },
   async rescueWithFreeRight(challengeId, missedDate) {
@@ -756,9 +831,9 @@ export const mockApi: GazlaApi = {
     const uid = me();
     const month = localDate().slice(0, 7);
     if (!store.pendingRescues.some((p) => p.challengeId === challengeId && p.missedDate === missedDate)) {
-      throw new ApiError('Bu gün için kurtarma yapılamaz', 'P0001');
+      throw serverError('rescue_unavailable', 'P0001');
     }
-    if (store.freeRescueUsedMonth === month) throw new ApiError('Bu ayın ücretsiz kurtarma hakkı kullanıldı', 'P0001');
+    if (store.freeRescueUsedMonth === month) throw serverError('free_rescue_used', 'P0001');
     store.freeRescueUsedMonth = month;
     store.rescues.push({ challengeId, userId: uid, rescuedDate: missedDate, method: 'free' });
     store.pendingRescues = store.pendingRescues.filter((p) => p.challengeId !== challengeId);
@@ -769,7 +844,7 @@ export const mockApi: GazlaApi = {
     const uid = me();
     if (store.rescues.some((r) => r.userId === uid && r.challengeId === challengeId && r.rescuedDate === missedDate)) return;
     if (!store.pendingRescues.some((p) => p.challengeId === challengeId && p.missedDate === missedDate)) {
-      throw new ApiError('Bu gün için kurtarma yapılamaz', 'P0001');
+      throw serverError('rescue_unavailable', 'P0001');
     }
     store.rescues.push({ challengeId, userId: uid, rescuedDate: missedDate, method: 'ad' });
     store.pendingRescues = store.pendingRescues.filter((p) => p.challengeId !== challengeId);
@@ -778,7 +853,7 @@ export const mockApi: GazlaApi = {
     await wait();
     me();
     if (!store.pendingRescues.some((p) => p.challengeId === challengeId && p.missedDate === missedDate)) {
-      throw new ApiError('Bekleyen bir kurtarma yok', 'P0002');
+      throw serverError('no_pending_rescue', 'P0002');
     }
     // Gün kurtarılmadan kapanır; seri sıfırdan devam eder, sonradan da kurtarılamaz
     store.rescueDeclines.push({ challengeId, missedDate });
@@ -855,8 +930,10 @@ export const mockApi: GazlaApi = {
   async setMyReminder(challengeId, time) {
     await wait();
     const m = store.membership(challengeId, me());
-    if (m?.status !== 'active') throw new ApiError("Bu challenge'da değilsin", '42501');
-    if (time !== null && !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) throw new ApiError('Geçersiz saat', '22007');
+    if (m?.status !== 'active') throw serverError('not_a_member', '42501');
+    if (time !== null && !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) {
+      throw new ApiError(getT().errors.validation.invalidTime, '22007');
+    }
     m.personalReminderTime = time;
     return store.membershipView(m);
   },
@@ -864,8 +941,8 @@ export const mockApi: GazlaApi = {
     await wait();
     const uid = me();
     const c = challengeOrThrow(challengeId);
-    if (store.membership(c.id, uid)?.status !== 'active') throw new ApiError("Bu challenge'da değilsin", '42501');
-    if (c.taskType !== 'number' || !c.number) throw new ApiError('Bu görev sayı ile işaretlenmiyor', '22023');
+    if (store.membership(c.id, uid)?.status !== 'active') throw serverError('not_a_member', '42501');
+    if (c.taskType !== 'number' || !c.number) throw serverError('not_number_task', '22023');
     const day = date ?? localDate();
     const dayIndex = store.dayIndex(c, day);
     const valueOf = (userId: string, d: LocalDate) => store.checkins.get(store.key(userId, c.id, d))?.value ?? null;
@@ -925,18 +1002,20 @@ export const mockApi: GazlaApi = {
     const today = localDate();
     const start = input.startDate ?? today;
     if (start < today || start > addDays(today, 7)) {
-      throw new ApiError('Başlangıç günü bugün ile 7 gün sonrası arasında olmalı', '22023');
+      throw serverError('start_date_out_of_range', '22023');
     }
-    const t = input.templateId ? seedTemplates.find((x) => x.id === input.templateId) : undefined;
-    if (input.templateId && !t) throw new ApiError('Şablon bulunamadı', 'P0002');
+    // Şablon alanları oluşturma anındaki dilde kopyalanır (create_challenge: başlık, kısa ad, birim)
+    const source = input.templateId ? seedTemplates.find((x) => x.id === input.templateId) : undefined;
+    if (input.templateId && !source) throw serverError('template_not_found', 'P0002');
+    const t = source && localizedTemplate(source);
     const title = t ? t.title : input.title?.trim();
     const taskType = t ? t.taskType : input.taskType;
     const duration = input.durationDays ?? t?.defaultDurationDays;
-    if (!title || !taskType || !duration) throw new ApiError('Ad, süre ve tamamlama şekli gerekli', '22023');
+    if (!title || !taskType || !duration) throw serverError('challenge_fields_required', '22023');
     if (t && input.durationDays !== undefined && !(t.allowedDurations as number[]).includes(input.durationDays)) {
-      throw new ApiError('Bu challenge için bu süre seçilemez', '23514');
+      throw serverError('duration_not_allowed', '23514');
     }
-    if (duration < 3 || duration > 60) throw new ApiError('Süre 3 ile 60 gün arasında olmalı', '23514');
+    if (duration < 3 || duration > 60) throw new ApiError(getT().errors.validation.durationRange, '23514');
     const id = `c-${Date.now().toString(36)}`;
     const c: SeedChallenge = {
       id,
@@ -966,17 +1045,17 @@ export const mockApi: GazlaApi = {
     const uid = me();
     challengeOrThrow(challengeId);
     if (store.membership(challengeId, uid)?.status !== 'active') {
-      throw new ApiError("Bu challenge'a davet edemezsin", '42501');
+      throw serverError('invite_not_allowed', '42501');
     }
     let count = 0;
     for (const id of userIds) {
       if (!store.areFriends(uid, id) || store.isBlocked(uid, id)) {
-        throw new ApiError('Yalnızca arkadaşlarını davet edebilirsin', 'P0001');
+        throw serverError('invite_friends_only', 'P0001');
       }
       const existing = store.membership(challengeId, id);
       if (existing && existing.status !== 'declined') continue;
       if (store.members.filter((m) => m.challengeId === challengeId && (m.status === 'active' || m.status === 'invited')).length >= MAX_MEMBERS) {
-        throw new ApiError('Grup dolu', 'P0001');
+        throw serverError('group_full', 'P0001');
       }
       if (existing) {
         existing.status = 'invited';
@@ -991,7 +1070,7 @@ export const mockApi: GazlaApi = {
   async respondToInvite(challengeId, accept) {
     await wait();
     const m = store.membership(challengeId, me());
-    if (!m || m.status !== 'invited') throw new ApiError('Davet bulunamadı', 'P0002');
+    if (!m || m.status !== 'invited') throw serverError('invite_not_found', 'P0002');
     if (accept) {
       m.status = 'active';
       m.joinedOn = localDate();
@@ -1005,8 +1084,8 @@ export const mockApi: GazlaApi = {
     const uid = me();
     const c = challengeOrThrow(challengeId);
     const m = store.membership(challengeId, uid);
-    if (c.endDate < localDate() && m?.status === 'active') throw new ApiError('Bu challenge bitti', 'P0001');
-    if (!m || m.status !== 'active') throw new ApiError("Bu challenge'da değilsin", 'P0002');
+    if (c.endDate < localDate() && m?.status === 'active') throw serverError('challenge_finished', 'P0001');
+    if (!m || m.status !== 'active') throw serverError('not_a_member', 'P0002');
     m.status = 'left';
     m.leftOn = localDate();
     if (m.role === 'owner') {
@@ -1019,7 +1098,7 @@ export const mockApi: GazlaApi = {
     await wait();
     const uid = me();
     if (store.membership(challengeId, uid)?.status !== 'active') {
-      throw new ApiError("Bu challenge'a davet edemezsin", '42501');
+      throw serverError('invite_not_allowed', '42501');
     }
     const existing = Object.entries(store.inviteCodes).find(([, v]) => v.challengeId === challengeId && v.inviterId === uid);
     if (existing) return existing[0];
@@ -1061,13 +1140,13 @@ export const mockApi: GazlaApi = {
     await wait();
     const uid = me();
     const inv = store.inviteCodes[code];
-    if (!inv || store.isBlocked(uid, inv.inviterId)) throw new ApiError('Davet linki geçersiz', 'P0002');
+    if (!inv || store.isBlocked(uid, inv.inviterId)) throw serverError('invite_link_invalid', 'P0002');
     const c = challengeOrThrow(inv.challengeId);
-    if (c.endDate < localDate()) throw new ApiError('Bu challenge bitti', 'P0001');
+    if (c.endDate < localDate()) throw serverError('challenge_finished', 'P0001');
     const m = store.membership(c.id, uid);
     if (m?.status === 'active') return c.id;
-    if (m?.status === 'left') throw new ApiError("Ayrıldığın challenge'a tekrar katılamazsın", 'P0001');
-    if (store.activeMembers(c.id).length >= MAX_MEMBERS) throw new ApiError('Grup dolu', 'P0001');
+    if (m?.status === 'left') throw serverError('rejoin_not_allowed', 'P0001');
+    if (store.activeMembers(c.id).length >= MAX_MEMBERS) throw serverError('group_full', 'P0001');
     const joinedOn = localDate();
     if (m) {
       m.status = 'active';
@@ -1091,13 +1170,13 @@ export const mockApi: GazlaApi = {
       !store.areFriends(uid, c.createdBy) ||
       store.membership(c.id, c.createdBy)?.status !== 'active'
     ) {
-      throw new ApiError('Challenge bulunamadı', 'P0002');
+      throw serverError('challenge_not_found', 'P0002');
     }
-    if (c.endDate < localDate()) throw new ApiError('Bu challenge bitti', 'P0001');
+    if (c.endDate < localDate()) throw serverError('challenge_finished', 'P0001');
     const m = store.membership(c.id, uid);
     if (m?.status === 'active') return store.membershipView(m);
-    if (m?.status === 'left') throw new ApiError("Ayrıldığın challenge'a tekrar katılamazsın", 'P0001');
-    if (store.activeMembers(c.id).length >= MAX_MEMBERS) throw new ApiError('Grup dolu', 'P0001');
+    if (m?.status === 'left') throw serverError('rejoin_not_allowed', 'P0001');
+    if (store.activeMembers(c.id).length >= MAX_MEMBERS) throw serverError('group_full', 'P0001');
     const joinedOn = localDate();
     const row =
       m ?? newMember({ challengeId: c.id, userId: uid, invitedBy: c.createdBy });
@@ -1144,7 +1223,13 @@ export const mockApi: GazlaApi = {
   async getBadges(): Promise<Badge[]> {
     await wait();
     me();
-    return seedBadges.map((b) => ({ ...b, earnedAt: store.earnedBadges.get(b.key) ?? null }));
+    // my_badges gibi kullanıcının dilinde (İngilizcede seedEn.ts `badgeEn[key]`, yoksa Türkçe)
+    const en = getLanguage() === 'en';
+    return seedBadges.map((b) => {
+      const text = en ? badgeEn[b.key] : undefined;
+      const earnedAt = store.earnedBadges.get(b.key) ?? null;
+      return text ? { ...b, title: text.title, description: text.description, earnedAt } : { ...b, earnedAt };
+    });
   },
 
   // Arkadaşlar ve sosyal ------------------------------------------------------------------------
@@ -1168,7 +1253,9 @@ export const mockApi: GazlaApi = {
           challengeShortTitle: shared?.shortTitle ?? null,
         };
       })
-      .sort((a, b) => Number(a.doneToday ?? 2) - Number(b.doneToday ?? 2) || a.displayName.localeCompare(b.displayName, 'tr'));
+      .sort(
+        (a, b) => Number(a.doneToday ?? 2) - Number(b.doneToday ?? 2) || a.displayName.localeCompare(b.displayName, localeTag()),
+      );
   },
   async getFriendRequests(): Promise<FriendRequest[]> {
     await wait();
@@ -1207,7 +1294,7 @@ export const mockApi: GazlaApi = {
   async findContacts(emailHashes): Promise<SearchResult[]> {
     await wait();
     const uid = me();
-    if (emailHashes.length > 500) throw new ApiError('En fazla 500 kişi aranabilir', '22023');
+    if (emailHashes.length > 500) throw serverError('contacts_limit', '22023');
     const wanted = new Set(emailHashes.map((h) => h.trim().toLowerCase()));
     return seedContactEmails
       .filter((c) => wanted.has(c.sha256) && c.discoverable && c.userId !== uid)
@@ -1226,8 +1313,8 @@ export const mockApi: GazlaApi = {
   async sendFriendRequest(userId) {
     await wait();
     const uid = me();
-    if (userId === uid) throw new ApiError('Kendine istek gönderemezsin', 'P0001');
-    if (!store.profiles.has(userId) || store.isBlocked(uid, userId)) throw new ApiError('Kullanıcı bulunamadı', 'P0002');
+    if (userId === uid) throw serverError('friend_request_self', 'P0001');
+    if (!store.profiles.has(userId) || store.isBlocked(uid, userId)) throw serverError('user_not_found', 'P0002');
     const f = store.friendship(uid, userId);
     if (f) {
       if (f.status === 'pending' && f.addresseeId === uid) f.status = 'accepted';
@@ -1239,7 +1326,7 @@ export const mockApi: GazlaApi = {
     await wait();
     const uid = me();
     const f = store.friendships.find((x) => x.id === friendshipId && x.addresseeId === uid && x.status === 'pending');
-    if (!f) throw new ApiError('İstek bulunamadı', 'P0002');
+    if (!f) throw serverError('friend_request_not_found', 'P0002');
     f.status = 'accepted';
     store.activity = store.activity.filter((a) => a.friendshipId !== friendshipId);
   },
@@ -1279,15 +1366,23 @@ export const mockApi: GazlaApi = {
   },
   async getPokeMessages(): Promise<PokeMessage[]> {
     await wait();
-    return clone(seedPokeMessages);
+    // poke_messages: metin uygulama dilinde (src/content/pokes.ts textEn, yoksa Türkçe)
+    const lang = getLanguage();
+    return POKE_MESSAGES.map((m) => ({
+      key: m.id,
+      tone: m.tone,
+      sortOrder: POKE_MESSAGES.filter((x) => x.tone === m.tone).indexOf(m),
+      text: pokeMessageText(m, lang),
+      isActive: true,
+    }));
   },
   async getPokeStatus(userId): Promise<PokeStatus> {
     await wait();
     const uid = me();
-    if (userId === uid) throw new ApiError('Kendini dürtemezsin', 'P0001');
+    if (userId === uid) throw serverError('poke_self', 'P0001');
     const recipient = store.profiles.get(userId);
     if (!recipient || store.isBlocked(uid, userId) || !(store.areFriends(uid, userId) || store.coMembers(uid, userId))) {
-      throw new ApiError('Bu kişiyi dürtemezsin', 'P0001');
+      throw serverError('poke_not_allowed', 'P0001');
     }
     const today = localDate();
     // Geri alınan dürtmeler de sayılır (mock'ta geri alınan kayıt silinmez)
@@ -1300,22 +1395,22 @@ export const mockApi: GazlaApi = {
     await wait();
     const uid = me();
     const recipient = store.profiles.get(input.recipientId);
-    if (!recipient || input.recipientId === uid) throw new ApiError('Kendini dürtemezsin', 'P0001');
-    if (store.isBlocked(uid, input.recipientId)) throw new ApiError('Bu kişiyi dürtemezsin', 'P0001');
+    if (!recipient || input.recipientId === uid) throw serverError('poke_self', 'P0001');
+    if (store.isBlocked(uid, input.recipientId)) throw serverError('poke_not_allowed', 'P0001');
     if (!store.areFriends(uid, input.recipientId) && !(input.challengeId && store.coMembers(uid, input.recipientId))) {
-      throw new ApiError('Bu kişiyi dürtemezsin', 'P0001');
+      throw serverError('poke_not_allowed', 'P0001');
     }
     if (input.tone === 'roast' && !recipient.harshMode) {
-      throw new ApiError('Sert modu kapalı; sadece gaz verebilirsin', 'P0001');
+      throw serverError('roast_not_allowed', 'P0001');
     }
-    if (!seedPokeMessages.some((m) => m.key === input.messageKey && m.tone === input.tone)) {
-      throw new ApiError('Geçersiz mesaj', '22023');
+    if (!POKE_MESSAGES.some((m) => m.id === input.messageKey && m.tone === input.tone)) {
+      throw serverError('poke_message_invalid', '22023');
     }
     const today = localDate();
     const sentToday = store.pokes.filter(
       (k) => k.senderId === uid && k.recipientId === input.recipientId && localDate(new Date(k.createdAt)) === today,
     ).length;
-    if (sentToday >= POKE_DAILY_LIMIT) throw new ApiError('Bugün bu kişiyi yeterince dürttün', 'P0001');
+    if (sentToday >= POKE_DAILY_LIMIT) throw serverError('poke_limit', 'P0001');
     const poke: Poke = {
       id: `p-${Date.now().toString(36)}`,
       senderId: uid,
@@ -1334,7 +1429,7 @@ export const mockApi: GazlaApi = {
     const uid = me();
     const p = store.pokes.find((k) => k.id === pokeId && k.senderId === uid);
     if (!p || Date.now() - new Date(p.createdAt).getTime() > POKE_UNDO_MS) {
-      throw new ApiError('Geri alma süresi doldu', 'P0001');
+      throw new ApiError(getT().errors.pokeUndoExpired, 'P0001');
     }
   },
   async getActivity() {
@@ -1381,7 +1476,7 @@ export const mockApi: GazlaApi = {
   async submitReport(input: ReportInput) {
     await wait();
     const uid = me();
-    if (input.userId === uid) throw new ApiError('Kendini şikayet edemezsin', 'P0001');
+    if (input.userId === uid) throw serverError('report_self', 'P0001');
     store.reports.push(clone(input));
     if (input.alsoBlock && input.userId) await mockApi.blockUser(input.userId);
   },

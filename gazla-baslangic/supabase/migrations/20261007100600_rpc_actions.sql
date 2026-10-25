@@ -12,10 +12,10 @@ declare
   v_uid uuid := auth.uid();
 begin
   if v_uid is null then
-    raise exception 'Oturum açman gerekiyor' using errcode = '42501';
+    raise exception 'Oturum açman gerekiyor' using errcode = '42501', hint = 'not_signed_in';
   end if;
   if not exists (select 1 from public.profiles p where p.id = v_uid) then
-    raise exception 'Önce profilini tamamla' using errcode = 'P0001';
+    raise exception 'Önce profilini tamamla' using errcode = 'P0001', hint = 'profile_required';
   end if;
   return v_uid;
 end
@@ -64,7 +64,7 @@ declare
   v_row public.profiles;
 begin
   if v_uid is null then
-    raise exception 'Oturum açman gerekiyor' using errcode = '42501';
+    raise exception 'Oturum açman gerekiyor' using errcode = '42501', hint = 'not_signed_in';
   end if;
 
   insert into public.profiles (id, username, display_name, avatar_tint)
@@ -122,10 +122,10 @@ declare
   v_row public.friendships;
 begin
   if p_user = v_uid then
-    raise exception 'Kendine istek gönderemezsin' using errcode = 'P0001';
+    raise exception 'Kendine istek gönderemezsin' using errcode = 'P0001', hint = 'friend_request_self';
   end if;
   if not exists (select 1 from public.profiles p where p.id = p_user) or app.is_blocked(v_uid, p_user) then
-    raise exception 'Kullanıcı bulunamadı' using errcode = 'P0002';
+    raise exception 'Kullanıcı bulunamadı' using errcode = 'P0002', hint = 'user_not_found';
   end if;
 
   select * into v_row from public.friendships f
@@ -145,7 +145,7 @@ begin
     coalesce((select s.discoverability from public.user_settings s where s.user_id = p_user), 'everyone') = 'everyone'
     or app.are_co_members(v_uid, p_user)
   ) then
-    raise exception 'Kullanıcı bulunamadı' using errcode = 'P0002';
+    raise exception 'Kullanıcı bulunamadı' using errcode = 'P0002', hint = 'user_not_found';
   end if;
 
   -- Geri çekip yeniden göndererek (her seferinde yeni bildirim) istek yağdırılamasın
@@ -155,7 +155,7 @@ begin
     select count(*) from app.friend_request_log l
     where l.requester_id = v_uid and l.addressee_id = p_user
   ) >= app.friend_request_daily_limit() then
-    raise exception 'Bu kişiye bugün yeterince istek gönderdin' using errcode = 'P0001';
+    raise exception 'Bu kişiye bugün yeterince istek gönderdin' using errcode = 'P0001', hint = 'friend_request_limit';
   end if;
 
   insert into public.friendships (requester_id, addressee_id)
@@ -177,7 +177,7 @@ begin
   where f.id = p_friendship and f.addressee_id = v_uid and f.status = 'pending'
   returning * into v_row;
   if not found then
-    raise exception 'İstek bulunamadı' using errcode = 'P0002';
+    raise exception 'İstek bulunamadı' using errcode = 'P0002', hint = 'friend_request_not_found';
   end if;
   return v_row;
 end
@@ -196,10 +196,10 @@ declare
   v_day date := app.local_date(p_recipient, p_at);
 begin
   if p_recipient = p_sender then
-    raise exception 'Kendini dürtemezsin' using errcode = 'P0001';
+    raise exception 'Kendini dürtemezsin' using errcode = 'P0001', hint = 'poke_self';
   end if;
   if app.is_blocked(p_sender, p_recipient) then
-    raise exception 'Bu kişiyi dürtemezsin' using errcode = 'P0001';
+    raise exception 'Bu kişiyi dürtemezsin' using errcode = 'P0001', hint = 'poke_not_allowed';
   end if;
 
   -- Challenge bağlamı yalnızca süren bir challenge: üyelik bitişten sonra da 'active' kalır, ama
@@ -210,23 +210,23 @@ begin
          select 1 from public.challenges c
          where c.id = p_challenge and app.day_closes_at(p_recipient, c.end_date) > p_at
        ) then
-      raise exception 'Bu kişiyi dürtemezsin' using errcode = 'P0001';
+      raise exception 'Bu kişiyi dürtemezsin' using errcode = 'P0001', hint = 'poke_not_allowed';
     end if;
   elsif not app.are_friends(p_sender, p_recipient) then
-    raise exception 'Bu kişiyi dürtemezsin' using errcode = 'P0001';
+    raise exception 'Bu kişiyi dürtemezsin' using errcode = 'P0001', hint = 'poke_not_allowed';
   end if;
 
   -- Laf sokma yalnızca alıcının sert modu açıksa
   if p_tone = 'roast'
      and not coalesce((select p.harsh_mode from public.profiles p where p.id = p_recipient), false) then
-    raise exception 'Sert modu kapalı; sadece gaz verebilirsin' using errcode = 'P0001';
+    raise exception 'Sert modu kapalı; sadece gaz verebilirsin' using errcode = 'P0001', hint = 'roast_not_allowed';
   end if;
 
   if not exists (
     select 1 from public.poke_messages pm
     where pm.key = p_message_key and pm.tone = p_tone and pm.is_active
   ) then
-    raise exception 'Geçersiz mesaj' using errcode = '22023';
+    raise exception 'Geçersiz mesaj' using errcode = '22023', hint = 'poke_message_invalid';
   end if;
 
   -- Aynı kişiye, alıcının yerel gününde en fazla N dürtme. Sınır alıcıyı korur; gönderen kendi
@@ -243,7 +243,7 @@ begin
       and l.created_at >= app.local_day_start(v_tz, v_day)
       and l.created_at < app.local_day_start(v_tz, v_day + 1)
   ) >= app.poke_daily_limit() then
-    raise exception 'Bugün bu kişiyi yeterince dürttün' using errcode = 'P0001';
+    raise exception 'Bugün bu kişiyi yeterince dürttün' using errcode = 'P0001', hint = 'poke_limit';
   end if;
 
   insert into public.pokes (sender_id, recipient_id, challenge_id, tone, message_key, created_at)
@@ -294,10 +294,10 @@ begin
   end if;
 
   if p_user is null or not exists (select 1 from public.profiles p where p.id = p_user) then
-    raise exception 'Kullanıcı bulunamadı' using errcode = 'P0002';
+    raise exception 'Kullanıcı bulunamadı' using errcode = 'P0002', hint = 'user_not_found';
   end if;
   if p_user = v_uid then
-    raise exception 'Kendini şikayet edemezsin' using errcode = 'P0001';
+    raise exception 'Kendini şikayet edemezsin' using errcode = 'P0001', hint = 'report_self';
   end if;
 
   -- Görünürlük kapısı yok: engel iki yönde de şikayeti engellemez (taciz eden, önce engelleyerek ya
@@ -317,7 +317,7 @@ begin
         where m.challenge_id = k.challenge_id and m.user_id = v_uid and m.status in ('active', 'left')
       );
     if v_evidence is null then
-      raise exception 'Fotoğraf bulunamadı' using errcode = 'P0002';
+      raise exception 'Fotoğraf bulunamadı' using errcode = 'P0002', hint = 'photo_not_found';
     end if;
   elsif p_target = 'challenge' then
     -- Şikayet edilen kişi challenge'la ilgili olmalı: kurucusu, davetlisi ya da (eski) üyesi
@@ -336,7 +336,7 @@ begin
          )
          or exists (select 1 from public.challenges c where c.id = p_challenge and c.created_by = p_user)
        ) then
-      raise exception 'Challenge bulunamadı' using errcode = 'P0002';
+      raise exception 'Challenge bulunamadı' using errcode = 'P0002', hint = 'challenge_not_found';
     end if;
     select jsonb_build_object('title', c.title, 'invite_message', c.invite_message) into v_evidence
     from public.challenges c where c.id = p_challenge;
@@ -363,7 +363,7 @@ begin
       select count(*) from public.reports r
       where r.reporter_id = v_uid and r.created_at > now() - interval '24 hours'
     ) >= app.report_daily_limit() then
-      raise exception 'Bugün çok fazla şikayet gönderdin' using errcode = 'P0001';
+      raise exception 'Bugün çok fazla şikayet gönderdin' using errcode = 'P0001', hint = 'report_limit';
     end if;
 
     insert into public.reports (reporter_id, reported_user_id, target_type, checkin_id, challenge_id,
@@ -425,7 +425,7 @@ language plpgsql stable security definer set search_path = '' as $$
 begin
   -- Kullanıcının işaretleyebileceği gün kalmadıysa (saat dilimi tabanı dahil) bitmiş sayılır
   if (select c.end_date from public.challenges c where c.id = p_challenge) < app.first_checkin_date(p_user, p_at) then
-    raise exception 'Bu challenge bitti' using errcode = 'P0001';
+    raise exception 'Bu challenge bitti' using errcode = 'P0001', hint = 'challenge_finished';
   end if;
 end
 $$;
@@ -492,7 +492,7 @@ begin
     where m.user_id = p_user and m.status = 'active' and c.end_date >= app.local_date(p_user, p_at)
   ) >= app.max_active_challenges() then
     raise exception 'Aynı anda en fazla % challenge sürdürebilirsin', app.max_active_challenges()
-      using errcode = 'P0001';
+      using errcode = 'P0001', hint = 'max_active_challenges';
   end if;
 end
 $$;
@@ -509,13 +509,13 @@ begin
   -- Challenge başına kilit: eşzamanlı davet/katılma üye sınırını aşamaz
   perform 1 from public.challenges c where c.id = p_challenge for no key update;
   if not app.is_active_member(p_inviter, p_challenge) then
-    raise exception 'Bu challenge''a davet edemezsin' using errcode = '42501';
+    raise exception 'Bu challenge''a davet edemezsin' using errcode = '42501', hint = 'invite_not_allowed';
   end if;
   perform app.assert_challenge_open(p_inviter, p_challenge, p_at);
 
   foreach v_user in array coalesce(p_users, '{}'::uuid[]) loop
     if v_user = p_inviter or not app.are_friends(p_inviter, v_user) or app.is_blocked(p_inviter, v_user) then
-      raise exception 'Yalnızca arkadaşlarını davet edebilirsin' using errcode = 'P0001';
+      raise exception 'Yalnızca arkadaşlarını davet edebilirsin' using errcode = 'P0001', hint = 'invite_friends_only';
     end if;
 
     select m.status into v_status from public.challenge_members m
@@ -538,7 +538,7 @@ begin
 
     if (select count(*) from public.challenge_members m
         where m.challenge_id = p_challenge and m.status in ('active', 'invited')) >= app.max_members() then
-      raise exception 'Grup dolu' using errcode = 'P0001';
+      raise exception 'Grup dolu' using errcode = 'P0001', hint = 'group_full';
     end if;
 
     if v_status is null then
@@ -592,18 +592,18 @@ begin
   p_number_max := trim_scale(round(p_number_max, 4));
   -- Başlangıç bugün ya da en fazla 7 gün sonra ("Yarın başlıyor")
   if v_start < v_today or v_start > v_today + 7 then
-    raise exception 'Başlangıç günü bugün ile 7 gün sonrası arasında olmalı' using errcode = '22023';
+    raise exception 'Başlangıç günü bugün ile 7 gün sonrası arasında olmalı' using errcode = '22023', hint = 'start_date_out_of_range';
   end if;
   perform app.assert_can_take_challenge(p_user, p_at);
 
   if p_template is not null then
     select * into v_t from public.challenge_templates t where t.id = p_template and t.is_active;
     if not found then
-      raise exception 'Şablon bulunamadı' using errcode = 'P0002';
+      raise exception 'Şablon bulunamadı' using errcode = 'P0002', hint = 'template_not_found';
     end if;
     -- Süre şablonun izin verdiklerinden biri olmalı (ChallengePreview süre seçicisi)
     if p_duration_days is not null and not (p_duration_days = any (v_t.allowed_durations)) then
-      raise exception 'Bu challenge için bu süre seçilemez' using errcode = '23514';
+      raise exception 'Bu challenge için bu süre seçilemez' using errcode = '23514', hint = 'duration_not_allowed';
     end if;
     insert into public.challenges (
       template_id, created_by, title, short_title, task_type, duration_days, start_date,
@@ -615,12 +615,13 @@ begin
       case when v_locale = 'en' then coalesce(v_t.short_title_en, v_t.short_title_tr) else v_t.short_title_tr end,
       v_t.task_type, coalesce(p_duration_days, v_t.default_duration_days), v_start,
       p_reminder_time, nullif(btrim(p_invite_message), ''), v_t.category, v_t.icon, v_t.tint,
-      v_t.number_unit, v_t.number_base_target, v_t.number_daily_increment, v_t.number_step, v_t.number_max,
+      case when v_locale = 'en' then coalesce(v_t.number_unit_en, v_t.number_unit) else v_t.number_unit end,
+      v_t.number_base_target, v_t.number_daily_increment, v_t.number_step, v_t.number_max,
       coalesce(p_visibility, 'invited')
     ) returning * into v_row;
   else
     if p_title is null or p_task_type is null or p_duration_days is null then
-      raise exception 'Ad, süre ve tamamlama şekli gerekli' using errcode = '22023';
+      raise exception 'Ad, süre ve tamamlama şekli gerekli' using errcode = '22023', hint = 'challenge_fields_required';
     end if;
     insert into public.challenges (
       created_by, title, task_type, duration_days, start_date, reminder_time, invite_message,
@@ -685,17 +686,17 @@ begin
   where m.challenge_id = p_challenge and m.user_id = p_user and m.status = 'invited'
   for update;
   if not found then
-    raise exception 'Davet bulunamadı' using errcode = 'P0002';
+    raise exception 'Davet bulunamadı' using errcode = 'P0002', hint = 'invite_not_found';
   end if;
 
   if p_accept then
     -- Davetten sonra aralarına engel girdiyse davet geçersiz (link yolu da reddeder)
     if app.is_blocked(p_user, v_row.invited_by) then
-      raise exception 'Davet bulunamadı' using errcode = 'P0002';
+      raise exception 'Davet bulunamadı' using errcode = 'P0002', hint = 'invite_not_found';
     end if;
     perform app.assert_challenge_open(p_user, p_challenge, p_at);
     if app.active_member_count(p_challenge) >= app.max_members() then
-      raise exception 'Grup dolu' using errcode = 'P0001';
+      raise exception 'Grup dolu' using errcode = 'P0001', hint = 'group_full';
     end if;
     perform app.assert_can_take_challenge(p_user, p_at);
     update public.challenge_members m
@@ -727,7 +728,7 @@ begin
   -- Son günü geçmiş challenge'dan ayrılınmaz: sonuç (bitiş, bahçe, sıra) kaydedilecek
   if (select c.end_date from public.challenges c where c.id = p_challenge) < app.local_date(p_user, p_at)
      and app.is_active_member(p_user, p_challenge) then
-    raise exception 'Bu challenge bitti' using errcode = 'P0001';
+    raise exception 'Bu challenge bitti' using errcode = 'P0001', hint = 'challenge_finished';
   end if;
   -- Bitmiş (sonucu kaydedilmiş) üyelikten ayrılınmaz: sonuç ve bahçe geçmişi korunur
   update public.challenge_members m
@@ -736,7 +737,7 @@ begin
     and m.finished_at is null
   returning * into v_row;
   if not found then
-    raise exception 'Bu challenge''da değilsin' using errcode = 'P0002';
+    raise exception 'Bu challenge''da değilsin' using errcode = 'P0002', hint = 'not_a_member';
   end if;
   return v_row;
 end
@@ -756,7 +757,7 @@ declare
   v_constraint text;
 begin
   if not app.is_active_member(v_uid, p_challenge) then
-    raise exception 'Bu challenge''a davet edemezsin' using errcode = '42501';
+    raise exception 'Bu challenge''a davet edemezsin' using errcode = '42501', hint = 'invite_not_allowed';
   end if;
   perform app.assert_challenge_open(v_uid, p_challenge, now());
 
@@ -784,7 +785,7 @@ begin
       end if;
     end;
   end loop;
-  raise exception 'Davet linki oluşturulamadı, tekrar dene' using errcode = 'P0001';
+  raise exception 'Davet linki oluşturulamadı, tekrar dene' using errcode = 'P0001', hint = 'invite_link_failed';
 end
 $$;
 
@@ -809,7 +810,7 @@ begin
            where m.challenge_id = p_challenge and m.user_id = v_uid and m.role = 'owner'
          ));
   if not found then
-    raise exception 'Davet linki bulunamadı' using errcode = 'P0002';
+    raise exception 'Davet linki bulunamadı' using errcode = 'P0002', hint = 'invite_link_not_found';
   end if;
 end
 $$;
@@ -828,7 +829,7 @@ begin
   select * into v_inv from public.challenge_invites i where i.code = p_code and i.revoked_at is null;
   if not found or app.is_blocked(p_user, v_inv.inviter_id)
      or not app.is_active_member(v_inv.inviter_id, v_inv.challenge_id) then
-    raise exception 'Davet linki geçersiz' using errcode = 'P0002';
+    raise exception 'Davet linki geçersiz' using errcode = 'P0002', hint = 'invite_link_invalid';
   end if;
   perform app.assert_challenge_open(p_user, v_inv.challenge_id, p_at);
 
@@ -840,11 +841,11 @@ begin
   end if;
   -- Ayrılan geri dönemez: dönüş katılma gününü bugüne çekip kaçırdığı günleri seriden silerdi
   if found and v_row.status = 'left' then
-    raise exception 'Ayrıldığın challenge''a tekrar katılamazsın' using errcode = 'P0001';
+    raise exception 'Ayrıldığın challenge''a tekrar katılamazsın' using errcode = 'P0001', hint = 'rejoin_not_allowed';
   end if;
 
   if app.active_member_count(v_inv.challenge_id) >= app.max_members() then
-    raise exception 'Grup dolu' using errcode = 'P0001';
+    raise exception 'Grup dolu' using errcode = 'P0001', hint = 'group_full';
   end if;
   perform app.assert_can_take_challenge(p_user, p_at);
 
@@ -881,7 +882,7 @@ begin
   if not found or v_c.visibility <> 'friends' or v_c.created_by is null
      or not app.are_friends(p_user, v_c.created_by)
      or not app.is_active_member(v_c.created_by, p_challenge) then
-    raise exception 'Challenge bulunamadı' using errcode = 'P0002';
+    raise exception 'Challenge bulunamadı' using errcode = 'P0002', hint = 'challenge_not_found';
   end if;
   perform app.assert_challenge_open(p_user, p_challenge, p_at);
 
@@ -892,11 +893,11 @@ begin
     return v_row;
   end if;
   if found and v_row.status = 'left' then
-    raise exception 'Ayrıldığın challenge''a tekrar katılamazsın' using errcode = 'P0001';
+    raise exception 'Ayrıldığın challenge''a tekrar katılamazsın' using errcode = 'P0001', hint = 'rejoin_not_allowed';
   end if;
 
   if app.active_member_count(p_challenge) >= app.max_members() then
-    raise exception 'Grup dolu' using errcode = 'P0001';
+    raise exception 'Grup dolu' using errcode = 'P0001', hint = 'group_full';
   end if;
   perform app.assert_can_take_challenge(p_user, p_at);
 
@@ -926,7 +927,7 @@ begin
   update public.challenge_members m set reminder_time = p_time
   where m.challenge_id = p_challenge and m.user_id = v_uid and m.status = 'active';
   if not found then
-    raise exception 'Bu challenge''da değilsin' using errcode = '42501';
+    raise exception 'Bu challenge''da değilsin' using errcode = '42501', hint = 'not_a_member';
   end if;
   return app.membership_json(v_uid, p_challenge);
 end
@@ -961,31 +962,31 @@ begin
   -- JS sayılarındaki kayan nokta kırıntısı (0.30000000000000004) reddedilmesin: 4 ondalığa yuvarla
   p_value := trim_scale(round(p_value, 4));
   if not app.is_active_member(p_user, p_challenge) then
-    raise exception 'Bu challenge''da değilsin' using errcode = '42501';
+    raise exception 'Bu challenge''da değilsin' using errcode = '42501', hint = 'not_a_member';
   end if;
   if not (v_day = any (app.checkin_dates(p_user, p_at))) then
-    raise exception 'Bu gün artık işaretlenemez' using errcode = 'P0001';
+    raise exception 'Bu gün artık işaretlenemez' using errcode = 'P0001', hint = 'day_closed';
   end if;
 
   select * into v_range from app.member_range(p_user, p_challenge);
   if v_day < v_range.range_start or v_day > v_range.range_end then
-    raise exception 'Challenge bu gün sürmüyor' using errcode = 'P0001';
+    raise exception 'Challenge bu gün sürmüyor' using errcode = 'P0001', hint = 'day_out_of_range';
   end if;
 
   select * into v_c from public.challenges c where c.id = p_challenge;
   case v_c.task_type
     when 'check' then
       if p_value is not null or p_photo_path is not null then
-        raise exception 'Bu görev tek dokunuşla işaretlenir' using errcode = '22023';
+        raise exception 'Bu görev tek dokunuşla işaretlenir' using errcode = '22023', hint = 'task_check_only';
       end if;
     when 'number' then
       -- NaN ve sonsuz da bu karşılaştırmalarda elenir
       if p_value is null or not (p_value >= 0 and p_value <= 1000000000) or scale(p_value) > 4
          or (v_c.number_max is not null and p_value > v_c.number_max) then
-        raise exception 'Geçersiz değer' using errcode = '22023';
+        raise exception 'Geçersiz değer' using errcode = '22023', hint = 'invalid_value';
       end if;
       if p_photo_path is not null then
-        raise exception 'Bu görev sayı ile işaretlenir' using errcode = '22023';
+        raise exception 'Bu görev sayı ile işaretlenir' using errcode = '22023', hint = 'task_number_only';
       end if;
     when 'photo' then
       -- Dosya proofs kovasına gerçekten yüklenmiş olmalı (önce yükle, sonra işaretle)
@@ -993,17 +994,17 @@ begin
          or not exists (
            select 1 from storage.objects o where o.bucket_id = 'proofs' and o.name = p_photo_path
          ) then
-        raise exception 'Fotoğraf kanıtı gerekli' using errcode = '22023';
+        raise exception 'Fotoğraf kanıtı gerekli' using errcode = '22023', hint = 'photo_required';
       end if;
       -- Her gün yeni kanıt: başka bir günün işaretlemesine bağlı dosya kullanılamaz
       if exists (
         select 1 from public.checkins k
         where k.photo_path = p_photo_path and k.local_date <> v_day
       ) then
-        raise exception 'Bu fotoğraf başka bir gün için gönderildi' using errcode = '22023';
+        raise exception 'Bu fotoğraf başka bir gün için gönderildi' using errcode = '22023', hint = 'photo_used';
       end if;
       if p_value is not null then
-        raise exception 'Bu görev fotoğrafla işaretlenir' using errcode = '22023';
+        raise exception 'Bu görev fotoğrafla işaretlenir' using errcode = '22023', hint = 'task_photo_only';
       end if;
   end case;
 
@@ -1035,7 +1036,7 @@ declare
   v_day date := coalesce(p_local_date, app.local_date(p_user, p_at));
 begin
   if not (v_day = any (app.checkin_dates(p_user, p_at))) then
-    raise exception 'Geçmiş günler değiştirilemez' using errcode = 'P0001';
+    raise exception 'Geçmiş günler değiştirilemez' using errcode = 'P0001', hint = 'past_day_locked';
   end if;
   delete from public.checkins k
   where k.user_id = p_user and k.challenge_id = p_challenge and k.local_date = v_day;
@@ -1067,7 +1068,7 @@ begin
     select 1 from app.pending_rescues(p_user, p_at) pr
     where pr.challenge_id = p_challenge and pr.missed_date = p_missed_date
   ) then
-    raise exception 'Bekleyen bir kurtarma yok' using errcode = 'P0002';
+    raise exception 'Bekleyen bir kurtarma yok' using errcode = 'P0002', hint = 'no_pending_rescue';
   end if;
   insert into app.rescue_declines (user_id, challenge_id, missed_date, created_at)
   values (p_user, p_challenge, p_missed_date, p_at)
@@ -1092,7 +1093,7 @@ declare
   v_row public.streak_rescues;
 begin
   if p_ad_reward_id is null or char_length(p_ad_reward_id) not between 8 and 200 then
-    raise exception 'Geçersiz ödül kimliği' using errcode = '22023';
+    raise exception 'Geçersiz ödül kimliği' using errcode = '22023', hint = 'invalid_reward_id';
   end if;
 
   select * into v_row from public.streak_rescues r where r.ad_reward_id = p_ad_reward_id;
@@ -1100,7 +1101,7 @@ begin
     if (v_row.user_id, v_row.challenge_id, v_row.rescued_date) = (p_user, p_challenge, p_missed_date) then
       return v_row;
     end if;
-    raise exception 'Bu ödül zaten kullanıldı' using errcode = '23505';
+    raise exception 'Bu ödül zaten kullanıldı' using errcode = '23505', hint = 'reward_used';
   end if;
 
   begin

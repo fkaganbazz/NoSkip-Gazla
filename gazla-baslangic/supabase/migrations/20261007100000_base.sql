@@ -113,7 +113,7 @@ create function app.assert_valid_timezone(p_tz text) returns void
 language plpgsql stable set search_path = '' as $$
 begin
   if p_tz is null or not exists (select 1 from pg_catalog.pg_timezone_names where name = p_tz) then
-    raise exception 'Geçersiz saat dilimi: %', p_tz using errcode = '22023';
+    raise exception 'Geçersiz saat dilimi: %', p_tz using errcode = '22023', hint = 'invalid_timezone';
   end if;
 end
 $$;

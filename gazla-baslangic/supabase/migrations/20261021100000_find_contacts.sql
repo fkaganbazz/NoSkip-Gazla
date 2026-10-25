@@ -77,7 +77,7 @@ declare
   v_hashes text[];
 begin
   if coalesce(cardinality(p_email_hashes), 0) > app.contact_hash_limit() then
-    raise exception 'Rehberden en fazla 500 kişi aranabilir' using errcode = '22023';
+    raise exception 'Rehberden en fazla 500 kişi aranabilir' using errcode = '22023', hint = 'contacts_limit';
   end if;
 
   -- Yalnızca geçerli özetler (64 hex), tekilleştirilmiş
@@ -92,7 +92,7 @@ begin
   delete from app.contact_lookup_log l
   where l.user_id = v_uid and l.created_at <= now() - interval '24 hours';
   if (select count(*) from app.contact_lookup_log l where l.user_id = v_uid) >= app.contact_lookup_daily_limit() then
-    raise exception 'Rehberden bulmayı bugün çok denedin. Yarın tekrar dene.' using errcode = 'P0001';
+    raise exception 'Rehberden bulmayı bugün çok denedin. Yarın tekrar dene.' using errcode = 'P0001', hint = 'contacts_daily_limit';
   end if;
   insert into app.contact_lookup_log (user_id, hash_count) values (v_uid, cardinality(v_hashes));
 

@@ -246,6 +246,7 @@ export type Database = {
           number_max: number | null
           number_step: number | null
           number_unit: string | null
+          number_unit_en: string | null
           onboarding_order: number | null
           short_title_en: string | null
           short_title_tr: string | null
@@ -273,6 +274,7 @@ export type Database = {
           number_max?: number | null
           number_step?: number | null
           number_unit?: string | null
+          number_unit_en?: string | null
           onboarding_order?: number | null
           short_title_en?: string | null
           short_title_tr?: string | null
@@ -299,6 +301,7 @@ export type Database = {
           number_max?: number | null
           number_step?: number | null
           number_unit?: string | null
+          number_unit_en?: string | null
           onboarding_order?: number | null
           short_title_en?: string | null
           short_title_tr?: string | null
@@ -1395,6 +1398,7 @@ export type Database = {
           p_ad_reward_id: string
           p_challenge: string
           p_code: string
+          p_hint?: string
           p_message: string
           p_missed_date: string
           p_user: string

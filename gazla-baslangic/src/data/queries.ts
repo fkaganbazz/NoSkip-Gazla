@@ -15,6 +15,12 @@ export const profileQuery = (userId: string | null) =>
     queryFn: () => api.getMyProfile(),
   });
 
+/** Kendi ayarların (user_settings); DataProvider dil eşitlemesinde de okur (`useMySettings` aynı sorgu) */
+export const settingsQuery = queryOptions({
+  queryKey: queryKeys.settings,
+  queryFn: () => api.getMySettings(),
+});
+
 /** Son günler sorgusu (Completion haftası); DataProvider açılışta önden çeker ki çevrimdışı da açılsın */
 export const recentDaysQuery = (days = 7) =>
   queryOptions({

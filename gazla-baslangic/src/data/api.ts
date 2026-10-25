@@ -3,9 +3,11 @@
  * çağrısına karşılık gelir (yorumda adı yazılı). İki uygulaması var: `mock/mockApi.ts` (örnek veri,
  * bellekte) ve `supabase/supabaseApi.ts`. Hangisinin kullanılacağına `client.ts` karar verir.
  *
- * Hatalar `ApiError` olarak fırlatılır; `message` kullanıcıya gösterilebilir Türkçe metindir
- * (Supabase'te RPC'lerin `raise exception` mesajı).
+ * Hatalar `ApiError` olarak fırlatılır; `message` kullanıcıya gösterilebilir, hatanın oluştuğu andaki uygulama
+ * dilinde metindir. Sunucu hatalarında `hint` kararlı anahtardır (SQL `raise … hint`; metni
+ * `t.serverErrors[hint]`, `serverError` / `serverErrorMessage`).
  */
+import { getLanguage, getT, type Messages } from '../i18n';
 import type { AuthRedirectParams } from './authRedirect';
 import type {
   ActivityItem,
@@ -51,25 +53,54 @@ import type {
 export class ApiError extends Error {
   /** Postgres SQLSTATE (ör. P0001 iş kuralı, P0002 bulunamadı, 42501 yetki) */
   code: string | null;
+  /** Sunucu hatasının kararlı anahtarı (`t.serverErrors` anahtarı, ör. 'group_full'); yoksa null */
+  hint: string | null;
 
-  constructor(message: string, code: string | null = null) {
+  constructor(message: string, code: string | null = null, hint: string | null = null) {
     super(message);
     this.name = 'ApiError';
     this.code = code;
+    this.hint = hint;
   }
 }
 
 /**
  * İstek sunucuya ulaşmadı (çevrimdışı, bağlantı koptu, zaman aşımı). İş kuralı hatası değildir:
  * çevrimdışı kuyruk bu hatada işlemi saklar ve bağlantı gelince yeniden dener. `ApiError`'dan
- * türer ki ekranlar `message`'ı yine Türkçe gösterebilsin; ayırt etmek için `isNetworkError`.
+ * türer ki ekranlar `message`'ı yine gösterebilsin (`common.offline`); ayırt etmek için `isNetworkError`.
  */
 export class NetworkError extends ApiError {
-  constructor(message = 'İnternet bağlantısı yok. Bağlanınca tekrar dene.') {
+  constructor(message = getT().common.offline) {
     super(message, 'NETWORK');
     this.name = 'NetworkError';
   }
 }
+
+/** Sunucu hatalarının anahtarları (SQL `hint`, Edge Function gövdesindeki `hint`) */
+export type ServerErrorKey = keyof Messages['serverErrors'];
+
+const isServerErrorKey = (hint: string | null | undefined): hint is ServerErrorKey =>
+  !!hint && Object.prototype.hasOwnProperty.call(getT().serverErrors, hint);
+
+/**
+ * Sunucu hatasının kullanıcıya gösterilecek metni: anahtar sözlükteyse o dildeki metni; değilse Türkçede
+ * sunucunun mesajı (SQL mesajları Türkçe), yoksa ya da İngilizcede `fallback` anahtarının metni
+ * (verilmezse `common.somethingWentWrong`).
+ */
+export function serverErrorMessage(
+  hint: string | null | undefined,
+  message?: string | null,
+  fallback?: ServerErrorKey,
+): string {
+  const t = getT();
+  if (isServerErrorKey(hint)) return t.serverErrors[hint];
+  if (getLanguage() === 'tr' && message) return message;
+  return fallback ? t.serverErrors[fallback] : t.common.somethingWentWrong;
+}
+
+/** Sunucunun bir iş kuralı hatası (mock ve istemci kontrolleri de aynı anahtarla) */
+export const serverError = (hint: ServerErrorKey, code: string | null = null) =>
+  new ApiError(getT().serverErrors[hint], code, hint);
 
 /** fetch'in ağ hatası metinleri: RN, Chrome, Safari, Firefox */
 const FETCH_FAILURE = /network request failed|failed to fetch|load failed|networkerror|network error|timed? ?out/i;

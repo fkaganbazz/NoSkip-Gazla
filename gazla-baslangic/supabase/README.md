@@ -32,7 +32,7 @@ Edge Function'lar (`functions/`, Deno; her birinin `deno.json` içe aktarma hari
 | `delete-account` | Hesabı sil: Storage `proofs/{uid}/`, `avatars/{uid}/`, sonra `auth.admin.deleteUser` | açık (uygulama oturumuyla) |
 | `push` | Expo push: arkadaş bildirimleri (notifications INSERT) ve 15 dakikada bir Diken bildirimleri | kapalı (`x-gazla-secret`) |
 
-Testler (`tests/`, pgTAP, 1216 doğrulama):
+Testler (`tests/`, pgTAP, 1238 doğrulama):
 
 | Dosya | Kapsam |
 |---|---|
@@ -42,7 +42,7 @@ Testler (`tests/`, pgTAP, 1216 doğrulama):
 | `04_challenge_rpcs.test.sql` | challenge oluşturma, davet, link, katılma, ayrılma, işaretleme |
 | `05_review_fixes.test.sql` | iki inceleme turunda eklenen kurallar (saat dilimi tabanı, ilk gün kurtarma, bitiş ve sıra, şikayet, engel, Diken push, sınırlar, dosya adları, tolerans, hesap silme) |
 | `06_screen_data.test.sql` | ekranların verisi: dürtme kotası, kişisel hatırlatma, "Arkadaşlarım" görünürlüğü ve katılma, 0/1/2 saat tolerans, 12 rozetin kuralları, kurtarmadan vazgeçme, sayı istatistikleri, bitti ekranı bir kez, durum/gün no, ortak arkadaş, kısa ad, popülerlik |
-| `07_server_jobs.test.sql` | rehberden bul (özet, keşfedilebilirlik, engel, sınırlar), reklamla kurtarma (süre geçmiş, zaten kurtarılmış, aynı ödül, ret sonucu), arkadaş push'u (dürtme tercihi, engel, bir kez), Diken push'u (yerel saat, günde bir, günde 2, sessiz saat, işaretlenmiş gün, token'sız kullanıcı, seri koptu), uzantı yokken iş kurulumu |
+| `07_server_jobs.test.sql` | rehberden bul (özet, keşfedilebilirlik, engel, sınırlar), reklamla kurtarma (süre geçmiş, zaten kurtarılmış, aynı ödül, ret sonucu), arkadaş push'u (dürtme tercihi, engel, bir kez), Diken push'u (yerel saat, günde bir, günde 2, sessiz saat, işaretlenmiş gün, token'sız kullanıcı, seri koptu), uzantı yokken iş kurulumu, dil (her `raise`'da `hint`, reklam reddinin anahtarı, İngilizce Diken ve arkadaş push'u) |
 
 ## Uygulama ve test
 
@@ -60,7 +60,7 @@ fonksiyonlarını kullanır (`tests.create_supabase_user`, `tests.authenticate_a
 verisini oluşturur ve `rollback` ile geri alır.
 
 Bu şema ve testler PostgreSQL 16 üzerinde, Supabase rolleri, `auth` ve `storage` şemalarıyla aynı
-davranan bir test ortamında doğrulandı (1216/1216; pg_cron, pg_net ve Vault olmadan — o yollar
+davranan bir test ortamında doğrulandı (1238/1238; pg_cron, pg_net ve Vault olmadan — o yollar
 koşullu). Gerçek Supabase'de ilk `supabase test db`
 çalıştırmasında farklılık çıkarsa önce Storage tablolarına doğrudan yazan testlere bakın (Storage
 sürümleri `storage.objects` üzerinde ek tetikleyiciler getirebiliyor).
@@ -222,12 +222,12 @@ DATABASE_URL=postgresql://postgres@127.0.0.1:54329/postgres npm run gen:types
   yerel saati). Kural `public.claim_diken_push` içinde ve atomik.
 - Ne zaman (`app.queue_diken_notifications`, kullanıcının yerel saatinde; her biri günde bir kez,
   hedef saatten sonraki 1 saat içinde; push token'ı olmayana hiç):
-  | Tür | Saat | Koşul | Metin (Notifications.dc.html) |
+  | Tür | Saat | Koşul | Metin (Notifications.dc.html; İngilizcesi alıcının dili `en` ise) |
   |---|---|---|---|
-  | `daily_reminder` | `user_settings.daily_reminder_time` (null = kapalı) | bugün bekleyen görev var | "Su yok mu su? Bugünkü görevlerin seni bekliyor." |
-  | `daily_reminder` + `challenge_id` | `app.member_reminder_time` (kişisel, yoksa grubun saati) | o challenge bugün işaretlenmedi; saat genel hatırlatmayla aynı değil | "Su yok mu su? {kısa ad} seni bekliyor." |
-  | `day_ending` | 22:00 ("gün bitimine 2 saat kala") | bekleyen görev var | "Gün bitiyor, {n} görevin duruyor. Susuz kaldım burada." |
-  | `streak_broken` | 09:00 ("ertesi sabah") | bekleyen kurtarma var | "Dün kaçtı. Beni sulamak için 24 saatin var." |
+  | `daily_reminder` | `user_settings.daily_reminder_time` (null = kapalı) | bugün bekleyen görev var | "Su yok mu su? Bugünkü görevlerin seni bekliyor." / "Water, anyone? Today's tasks are waiting for you." |
+  | `daily_reminder` + `challenge_id` | `app.member_reminder_time` (kişisel, yoksa grubun saati) | o challenge bugün işaretlenmedi; saat genel hatırlatmayla aynı değil | "Su yok mu su? {kısa ad} seni bekliyor." / "Water, anyone? {kısa ad} is waiting for you." |
+  | `day_ending` | 22:00 ("gün bitimine 2 saat kala") | bekleyen görev var | "Gün bitiyor, {n} görevin duruyor. Susuz kaldım burada." / "The day's almost over and {n} tasks are left. I'm getting thirsty here." (1: "1 task is left") |
+  | `streak_broken` | 09:00 ("ertesi sabah") | bekleyen kurtarma var | "Dün kaçtı. Beni sulamak için 24 saatin var." / "Yesterday slipped by. You have 24 hours to water me." |
 - Hakkı alınamayan (sessiz saat, günün 2 hakkı doldu) Diken bildirimi için satır eklenmez; satır
   eklenirse metni `payload.text`'te, uygulama içi yolu `payload.url`'de durur (Aktivite aynı metni
   gösterir). Haftalık özet ("Haftan", Pazar 19:00) henüz yok.
@@ -239,7 +239,9 @@ DATABASE_URL=postgresql://postgres@127.0.0.1:54329/postgres npm run gen:types
   Aynı satır bir kez gönderilir (`pushed_at`). Diken sınırına sayılmaz.
 - Metinler: "{ad} sana gaz verdi" / "{ad} sana laf soktu" + dürtme metni tırnak içinde; "{ad}
   bitirdi" + "{challenge} tamam. Tebrik etmek ister misin?"; "{ad} arkadaşlık isteği gönderdi"; "{ad}
-  seni bir challenge'a ekledi" + challenge adı.
+  seni bir challenge'a ekledi" + challenge adı. İngilizce alıcıya (`locale` 'en'): "{ad} hyped you up" /
+  "{ad} roasted you", "{ad} finished" + "{challenge}, done. Want to send congrats?", "{ad} sent you a friend
+  request", "{ad} added you to a challenge" (`functions/push` `SOCIAL_COPY`; bkz. "Dil").
 - Android kanalı (`channelId`, src/notifications/channels.ts): Diken `diken`; arkadaş bildirimleri
   `friends`; diğerleri `default`. `data.url`: Diken `/`, `/challenge/<id>`, `/streak-lost/<challenge_id>`
   (ilk bekleyen kurtarma, en uzun seri önce; ekran sıradakilere kendisi geçer; eski `/streak-lost`
@@ -308,6 +310,29 @@ DATABASE_URL=postgresql://postgres@127.0.0.1:54329/postgres npm run gen:types
 - API rollerinde TRUNCATE, TRIGGER, REFERENCES yok (TRUNCATE RLS'i atlar).
 - RLS politikaları `app.my_challenge_ids()` / `app.my_related_user_ids()` ön süzgeciyle dizin
   kullanır; satır başına pahalı kontrol yalnızca ilgili satırlarda çalışır.
+
+## Dil
+
+Uygulama Türkçe (Gazla) ve İngilizce (NoSkip). Sunucunun ürettiği metinler kullanıcının diline şöyle uyar:
+
+- **Kullanıcının dili** `user_settings.locale` ('tr' | 'en', varsayılan 'tr'). İstemci uygulama dilini yazar:
+  profil oluştururken `complete_profile(p_locale)`, sonra oturum açıkken dil değişince ya da açılışta farklıysa
+  `user_settings` update (`src/data/DataProvider.tsx`). Sunucu buna göre seçer: `create_challenge` şablondan
+  başlık, kısa ad ve birimi (`title_en`, `short_title_en`, `number_unit_en`; yoksa Türkçesi) kopyalar,
+  `my_badges` rozet adlarını, push metinlerini (aşağıda). Challenge adı oluşturulduğu dilde kalır (gruptaki
+  herkes aynı adı görür). Şablon ve dürtme metinlerini istemci kendisi seçer (`*_tr`/`*_en`, çağrı anındaki dil).
+- **Hata anahtarları**: her `raise exception` kararlı bir anahtar taşır:
+  `raise exception 'Grup dolu' using errcode = 'P0001', hint = 'group_full'` (snake_case; 51 anahtar). Türkçe
+  mesaj yedek olarak kalır. PostgREST anahtarı `error.hint` olarak döner; istemci (`supabaseApi` `fail`) metni
+  sözlükten alır (`src/i18n/locales/{tr,en}/serverErrors.ts`; Türkçe metinler SQL mesajıyla aynı). Anahtarı
+  sözlükte olmayan hata Türkçede sunucunun mesajıyla, İngilizcede "Something went wrong" ile gösterilir. Biçimli
+  mesajlarda (`%`) sözlük metni yeter. Yeni bir `raise` eklerken anahtarını iki sözlüğe de yaz;
+  `07_server_jobs` her `raise`'ın `hint` taşıdığını denetler. Reklam reddinin anahtarı
+  `app.ad_rescue_failures.hint`'te saklanır (`record_ad_rescue_failure(…, p_hint)`), `ad_rescue_result` aynı
+  anahtarla döner (yoksa `rescue_unavailable`). `delete-account` hata gövdesi `{ error, hint }`.
+- **Push dili**: Diken metnini SQL alıcının dilinde yazar (`app.diken_text(…, p_locale)`; satırın
+  `payload.text`'i de o dilde, Aktivite onu gösterir). Arkadaş bildiriminde `claim_social_push` alıcının
+  `locale`'ini ve o dildeki dürtme metnini (`text_en`, yoksa `text_tr`) döner; başlığı `push` fonksiyonu kurar.
 
 ## İstemci RPC'leri
 
@@ -449,7 +474,8 @@ Tasarımda ya da CLAUDE.md'de açık olmayan noktalarda verilen kararlar:
 
 - **Rozetler**: tasarımda olmayan 9 rozetin adları, ikonları (trophy, moon çizilmedi) ve eşikleri
   ürün onayı bekliyor (Kararlar 19).
-- **İngilizce metinler**: şablon ve dürtme mesajlarının `*_en` alanları boş.
+- **İngilizce metinler**: şablon, dürtme ve rozet metinlerinin İngilizcesi (`*_en`, `number_unit_en`) taslak;
+  ürün/çeviri onayı bekliyor (istemcideki kopyaları `src/content/pokes.ts`, `src/data/mock/seedEn.ts`).
 - **FriendProfile "11/30"**: takvim günü mü, tamamlanan gün mü? `friend_profile` ikisini de döner
   (`day_index`, `days_done`).
 - **Explore "Mert ve Kerem yapıyor"**: arkadaşın ortak olmayan challenge'ı görünsün mü? Şu an

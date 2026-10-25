@@ -3,14 +3,13 @@
  * FriendProfile, Settings, InviteLanding, NumberEntry, Poke). Tarihler bugüne göre hesaplanır.
  * Supabase bağlanınca kullanılmaz; yalnızca `mockApi` okur.
  */
-import { POKE_MESSAGES } from '../../content/pokes';
 import type {
   ActivityItem,
   AvatarTintKey,
   Badge,
   BadgeKey,
   Challenge,
-  PokeMessage,
+  PokeTone,
   Profile,
   Template,
   UserSettings,
@@ -475,17 +474,6 @@ export const seedStreakBase: Record<string, number> = {
 
 export const seedLongestStreak = 31;
 
-// Dürtme mesajları (src/content/pokes.ts = migration 900) -------------------------------------------
-
-/** Sabit listeden (id = poke_messages.key); sortOrder tondaki sıra */
-export const seedPokeMessages: PokeMessage[] = POKE_MESSAGES.map((m) => ({
-  key: m.id,
-  tone: m.tone,
-  sortOrder: POKE_MESSAGES.filter((x) => x.tone === m.tone).indexOf(m),
-  text: m.text,
-  isActive: true,
-}));
-
 // Rozetler (migration 1000 ile aynı katalog) ----------------------------------------------------------
 
 export const seedBadges: Omit<Badge, 'earnedAt'>[] = (
@@ -514,7 +502,16 @@ export const seedEarnedBadges: { key: BadgeKey; earnedAt: string }[] = [
 
 // Aktivite (Activity.dc.html) ------------------------------------------------------------------------
 
-export const seedActivity = (lite: (id: string) => ActivityItem['actor']): ActivityItem[] => [
+/**
+ * Örnek aktivite öğesi: dürtme metni (`poke`, src/content/pokes.ts id'si) ve Diken metni (`text`, payload.text)
+ * mockApi okurken o anki dilde kurulur; `pokeText` Türkçe yedek.
+ */
+export type SeedActivityItem = ActivityItem & {
+  poke?: { key: string; tone: PokeTone };
+  text?: { tr: string; en: string };
+};
+
+export const seedActivity = (lite: (id: string) => ActivityItem['actor']): SeedActivityItem[] => [
   {
     id: 'n-1',
     kind: 'poke_roast',
@@ -522,6 +519,7 @@ export const seedActivity = (lite: (id: string) => ActivityItem['actor']): Activ
     challengeId: 'c-phone',
     challengeTitle: 'Uyanınca 1 saat telefonsuz',
     pokeText: 'Kaktüs bile senden hızlı büyüyor',
+    poke: { key: 'cactus_faster', tone: 'roast' },
     friendshipId: null,
     payload: {},
     createdAt: minutesAgo(5),
@@ -560,6 +558,7 @@ export const seedActivity = (lite: (id: string) => ActivityItem['actor']): Activ
     pokeText: null,
     friendshipId: null,
     payload: { text: 'Serin 12 gün oldu. Fena değilsin.' },
+    text: { tr: 'Serin 12 gün oldu. Fena değilsin.', en: 'Your streak hit 12 days. Not bad at all.' },
     createdAt: minutesAgo(60 * 20),
     readAt: minutesAgo(60 * 19),
   },
@@ -570,6 +569,7 @@ export const seedActivity = (lite: (id: string) => ActivityItem['actor']): Activ
     challengeId: 'c-read',
     challengeTitle: 'Her gün 20 sayfa oku',
     pokeText: 'Beraber bitireceğiz',
+    poke: { key: 'finish_together', tone: 'hype' },
     friendshipId: null,
     payload: {},
     createdAt: minutesAgo(60 * 22),

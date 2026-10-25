@@ -11,16 +11,21 @@
  *   bağlantı gelince oturum yeniden sorulur.
  * - Bağlantı durumu `network.ts` ile onlineManager'a bağlıdır; oturum hazırken çevrimdışı
  *   işaretleme kuyruğu (`offlineQueue.ts`) açılışta ve bağlantı gelince boşaltılır.
+ * - Dil: uygulama dili (`src/i18n`) oturum hazırken `user_settings.locale`'e yazılır (açılışta farklıysa ve dil
+ *   değişince; çevrimdışıysa bağlantı gelince). Sunucu create_challenge şablon metnini, rozet adlarını ve push
+ *   metinlerini buna göre seçer. Dil değişince dile bağlı önbellekler (şablonlar, rozetler, aktivite) yenilenir.
  */
 import { onlineManager, QueryClient, useQuery, useQueryClient } from '@tanstack/react-query';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
+import { useLanguage, type Language } from '../i18n';
 import { api } from './client';
 import { forgetSession, lastSession, rememberSession } from './lastSession';
-import { connectivityKnown } from './network';
+import { connectivityKnown, useIsOnline } from './network';
 import { reapplyCheckinQueue, useCheckinQueueSync } from './offlineQueue';
-import { profileQuery, recentDaysQuery } from './queries';
+import { profileQuery, recentDaysQuery, settingsQuery } from './queries';
+import { queryKeys } from './queryKeys';
 import { configurePersistedQueries, getCacheOwner, persistOptions, setCacheOwner } from './queryPersist';
 import type { Profile, Session } from './types';
 
@@ -53,6 +58,49 @@ const queryClient = new QueryClient({
 configurePersistedQueries(queryClient);
 
 const PERSIST_OPTIONS = persistOptions(api);
+
+/** Metni dile bağlı sorgular: şablonlar (istemci seçer), rozetler (sunucu locale'e göre), aktivite (dürtme metni) */
+const LANGUAGE_KEYS = [queryKeys.templates, queryKeys.badges, ['activity']];
+
+const refreshLanguageQueries = (client: QueryClient) =>
+  Promise.all(LANGUAGE_KEYS.map((queryKey) => client.invalidateQueries({ queryKey })));
+
+/**
+ * Uygulama dilini sunucuya yazar (`user_settings.locale`): oturum hazırken sunucudaki dil farklıysa (açılışta ya
+ * da dil değişince). İstek düşerse (çevrimdışı) bağlantı gelince yeniden dener. Yazınca rozetler (sunucu dile göre
+ * seçer) yenilenir. Dil değişince, oturum olmasa da (onboarding şablonları) dile bağlı önbellekler yenilenir.
+ */
+function useLanguageSync(client: QueryClient, userId: string | null) {
+  const language = useLanguage();
+  const online = useIsOnline();
+  const settings = useQuery({ ...settingsQuery, enabled: !!userId });
+  const serverLocale = settings.data?.locale;
+  const pending = useRef<Language | null>(null);
+
+  useEffect(() => {
+    if (!userId || !online || !serverLocale || serverLocale === language || pending.current === language) return;
+    pending.current = language;
+    api
+      .updateSettings({ locale: language })
+      .then((next) => {
+        client.setQueryData(queryKeys.settings, next);
+        return client.invalidateQueries({ queryKey: queryKeys.badges });
+      })
+      .catch(() => {
+        // Yeniden denenir: bağlantı gelince ya da dil yeniden değişince
+      })
+      .finally(() => {
+        if (pending.current === language) pending.current = null;
+      });
+  }, [client, userId, online, serverLocale, language]);
+
+  const shown = useRef(language);
+  useEffect(() => {
+    if (shown.current === language) return;
+    shown.current = language;
+    void refreshLanguageQueries(client);
+  }, [client, language]);
+}
 
 function AuthGate({ children }: { children: ReactNode }) {
   const client = useQueryClient();
@@ -119,6 +167,7 @@ function AuthGate({ children }: { children: ReactNode }) {
 
   const ready = state.status === 'ready';
   useCheckinQueueSync(api, ready ? state.session!.userId : null);
+  useLanguageSync(client, ready ? state.session!.userId : null);
 
   // Completion haftası çevrimdışı da açılsın: son günler önden çekilir (kalıcı önbelleğe girer)
   useEffect(() => {

@@ -5,10 +5,12 @@
  *    `{ type: 'INSERT', table: 'notifications', record }`; migration 20261021100200'deki tetikleyici
  *    pg_net ile gönderir, Supabase panelindeki Database Webhook da aynı gövdeyi yollar). `actor_id`
  *    doluysa `claim_social_push(id)`: alıcı dürtme bildirimlerini kapattıysa dürtme gitmez, aynı satır
- *    iki kez gönderilmez. Diken satırları (actor_id null) burada atlanır.
+ *    iki kez gönderilmez. Metin alıcının dilinde (`locale`: 'tr' Gazla, 'en' NoSkip; dürtme metni de o dilde
+ *    gelir). Diken satırları (actor_id null) burada atlanır.
  * 2. Diken bildirimleri — `{ mode: 'schedule' }` (pg_cron 15 dakikada bir): `queue_diken_notifications()`
  *    kullanıcının yerel saatinde zamanı gelenleri (günlük hatırlatma, challenge hatırlatması, gün bitiyor,
- *    seri koptu) sessiz saat ve günde 2 kuralıyla ayırır; burada yalnızca gönderilir.
+ *    seri koptu) sessiz saat ve günde 2 kuralıyla ayırır; metni alıcının dilinde SQL yazar (`app.diken_text`),
+ *    burada yalnızca gönderilir.
  *
  * Expo yanıtında `DeviceNotRegistered` dönen token'lar `push_tokens`'tan silinir.
  * Android kanalları (src/notifications/channels.ts): Diken `diken`; dürt, gaz, istek, davet, arkadaşın
@@ -42,14 +44,18 @@ export type PushMessage = {
 };
 
 // Metinler (design/Notifications.dc.html; src/features/settings/notificationCopy.ts ve
-// src/features/activity/logic.ts ile aynı kalıplar). Diken metinleri SQL'de (app.diken_text) çünkü
-// satırla birlikte saklanıp Aktivite'de de gösteriliyor.
+// src/features/activity/logic.ts ile aynı kalıplar), alıcının dilinde. Diken metinleri SQL'de (app.diken_text)
+// çünkü satırla birlikte saklanıp Aktivite'de de gösteriliyor.
 
 export const DIKEN_TITLE = 'Diken';
+
+export type Locale = 'tr' | 'en';
 
 export type SocialPush = {
   notification_id: string;
   recipient_id: string;
+  /** Alıcının dili (user_settings.locale); eski satırlarda yoksa Türkçe */
+  locale?: Locale | null;
   kind: string;
   actor_id: string;
   actor_name: string | null;
@@ -62,28 +68,61 @@ export type SocialPush = {
 
 type Content = { title: string; body?: string; url: string; channelId: ChannelId };
 
+/** Arkadaş bildirimi metinleri, dile göre */
+type SocialCopy = {
+  someone: string;
+  hype: (name: string) => string;
+  roast: (name: string) => string;
+  friendRequest: (name: string) => string;
+  challengeInvite: (name: string) => string;
+  finished: (name: string) => string;
+  finishedBody: (title: string | null) => string;
+};
+
+export const SOCIAL_COPY: Record<Locale, SocialCopy> = {
+  tr: {
+    someone: 'Bir arkadaşın',
+    hype: (name) => `${name} sana gaz verdi`,
+    roast: (name) => `${name} sana laf soktu`,
+    friendRequest: (name) => `${name} arkadaşlık isteği gönderdi`,
+    challengeInvite: (name) => `${name} seni bir challenge'a ekledi`,
+    finished: (name) => `${name} bitirdi`,
+    finishedBody: (title) => (title ? `${title} tamam. Tebrik etmek ister misin?` : 'Tebrik etmek ister misin?'),
+  },
+  en: {
+    someone: 'A friend',
+    hype: (name) => `${name} hyped you up`,
+    roast: (name) => `${name} roasted you`,
+    friendRequest: (name) => `${name} sent you a friend request`,
+    challengeInvite: (name) => `${name} added you to a challenge`,
+    finished: (name) => `${name} finished`,
+    finishedBody: (title) => (title ? `${title}, done. Want to send congrats?` : 'Want to send congrats?'),
+  },
+};
+
 const quote = (text: string | null) => (text ? `"${text}"` : undefined);
 
 export function socialContent(n: SocialPush): Content {
-  const name = n.actor_name?.trim() || 'Bir arkadaşın';
+  const copy = SOCIAL_COPY[n.locale === 'en' ? 'en' : 'tr'];
+  const name = n.actor_name?.trim() || copy.someone;
   switch (n.kind) {
     case 'poke_hype':
-      return { title: `${name} sana gaz verdi`, body: quote(n.poke_text), url: `/poke/${n.actor_id}`, channelId: 'friends' };
+      return { title: copy.hype(name), body: quote(n.poke_text), url: `/poke/${n.actor_id}`, channelId: 'friends' };
     case 'poke_roast':
-      return { title: `${name} sana laf soktu`, body: quote(n.poke_text), url: `/poke/${n.actor_id}`, channelId: 'friends' };
+      return { title: copy.roast(name), body: quote(n.poke_text), url: `/poke/${n.actor_id}`, channelId: 'friends' };
     case 'friend_request':
-      return { title: `${name} arkadaşlık isteği gönderdi`, url: '/friends', channelId: 'friends' };
+      return { title: copy.friendRequest(name), url: '/friends', channelId: 'friends' };
     case 'challenge_invite':
       return {
-        title: `${name} seni bir challenge'a ekledi`,
+        title: copy.challengeInvite(name),
         body: n.challenge_title ?? undefined,
         url: '/activity',
         channelId: 'friends',
       };
     case 'friend_finished_challenge':
       return {
-        title: `${name} bitirdi`,
-        body: n.challenge_title ? `${n.challenge_title} tamam. Tebrik etmek ister misin?` : 'Tebrik etmek ister misin?',
+        title: copy.finished(name),
+        body: copy.finishedBody(n.challenge_title),
         url: '/activity',
         channelId: 'friends',
       };

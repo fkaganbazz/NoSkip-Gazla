@@ -7,6 +7,11 @@
  * `createClient<Database>`, RPC adları/parametreleri/dönüşleri ve tablo sorguları derleyicide denetlenir.
  * jsonb dönen RPC'lerin içi şemada görünmez; şekilleri aşağıda (`*Json`), migration'daki
  * `jsonb_build_object` alanlarıyla aynı.
+ *
+ * Dil: hata metinleri `hint` anahtarıyla sözlükten (`fail`, `serverErrorMessage`); şablon ve dürtme metinleri
+ * çağrı anındaki uygulama diline göre (`getLanguage()`); profil oluştururken dil `user_settings.locale`'e yazılır
+ * (sonraki değişiklikleri DataProvider eşitler). Sunucu create_challenge, my_badges ve push metinlerini o dile
+ * göre seçer (supabase/README.md "Dil").
  */
 import 'react-native-url-polyfill/auto';
 
@@ -22,9 +27,19 @@ import {
 import { AppState, Platform } from 'react-native';
 
 import { pokeText } from '../../content/pokes';
+import { getLanguage, getT, type Language } from '../../i18n';
 import type { Database, Json, Tables, TablesUpdate } from '../../types/database';
-import { ApiError, ApiErrorCode, isNetworkError, NetworkError, type GazlaApi, type OAuthProvider } from '../api';
-import { AUTH_NOT_COMPLETED, authError } from '../authRedirect';
+import {
+  ApiError,
+  ApiErrorCode,
+  isNetworkError,
+  NetworkError,
+  serverError,
+  serverErrorMessage,
+  type GazlaApi,
+  type OAuthProvider,
+} from '../api';
+import { authError, authNotCompleted } from '../authRedirect';
 import { authRedirectUrl, completeAuthRedirect, signInWithProvider, signOutNativeProviders } from './nativeAuth';
 import type {
   ActivityItem,
@@ -93,6 +108,8 @@ type NumberColumns = Pick<
   Tables<'challenges'>,
   'number_unit' | 'number_base_target' | 'number_daily_increment' | 'number_step' | 'number_max'
 >;
+/** Şablonun sayı ayarları: birimin İngilizcesi de (`number_unit_en`) */
+type TemplateNumberColumns = NumberColumns & Pick<Tables<'challenge_templates'>, 'number_unit_en'>;
 /** `challenges.end_date` üretilmiş sütun (start_date + süre − 1): şemada null olabilir görünür, olmaz */
 type ChallengeJson = Omit<Tables<'challenges'>, 'end_date'> & { end_date: string };
 
@@ -193,9 +210,14 @@ export function createSupabaseApi(url: string, anonKey: string): GazlaApi {
 
   // Yardımcılar ---------------------------------------------------------------------------------
 
-  const fail = (error: PostgrestError | { message: string; code?: string } | null): never => {
+  /**
+   * Sunucu hatası → `ApiError`: `hint` (SQL `raise … hint`) sözlükteyse o dildeki metin, değilse Türkçede sunucunun
+   * mesajı, İngilizcede "Something went wrong" (`serverErrorMessage`). Ağ hatası `NetworkError`.
+   */
+  const fail = (error: PostgrestError | { message: string; code?: string; hint?: string | null } | null): never => {
     if (isFetchFailure(error)) throw new NetworkError();
-    throw new ApiError(error?.message ?? 'Bir şeyler ters gitti', (error as PostgrestError | null)?.code ?? null);
+    const hint = (error as { hint?: string | null } | null)?.hint || null;
+    throw new ApiError(serverErrorMessage(hint, error?.message), (error as PostgrestError | null)?.code ?? null, hint);
   };
 
   /**
@@ -218,7 +240,7 @@ export function createSupabaseApi(url: string, anonKey: string): GazlaApi {
   async function uid(): Promise<string> {
     const { data } = await supabase.auth.getSession();
     const id = data.session?.user.id;
-    if (!id) throw new ApiError('Oturum açman gerekiyor', '42501');
+    if (!id) throw serverError('not_signed_in', '42501');
     return id;
   }
 
@@ -270,10 +292,11 @@ export function createSupabaseApi(url: string, anonKey: string): GazlaApi {
     avatarTint: r.avatar_tint as AvatarTintKey,
   });
 
-  const toNumber = (r: NumberColumns): NumberSettings | null =>
+  /** `unit`: verilirse birim yerine (şablonun dile göre birimi) */
+  const toNumber = (r: NumberColumns, unit?: string | null): NumberSettings | null =>
     r.number_unit
       ? {
-          unit: r.number_unit,
+          unit: unit || r.number_unit,
           baseTarget: Number(r.number_base_target),
           dailyIncrement: Number(r.number_daily_increment),
           step: Number(r.number_step),
@@ -339,17 +362,12 @@ export function createSupabaseApi(url: string, anonKey: string): GazlaApi {
   ): Session | null =>
     s ? { userId: s.user.id, email: s.user.email ?? null, displayNameHint: nameHint(s.user.user_metadata) } : null;
 
-  let localeCache: Locale | null = null;
-  async function locale(): Promise<Locale> {
-    if (localeCache) return localeCache;
-    const { data } = await supabase.auth.getSession();
-    if (!data.session) return 'tr';
-    const { data: s } = await supabase.from('user_settings').select('locale').maybeSingle();
-    localeCache = (s?.locale as Locale) ?? 'tr';
-    return localeCache;
-  }
+  /** Şablonun sayı ayarları uygulama dilinde (İngilizcede `number_unit_en`, yoksa Türkçe birim) */
+  const templateNumber = (r: TemplateNumberColumns, lang: Language) =>
+    toNumber(r, lang === 'en' ? r.number_unit_en : null);
 
-  let pokeMessagesCache: PokeMessage[] | null = null;
+  /** Dürtme mesajları dile göre önbellekte (metin `text_en`/`text_tr`) */
+  const pokeMessagesCache = new Map<Language, PokeMessage[]>();
 
   const api: GazlaApi = {
     kind: 'supabase',
@@ -361,7 +379,6 @@ export function createSupabaseApi(url: string, anonKey: string): GazlaApi {
     },
     onSessionChange(listener) {
       const { data } = supabase.auth.onAuthStateChange((_event, session) => {
-        localeCache = null;
         listener(toSession(session));
       });
       return () => data.subscription.unsubscribe();
@@ -375,13 +392,13 @@ export function createSupabaseApi(url: string, anonKey: string): GazlaApi {
         email: email.trim(),
         options: { emailRedirectTo: authRedirectUrl() },
       });
-      if (error) throw authError(error, 'E-posta gönderilemedi. Biraz sonra tekrar dene.');
+      if (error) throw authError(error, 'emailSendFailed');
     },
     async completeAuthRedirect(params) {
       if (await completeAuthRedirect(supabase, params)) return;
       // Kod yok: iOS'ta tarayıcı dönüşü uygulamaya değil openAuthSessionAsync'e gider; oturum açıksa sorun yok
       const { data } = await supabase.auth.getSession();
-      if (!data.session) throw new ApiError(AUTH_NOT_COMPLETED);
+      if (!data.session) throw authNotCompleted();
     },
     async signOut() {
       await signOutNativeProviders();
@@ -390,18 +407,22 @@ export function createSupabaseApi(url: string, anonKey: string): GazlaApi {
     },
     async deleteAccount() {
       // Edge Function supabase/functions/delete-account: JWT'den kullanıcı, Storage dosyaları
-      // (proofs/{uid}, avatars/{uid}), auth.admin.deleteUser. Hata gövdesindeki `error` Türkçe metindir.
+      // (proofs/{uid}, avatars/{uid}), auth.admin.deleteUser. Hata gövdesi `{ error, hint }`: `error` Türkçe metin,
+      // `hint` sözlük anahtarı (t.serverErrors).
       const { error } = await supabase.functions.invoke('delete-account', { method: 'POST' });
       if (error) {
         if (error instanceof FunctionsHttpError) {
           const body = await (error.context as Response).json().catch(() => null);
+          const hint = typeof body?.hint === 'string' ? body.hint : null;
+          const text = typeof body?.error === 'string' ? body.error : null;
           throw new ApiError(
-            typeof body?.error === 'string' ? body.error : 'Hesap silinemedi. Biraz sonra tekrar dene.',
+            serverErrorMessage(hint, text, 'delete_account_failed'),
             String((error.context as Response).status),
+            hint,
           );
         }
         if (error instanceof FunctionsFetchError) throw new NetworkError();
-        if (error instanceof FunctionsRelayError) throw new ApiError('Hesap şu an silinemiyor. Biraz sonra tekrar dene.');
+        if (error instanceof FunctionsRelayError) throw serverError('delete_account_unavailable');
         fail(error);
       }
       // Kullanıcı ve oturumları sunucuda silindi: yalnızca cihazdaki oturumu kapat
@@ -423,7 +444,8 @@ export function createSupabaseApi(url: string, anonKey: string): GazlaApi {
         p_display_name: input.displayName,
         p_birth_year: input.birthYear,
         p_timezone: input.timezone,
-        p_locale: input.locale ?? null,
+        // Sunucu dili uygulama dilidir (create_challenge şablon metni, rozetler, push metinleri)
+        p_locale: getLanguage(),
       });
       return toProfile(row);
     },
@@ -460,7 +482,6 @@ export function createSupabaseApi(url: string, anonKey: string): GazlaApi {
       if (update.dayEndGraceHours !== undefined) patch.day_end_grace_hours = update.dayEndGraceHours;
       const { data, error } = await supabase.from('user_settings').update(patch).eq('user_id', id).select('*').single();
       if (error) fail(error);
-      localeCache = null;
       return toSettings(data!);
     },
     async registerPushToken(token, platform) {
@@ -548,7 +569,7 @@ export function createSupabaseApi(url: string, anonKey: string): GazlaApi {
       // 'granted' | 'pending' ya da reddin hatası (süre geçti …)
       const result = await rpc('ad_rescue_result', { p_challenge: challengeId, p_missed_date: missedDate });
       if (result === 'granted') return;
-      throw new ApiError('Reklam ödülü henüz doğrulanmadı. Birazdan tekrar dene.', ApiErrorCode.adRewardPending);
+      throw new ApiError(getT().errors.adRewardPending, ApiErrorCode.adRewardPending);
     },
     async declineRescue(challengeId, missedDate) {
       await rpc('decline_rescue', { p_challenge: challengeId, p_missed_date: missedDate });
@@ -578,7 +599,8 @@ export function createSupabaseApi(url: string, anonKey: string): GazlaApi {
 
     // Challenge ---------------------------------------------------------------------------------
     async getTemplates() {
-      const lang = await locale();
+      // Metinler çağrı anındaki uygulama dilinde (dil değişince DataProvider şablon önbelleğini yeniler)
+      const lang = getLanguage();
       const [{ data, error }, popularity] = await Promise.all([
         supabase
           .from('challenge_templates')
@@ -606,7 +628,7 @@ export function createSupabaseApi(url: string, anonKey: string): GazlaApi {
         ) as TemplateDuration[],
         icon: r.icon as ChallengeIconKey,
         tint: r.tint as ChallengeTintKey,
-        number: toNumber(r),
+        number: templateNumber(r, lang),
         onboardingOrder: r.onboarding_order,
         featuredWeek: r.featured_week,
         activeCount: rank.get(r.id)?.active_count ?? 0,
@@ -623,7 +645,7 @@ export function createSupabaseApi(url: string, anonKey: string): GazlaApi {
     },
     async getChallenge(challengeId) {
       const r = (await rpc('challenge_detail', { p_challenge: challengeId })) as ChallengeDetailJson | null;
-      if (!r) throw new ApiError('Challenge bulunamadı', 'P0002');
+      if (!r) throw serverError('challenge_not_found', 'P0002');
       return toChallenge(r);
     },
     async getMyMembership(challengeId) {
@@ -856,18 +878,20 @@ export function createSupabaseApi(url: string, anonKey: string): GazlaApi {
       };
     },
     async getPokeMessages() {
-      if (pokeMessagesCache) return pokeMessagesCache;
-      const lang = await locale();
+      const lang = getLanguage();
+      const cached = pokeMessagesCache.get(lang);
+      if (cached) return cached;
       const { data, error } = await supabase.from('poke_messages').select('*').order('tone').order('sort_order');
       if (error) fail(error);
-      pokeMessagesCache = (data ?? []).map((r) => ({
+      const messages = (data ?? []).map((r) => ({
         key: r.key,
         tone: r.tone,
         sortOrder: r.sort_order,
         text: lang === 'en' ? (r.text_en ?? r.text_tr) : r.text_tr,
         isActive: r.is_active,
       }));
-      return pokeMessagesCache;
+      pokeMessagesCache.set(lang, messages);
+      return messages;
     },
     async getPokeStatus(userId) {
       const [r] = await rpc('poke_status', { p_recipient: userId });
@@ -898,7 +922,7 @@ export function createSupabaseApi(url: string, anonKey: string): GazlaApi {
     async undoPoke(pokeId) {
       const { error, count } = await supabase.from('pokes').delete({ count: 'exact' }).eq('id', pokeId);
       if (error) fail(error);
-      if (!count) throw new ApiError('Geri alma süresi doldu', 'P0001');
+      if (!count) throw new ApiError(getT().errors.pokeUndoExpired, 'P0001');
     },
     async getActivity() {
       const messages = await api.getPokeMessages();

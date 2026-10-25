@@ -9,7 +9,7 @@
  *   istemci kimliği tanımsız) Supabase OAuth tarayıcı akışı.
  *
  * Kullanıcı pencereyi kapatırsa `ApiError` kodu 'CANCELLED' (ekran sessiz geçer; `isCancelledError`).
- * Supabase Auth hataları `authError` ile Türkçe `ApiError`'a çevrilir.
+ * Supabase Auth hataları `authError` ile uygulama dilindeki `ApiError`'a çevrilir (`t.errors.auth`).
  */
 import type { SupabaseClient } from '@supabase/supabase-js';
 import * as AppleAuthentication from 'expo-apple-authentication';
@@ -19,12 +19,13 @@ import * as WebBrowser from 'expo-web-browser';
 import { Platform } from 'react-native';
 
 import { googleSignInConfig } from '../../config/auth';
+import { getT } from '../../i18n';
 import { ApiError, ApiErrorCode, isNetworkError, type OAuthProvider } from '../api';
-import { AUTH_NOT_COMPLETED, authError, parseAuthRedirect, redirectError } from '../authRedirect';
+import { authCancelled, authError, authNotCompleted, parseAuthRedirect, redirectError } from '../authRedirect';
 
 type GoogleSignInModule = typeof import('@react-native-google-signin/google-signin');
 
-export const cancelledError = () => new ApiError('Giriş iptal edildi', ApiErrorCode.cancelled);
+export const cancelledError = authCancelled;
 
 let googleModule: GoogleSignInModule | null | undefined;
 
@@ -90,9 +91,9 @@ async function signInWithApple(supabase: SupabaseClient): Promise<void> {
     });
   } catch (error) {
     if (codeOf(error) === 'ERR_REQUEST_CANCELED') throw cancelledError();
-    throw new ApiError('Apple ile giriş tamamlanamadı. Tekrar dene.', codeOf(error));
+    throw new ApiError(getT().errors.auth.appleFailed, codeOf(error));
   }
-  if (!credential.identityToken) throw new ApiError(AUTH_NOT_COMPLETED);
+  if (!credential.identityToken) throw authNotCompleted();
 
   const { error } = await supabase.auth.signInWithIdToken({
     provider: 'apple',
@@ -125,14 +126,16 @@ async function signInWithGoogle(google: GoogleSignInModule, supabase: SupabaseCl
     if (error instanceof ApiError) throw error;
     if (isErrorWithCode(error)) {
       if (error.code === statusCodes.SIGN_IN_CANCELLED) throw cancelledError();
-      if (error.code === statusCodes.IN_PROGRESS) throw new ApiError('Giriş zaten sürüyor.', ApiErrorCode.cancelled);
+      if (error.code === statusCodes.IN_PROGRESS) {
+        throw new ApiError(getT().errors.auth.googleInProgress, ApiErrorCode.cancelled);
+      }
       if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-        throw new ApiError('Google ile giriş için Google Play Hizmetleri gerekli.', error.code);
+        throw new ApiError(getT().errors.auth.googlePlayServices, error.code);
       }
     }
-    throw new ApiError('Google ile giriş tamamlanamadı. Tekrar dene.', codeOf(error));
+    throw new ApiError(getT().errors.auth.googleFailed, codeOf(error));
   }
-  if (!idToken) throw new ApiError(AUTH_NOT_COMPLETED);
+  if (!idToken) throw authNotCompleted();
 
   const { error } = await supabase.auth.signInWithIdToken({ provider: 'google', token: idToken });
   if (error) throw authError(error);
@@ -208,9 +211,9 @@ async function signInWithBrowser(supabase: SupabaseClient, provider: OAuthProvid
   if (error) throw authError(error);
   const result = await WebBrowser.openAuthSessionAsync(data.url!, redirectTo);
   if (result.type === 'cancel' || result.type === 'dismiss') throw cancelledError();
-  if (result.type !== 'success') throw new ApiError(AUTH_NOT_COMPLETED);
+  if (result.type !== 'success') throw authNotCompleted();
   // Sağlayıcı reddettiyse (error=access_denied) kullanıcı vazgeçmiştir
-  if (!(await completeAuthRedirect(supabase, parseAuthRedirect(result.url)))) throw new ApiError(AUTH_NOT_COMPLETED);
+  if (!(await completeAuthRedirect(supabase, parseAuthRedirect(result.url)))) throw authNotCompleted();
 }
 
 export async function signInWithProvider(supabase: SupabaseClient, provider: OAuthProvider): Promise<void> {

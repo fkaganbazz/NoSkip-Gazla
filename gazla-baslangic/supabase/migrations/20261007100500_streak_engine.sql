@@ -271,11 +271,11 @@ begin
     select 1 from app.pending_rescues(p_user, p_at) pr
     where pr.challenge_id = p_challenge and pr.missed_date = p_missed_date
   ) then
-    raise exception 'Bu gün için kurtarma yapılamaz' using errcode = 'P0001';
+    raise exception 'Bu gün için kurtarma yapılamaz' using errcode = 'P0001', hint = 'rescue_unavailable';
   end if;
 
   if p_method = 'free' and not app.free_rescue_available(p_user, p_at) then
-    raise exception 'Bu ayın ücretsiz kurtarma hakkı kullanıldı' using errcode = 'P0001';
+    raise exception 'Bu ayın ücretsiz kurtarma hakkı kullanıldı' using errcode = 'P0001', hint = 'free_rescue_used';
   end if;
 
   insert into public.streak_rescues (user_id, challenge_id, rescued_date, method, quota_month, ad_reward_id, created_at)
