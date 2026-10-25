@@ -22,18 +22,18 @@ export type PokeMessageContent = {
 
 /** Karo sırası tasarımdaki gibi (her tonda 6; sortOrder = tondaki sıra) */
 export const POKE_MESSAGES: readonly PokeMessageContent[] = [
-  { id: 'almost_there', tone: 'hype', text: 'Az kaldı, bırakma!', textEn: null },
-  { id: 'streak_going_well', tone: 'hype', text: 'Serin çok iyi gidiyor', textEn: null },
-  { id: 'finish_together', tone: 'hype', text: 'Beraber bitireceğiz', textEn: null },
-  { id: 'take_five', tone: 'hype', text: '5 dakikanı ayır, hallet', textEn: null },
-  { id: 'proud_of_you', tone: 'hype', text: 'Seninle gurur duyuyorum', textEn: null },
-  { id: 'diken_waiting', tone: 'hype', text: 'Diken seni bekliyor', textEn: null },
-  { id: 'cactus_faster', tone: 'roast', text: 'Kaktüs bile senden hızlı büyüyor', textEn: null },
-  { id: 'phone_in_hand', tone: 'roast', text: 'Telefon elinde, challenge nerede?', textEn: null },
-  { id: 'diken_thirsty', tone: 'roast', text: 'Diken susuz kaldı, haberin olsun', textEn: null },
-  { id: 'today_tomorrow', tone: 'roast', text: 'Bugün mü, yarın mı, seneye mi?', textEn: null },
-  { id: 'streak_crying', tone: 'roast', text: 'Serin şu an ağlıyor', textEn: null },
-  { id: 'i_did_it', tone: 'roast', text: 'Ben yaptım. Sen?', textEn: null },
+  { id: 'almost_there', tone: 'hype', text: 'Az kaldı, bırakma!', textEn: "So close, don't quit!" },
+  { id: 'streak_going_well', tone: 'hype', text: 'Serin çok iyi gidiyor', textEn: 'Your streak is on fire' },
+  { id: 'finish_together', tone: 'hype', text: 'Beraber bitireceğiz', textEn: "We'll finish together" },
+  { id: 'take_five', tone: 'hype', text: '5 dakikanı ayır, hallet', textEn: '5 minutes, get it done' },
+  { id: 'proud_of_you', tone: 'hype', text: 'Seninle gurur duyuyorum', textEn: 'So proud of you' },
+  { id: 'diken_waiting', tone: 'hype', text: 'Diken seni bekliyor', textEn: "Diken's waiting for you" },
+  { id: 'cactus_faster', tone: 'roast', text: 'Kaktüs bile senden hızlı büyüyor', textEn: 'Even cacti grow faster than you' },
+  { id: 'phone_in_hand', tone: 'roast', text: 'Telefon elinde, challenge nerede?', textEn: 'Phone in hand, but no challenge?' },
+  { id: 'diken_thirsty', tone: 'roast', text: 'Diken susuz kaldı, haberin olsun', textEn: "Diken's thirsty, just saying" },
+  { id: 'today_tomorrow', tone: 'roast', text: 'Bugün mü, yarın mı, seneye mi?', textEn: 'Today, tomorrow, or next year?' },
+  { id: 'streak_crying', tone: 'roast', text: 'Serin şu an ağlıyor', textEn: 'Your streak is crying' },
+  { id: 'i_did_it', tone: 'roast', text: 'Ben yaptım. Sen?', textEn: 'I did mine. You?' },
 ];
 
 /**
