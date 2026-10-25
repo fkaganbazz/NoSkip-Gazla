@@ -219,6 +219,14 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ],
   ];
 
+  // Sentry kaynak haritası yüklemesi: kuruluş ve proje tanımlıysa (SENTRY_AUTH_TOKEN derleme ortamında, EAS
+  // ortam değişkeni). Yoksa plugin eklenmez: hata takibi yine çalışır (EXPO_PUBLIC_SENTRY_DSN), yığınlar küçültülmüş kalır.
+  const sentryOrg = env('SENTRY_ORG');
+  const sentryProject = env('SENTRY_PROJECT');
+  if (sentryOrg && sentryProject) {
+    plugins.push(['@sentry/react-native/expo', { organization: sentryOrg, project: sentryProject, url: 'https://sentry.io/' }]);
+  }
+
   // Uyarı: EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID (ya da _URL_SCHEME) yoksa plugin eklenmez; iOS'ta native
   // Google girişi açılmaz, giriş Supabase OAuth tarayıcı akışına düşer (src/data/supabase/nativeAuth.ts).
   if (iosUrlScheme) {

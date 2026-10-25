@@ -1,6 +1,9 @@
+// Hata takibi her şeyden önce başlasın
+import { navigationIntegration, Sentry } from '@/monitoring/sentry';
+
 import { useFonts } from 'expo-font';
 import { NavigationBar } from 'expo-navigation-bar';
-import { Stack } from 'expo-router';
+import { Stack, useNavigationContainerRef } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
@@ -24,7 +27,13 @@ export const unstable_settings = {
   anchor: '(tabs)',
 };
 
-export default function RootLayout() {
+function RootLayout() {
+  // Sentry: hata kayıtlarında hangi ekranda olunduğu görünsün
+  const navigationRef = useNavigationContainerRef();
+  useEffect(() => {
+    if (navigationRef) navigationIntegration.registerNavigationContainer(navigationRef);
+  }, [navigationRef]);
+
   return (
     // Alt sayfalar (@gorhom/bottom-sheet) için jest kökü
     <GestureHandlerRootView style={styles.root}>
@@ -36,6 +45,9 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
+
+// Yakalanmamış hatalar ve çizim hataları Sentry'ye (DSN yoksa kapalı)
+export default Sentry.wrap(RootLayout);
 
 const styles = StyleSheet.create({
   root: {
