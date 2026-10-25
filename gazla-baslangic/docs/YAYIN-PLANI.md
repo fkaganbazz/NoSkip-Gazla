@@ -112,7 +112,7 @@ adımlarla aynı anda yürüyebilir.
 ## Adım 10: Web sitesi
 - Tasarım hazırsa siteyi ben kurarım: ana sayfa, davet sayfası (`/d/<kod>`), yasal sayfalar, davet linklerinin
   uygulamayı açması için gereken dosyalar ve `app-ads.txt`. Sen barındırma hesabına bağlarsın.
-- Yasal metinlerin (Koşullar, Gizlilik, KVKK) taslağını ben yazarım. KVKK metnini bir avukata kontrol ettirmeni ve VERBİS
+- Yasal metinlerin (Koşullar, Gizlilik, KVKK, Yardım; TR + EN) taslakları hazır → `docs/yasal/`. KVKK metnini bir avukata kontrol ettirmeni ve VERBİS
   kaydı gerekip gerekmediğini sormanı öneririm.
 
 ## Adım 11: Beta
@@ -122,12 +122,13 @@ adımlarla aynı anda yürüyebilir.
 3. Arkadaşlarınla en az bir gerçek 7 günlük challenge yapın.
 
 ## Adım 12: Mağaza ve gönderim
-- **Mağaza metinleri** (ad, alt başlık, açıklama, anahtar kelimeler; TR + EN): taslakları ben yazarım.
+- **Mağaza metinleri** (ad, alt başlık, açıklama, anahtar kelimeler; TR + EN): taslak hazır → `docs/magaza/metinler.md`.
 - **Ekran görüntüleri ve öne çıkan görsel:** tasarım (`docs/TASARIM-ISTEKLERI.md` §7).
 - **Apple App Privacy ve Google Data Safety formları:** neyin işaretleneceğini ben listelerim (rehber özetleri,
   fotoğraf, reklam kimliği…), sen girersin.
 - **Yaş sınıflandırma anketi ve kategori:** öneri "Sağlık ve Fitness" ya da "Yaşam Tarzı".
 - **Apple incelemesi için demo hesap:** test hesabını ve örnek veriyi ben hazırlarım.
+- **Google Play hesap silme adresi:** web sitesinde `/hesap-sil` sayfası olmalı (Play bunu zorunlu tutuyor).
 - **Gönder.** Apple incelemesi genelde 1–2 gün sürer.
 
 ---

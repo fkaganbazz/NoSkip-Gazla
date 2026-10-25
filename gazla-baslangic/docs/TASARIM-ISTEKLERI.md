@@ -138,6 +138,13 @@ Davet linkine tıklayan kişide uygulama yüklü değilse bu sayfa açılır. Re
 
 **4d. 404 sayfası:** Diken "şaşkın" ruh halinde, ana sayfaya dönüş butonu.
 
+**4e. Hesap silme sayfası `/hesap-sil` (EN: `/en/delete-account`)**
+Google Play, uygulamayı yeniden kurmadan hesap silme talebi yapılabilecek bir web sayfası ister.
+- Uygulama içinden silme adımları (Ayarlar → Hesabı sil), 3 adımlık görsel ya da numaralı liste.
+- Uygulamaya erişemeyenler için: destek e-postasına hangi bilgilerle yazılacağı (hesabın e-postası, kullanıcı adı).
+- Neyin silindiği (profil, challenge'lar, fotoğraflar, bildirim anahtarları) ve ne kadar sürede.
+- Yasal sayfa şablonuyla (4c) aynı yerleşim olabilir.
+
 ## 5. Link önizleme görseli (Open Graph)
 
 | Dosya | Ölçü |
@@ -222,7 +229,7 @@ tarafından önerildi ve **onay bekliyor**.
       `play-store-icon.png`, `favicon.png`, `favicon-512.png`, `icon.svg`
 - [ ] 2. `splash-icon.png` (+ gerekirse `splash-icon-dark.png`)
 - [ ] 3. `notification-icon.png`
-- [ ] 4. Web: ana sayfa, davet sayfası (2 durum), yasal/yardım şablonu, 404. Mobil + masaüstü, TR + EN.
+- [ ] 4. Web: ana sayfa, davet sayfası (2 durum), yasal/yardım şablonu, 404, hesap silme sayfası. Mobil + masaüstü, TR + EN.
 - [ ] 5. `og-tr.png`, `og-en.png`
 - [ ] 6. Giriş e-postası HTML'i (TR + EN)
 - [ ] 7. Mağaza: App Store 1290×2796 ve Play 1080×1920 kareleri, `play-feature-{tr,en}.png`
