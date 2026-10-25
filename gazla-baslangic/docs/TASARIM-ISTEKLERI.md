@@ -174,8 +174,9 @@ E-postayla girişte gönderilen "giriş linki" e-postası.
 
 ## 7. Mağaza görselleri (gönderimden önce)
 
-**Kaynak:** Ham ekran görüntülerini (uygulamadan, tam çözünürlükte, TR ve EN) uygulama tarafı verecek. Bu iş onları
-çerçeveleyip üstüne başlık koymak. Stil `marketing/instagram` görselleriyle aynı olmalı.
+**Kaynak:** Ham ekran görüntüleri hazır: `marketing/magaza-ham/` (örnek veriyle, tam çözünürlükte):
+`appstore-<tr|en>-<1-6>.png` 1290×2796 ve `play-<tr|en>-<1-6>.png` 1080×1920, kare sırası aşağıdaki listeyle aynı. Bu iş
+onları çerçeveleyip üstüne başlık koymak. Stil `marketing/instagram` görselleriyle aynı olmalı.
 
 | Mağaza | Dosyalar | Ölçü | Adet |
 |---|---|---|---|

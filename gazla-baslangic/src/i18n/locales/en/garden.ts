@@ -6,7 +6,7 @@ export const garden: typeof tr = {
     sub: (username, harshMode) => `@${username} · Roast mode ${harshMode ? 'on' : 'off'}`,
   },
   stats: {
-    currentStreak: 'Current streak',
+    currentStreak: 'Streak',
     completed: 'Completed',
     longestStreak: 'Best streak',
   },
