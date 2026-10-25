@@ -16,10 +16,11 @@ import {
   useRescueStreak,
   type PendingRescue,
 } from '@/data';
-import { addDays, formatShortDate, isoDate, joinNames } from '@/features/challenge/logic';
+import { addLocalDays, deviceToday } from '@/features/checkin/logic';
 import { formatRemaining } from '@/features/moments/logic';
 import { useNow } from '@/features/today/useNow';
-import { momentsMetrics as m, momentsTypography as t, streakLostColors } from '@/theme/moments';
+import { useT } from '@/i18n';
+import { momentsMetrics as m, momentsTypography as ty, streakLostColors } from '@/theme/moments';
 import { layout, radius, useTheme } from '@/theme';
 
 type Saved = { item: PendingRescue; via: 'ad' | 'free' };
@@ -37,6 +38,8 @@ type Saved = { item: PendingRescue; via: 'ad' | 'free' };
 export default function StreakLostScreen() {
   const { challengeId } = useLocalSearchParams<{ challengeId: string }>();
   const router = useRouter();
+  const t = useT();
+  const ts = t.streakLost;
   const insets = useSafeAreaInsets();
   const { colors, scheme } = useTheme();
   const c = streakLostColors[scheme];
@@ -150,7 +153,7 @@ export default function StreakLostScreen() {
       <View style={[styles.screen, { paddingTop: top, paddingHorizontal: layout.screenPadding, backgroundColor: c.bgLost }]}>
         <View style={styles.topRow}>
           <View />
-          <IconButton icon="close" tone="onColor" accessibilityLabel="Kapat" onPress={close} />
+          <IconButton icon="close" tone="onColor" accessibilityLabel={t.common.close} onPress={close} />
         </View>
         <ErrorState message={rescues.error.message} onRetry={() => rescues.refetch()} />
       </View>
@@ -166,26 +169,28 @@ export default function StreakLostScreen() {
     return (
       <View style={[styles.screen, styles.empty, { paddingTop: top, paddingBottom: bottom, backgroundColor: c.bgLost }]}>
         <Diken mood="mutlu" size={m.lostDiken} />
-        <Text accessibilityRole="header" style={[t.lostTitle, styles.center, { color: colors.text }]}>
-          Kurtarılacak seri yok
+        <Text accessibilityRole="header" style={[ty.lostTitle, styles.center, { color: colors.text }]}>
+          {ts.nothingToSave}
         </Text>
-        <Button title="Kapat" onPress={close} style={styles.emptyButton} />
+        <Button title={t.common.close} onPress={close} style={styles.emptyButton} />
       </View>
     );
   }
 
   const lost = !saved;
-  const yesterday = addDays(isoDate(now), -1);
-  const when = current.missedDate === yesterday ? 'Dün' : formatShortDate(current.missedDate);
-  const remaining = formatRemaining(Date.parse(current.expiresAt) - now.getTime());
+  const yesterday = addLocalDays(deviceToday(now), -1);
+  // Kaçırılan gün dün değilse tarihiyle ("24 Ekim")
+  const [my, mm, md] = current.missedDate.split('-').map(Number);
+  const missedOn = current.missedDate === yesterday ? null : new Date(my, mm - 1, md);
+  const remaining = formatRemaining(Date.parse(current.expiresAt) - now.getTime(), t);
   const continuing = (board.data ?? []).filter((b) => b.id !== session?.userId && b.streak > 0);
 
-  const title = lost ? 'Serin koptu' : 'Diken sulandı!';
+  const title = lost ? ts.lostTitle : ts.savedTitle;
   const sub = lost
-    ? `${when} "${current.title}" günü kaçtı. ${current.streakBefore} günlük serin tehlikede.`
+    ? ts.lostSub(current.title, current.streakBefore, missedOn)
     : saved.via === 'ad'
-      ? `${current.streakBefore} günlük serin kaldığı yerden devam ediyor. Bugünü unutma.`
-      : `Ücretsiz hakkını kullandın. Serin ${current.streakBefore}. günden devam ediyor.`;
+      ? ts.savedAdSub(current.streakBefore)
+      : ts.savedFreeSub(current.streakBefore);
 
   const onWatchAd = () => {
     if (verifyAgain && verifyAgain.challengeId === current.challengeId && verifyAgain.missedDate === current.missedDate) {
@@ -233,18 +238,18 @@ export default function StreakLostScreen() {
         <View style={styles.topRow}>
           <View
             accessible
-            accessibilityLabel={lost ? `Kurtarmak için ${remaining} kaldı` : 'Seri kurtarıldı'}
+            accessibilityLabel={lost ? ts.pill.remainingA11y(remaining) : ts.pill.saved}
             style={[styles.pill, { backgroundColor: c.pillBg }]}>
             {lost ? (
               <ClockIcon color={c.pillLostText} size={m.pillIconSize} strokeWidth={m.pillClockStroke} />
             ) : (
               <CheckIcon color={c.pillSavedText} size={m.pillIconSize} strokeWidth={m.pillCheckStroke} />
             )}
-            <Text style={[t.pill, { color: lost ? c.pillLostText : c.pillSavedText }]}>
-              {lost ? `Kurtarmak için ${remaining}` : 'Seri kurtarıldı'}
+            <Text style={[ty.pill, { color: lost ? c.pillLostText : c.pillSavedText }]}>
+              {lost ? ts.pill.remaining(remaining) : ts.pill.saved}
             </Text>
           </View>
-          <IconButton icon="close" tone="onColor" accessibilityLabel="Kapat" onPress={close} />
+          <IconButton icon="close" tone="onColor" accessibilityLabel={t.common.close} onPress={close} />
         </View>
 
         <View style={styles.diken}>
@@ -256,10 +261,10 @@ export default function StreakLostScreen() {
         </View>
 
         <View style={styles.texts}>
-          <Text accessibilityRole="header" style={[t.lostTitle, styles.center, { color: colors.text }]}>
+          <Text accessibilityRole="header" style={[ty.lostTitle, styles.center, { color: colors.text }]}>
             {title}
           </Text>
-          <Text style={[t.lostSub, styles.center, styles.sub, { color: c.body }]}>{sub}</Text>
+          <Text style={[ty.lostSub, styles.center, styles.sub, { color: c.body }]}>{sub}</Text>
         </View>
 
         {lost && continuing.length > 0 && (
@@ -269,8 +274,8 @@ export default function StreakLostScreen() {
               size={m.lostStackAvatar}
               outlineColor={c.stackBorder}
             />
-            <Text style={[t.friendsPill, styles.friendsText, { color: c.body }]}>
-              {`${joinNames(continuing.map((f) => f.displayName))} hâlâ devam ediyor`}
+            <Text style={[ty.friendsPill, styles.friendsText, { color: c.body }]}>
+              {ts.friendsContinue(continuing.map((f) => f.displayName))}
             </Text>
           </View>
         )}
@@ -288,14 +293,14 @@ export default function StreakLostScreen() {
                         : adRescueError
                           ? adRescueError.message
                           : current.freeRescueAvailable
-                            ? 'Reklam şu an yüklenemedi. Ücretsiz hakkını kullanabilirsin.'
-                            : 'Reklam şu an yüklenemedi. Biraz sonra tekrar dene.'
+                            ? ts.adFailedFree
+                            : ts.adFailed
                   }
                 />
               )}
               <Button
-                title="Reklam izle, Diken'i sula"
-                accessibilityLabel="Reklam izle, Diken'i sula, 30 saniye"
+                title={ts.watchAd}
+                accessibilityLabel={ts.watchAdA11y}
                 onPress={onWatchAd}
                 loading={ad.status !== 'idle' || adRescuePending}
                 disabled={freePending || decline.isPending}
@@ -303,16 +308,14 @@ export default function StreakLostScreen() {
                 icon={<SolidDropIcon color={c.adDrop} size={m.adDropSize} />}
                 trailing={
                   <View style={[styles.adBadge, { backgroundColor: c.adBadgeBg }]}>
-                    <Text style={[t.adBadge, { color: colors.onAction }]}>30 sn</Text>
+                    <Text style={[ty.adBadge, { color: colors.onAction }]}>{ts.adBadge}</Text>
                   </View>
                 }
               />
               {/* Reklam yüklenemezse kenar aksiyon yeşiliyle vurgulanır (ücretsiz hak önerilir) */}
               <Button
-                title="Ücretsiz hakkımı kullan"
-                subtitle={
-                  current.freeRescueAvailable ? 'Ayda 1 hak · bu ay 1 hakkın var' : 'Ayda 1 hak · bu ayın hakkı kullanıldı'
-                }
+                title={ts.useFree}
+                subtitle={current.freeRescueAvailable ? ts.freeAvailable : ts.freeUsed}
                 variant="secondary"
                 highlighted={adFailed}
                 disabled={!current.freeRescueAvailable || decline.isPending || adRescuePending}
@@ -320,7 +323,7 @@ export default function StreakLostScreen() {
                 onPress={onFree}
               />
               <Button
-                title="Baştan başla"
+                title={ts.restart}
                 variant="text"
                 size="md"
                 loading={decline.isPending}
@@ -329,7 +332,7 @@ export default function StreakLostScreen() {
               />
             </>
           ) : (
-            <Button title="Devam" onPress={onContinue} style={styles.tallButton} />
+            <Button title={t.common.continue} onPress={onContinue} style={styles.tallButton} />
           )}
         </View>
       </ScrollView>

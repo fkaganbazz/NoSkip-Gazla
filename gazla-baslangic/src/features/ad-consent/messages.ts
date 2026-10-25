@@ -1,14 +1,12 @@
-/** Reklam tercihleri (6.2 "Reklam tercihlerini yönet", 5.2 "Reklam tercihleri") kısa bilgi metinleri */
+/** Reklam tercihleri (6.2 "Reklam tercihlerini yönet") kısa bilgi metinleri; metinler `t.adConsent.privacyOptions` */
 import { Platform } from 'react-native';
 
-/** UMP gizlilik seçenekleri formu bu kullanıcı için yok (AB/İngiltere dışı) ya da web */
-export function noPrivacyOptionsMessage(): string {
-  if (Platform.OS === 'web') return 'Web sürümünde reklam gösterilmiyor.';
-  if (Platform.OS === 'ios') {
-    return "Bölgende ayrıca yönetilecek reklam tercihi yok. İzleme iznini iPhone Ayarlar'ından değiştirebilirsin.";
-  }
-  return 'Bölgende ayrıca yönetilecek reklam tercihi yok. Reklam kimliğini telefonunun ayarlarından yönetebilirsin.';
-}
+import type { Messages } from '@/i18n';
 
-/** Form açılamadı (çoğunlukla ağ yok) */
-export const PRIVACY_OPTIONS_FAILED = 'Reklam tercihleri şu an açılamadı. Biraz sonra tekrar dene.';
+/** UMP gizlilik seçenekleri formu bu kullanıcı için yok (AB/İngiltere dışı) ya da web */
+export function noPrivacyOptionsMessage(t: Messages): string {
+  const p = t.adConsent.privacyOptions;
+  if (Platform.OS === 'web') return p.notRequiredWeb;
+  if (Platform.OS === 'ios') return p.notRequiredIos;
+  return p.notRequiredAndroid;
+}

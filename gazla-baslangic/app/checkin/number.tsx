@@ -9,13 +9,14 @@ import Sheet, { type SheetHandle } from '@/components/Sheet';
 import SpeechBubble from '@/components/SpeechBubble';
 import { Button, Chip, ErrorState, IconButton, LoadingState } from '@/components/ui';
 import { useChallenge, useCheckin, useNumberStats, useTodayTasks } from '@/data';
+import { useT } from '@/i18n';
 import { formatNumber, targetText, unitName } from '@/features/checkin/logic';
 import StepButton from '@/features/checkin/StepButton';
 import { borderWidth, componentTypography, spacing, typography, useTheme } from '@/theme';
 import {
   numberEntryColors,
   numberEntryMetrics as m,
-  numberEntryTypography as t,
+  numberEntryTypography as ty,
 } from '@/theme/checkin';
 import { sheetDikenMetrics } from '@/theme/sheet';
 
@@ -32,6 +33,8 @@ export default function NumberEntryScreen() {
   const router = useRouter();
   const sheet = useRef<SheetHandle>(null);
   const { colors, scheme } = useTheme();
+  const t = useT();
+  const tn = t.checkin.number;
   const c = numberEntryColors[scheme];
 
   const today = useTodayTasks();
@@ -52,7 +55,7 @@ export default function NumberEntryScreen() {
       onClose={() => router.back()}
       top={top}
       minHeight={m.sheetMinHeight}
-      accessibilityLabel={task ? `${task.title}: sayı gir` : 'Sayı gir'}>
+      accessibilityLabel={task ? tn.sheetLabelFor(task.title) : tn.sheetLabel}>
       {content}
     </Sheet>
   );
@@ -68,7 +71,7 @@ export default function NumberEntryScreen() {
     return shell(
       <View style={styles.state}>
         <ErrorState
-          message={today.isError ? undefined : 'Bu görev bugün işaretlenemiyor.'}
+          message={today.isError ? undefined : t.checkin.notMarkable}
           onRetry={today.isError ? () => today.refetch() : close}
         />
       </View>,
@@ -85,13 +88,14 @@ export default function NumberEntryScreen() {
   // Tasarımdaki üç kutu; değeri olmayan "—". Hiçbiri yoksa (ilk gün, tek kişi) satır gösterilmez.
   const statItems = s
     ? [
-        { label: 'Dün', value: s.yesterday },
-        { label: 'En iyin', value: s.best },
-        { label: 'Grupta en iyi', value: s.groupBest?.value ?? null, who: s.groupBest?.person.displayName },
+        { label: tn.stats.yesterday, value: s.yesterday },
+        { label: tn.stats.best, value: s.best },
+        { label: tn.stats.groupBest, value: s.groupBest?.value ?? null, who: s.groupBest?.person.displayName },
       ]
     : [];
   const showStats = statItems.some((x) => x.value !== null);
-  const targetLabel = target === null ? null : targetText(value, target, unit);
+  const targetLabel = target === null ? null : targetText(value, target, unit, t);
+  const unitLabel = unitName(unit, t);
 
   // Kaydedince sayfa kapanır; hepsi bittiyse Bugün odağa dönünce tamamlama anını açar
   const save = () => {
@@ -113,7 +117,7 @@ export default function NumberEntryScreen() {
           <Diken mood="laf" stage="tam" size={sheetDikenMetrics.dikenSize} />
         </View>
         <SpeechBubble size="sm" tail="left" tailOffset={d.tailTop} shadow="none" style={styles.bubble}>
-          {`${formatNumber(target)} yeter, abartma. Ama abartırsan saygı duyarım.`}
+          {tn.dikenBubble(formatNumber(target))}
         </SpeechBubble>
       </View>
     ) : undefined;
@@ -123,36 +127,36 @@ export default function NumberEntryScreen() {
       <View style={styles.header}>
         <CategoryTile icon={task.icon} tint={task.tint} size={m.iconTile} />
         <View style={styles.headerTexts}>
-          <Text accessibilityRole="header" numberOfLines={2} style={[t.title, { color: colors.text }]}>
+          <Text accessibilityRole="header" numberOfLines={2} style={[ty.title, { color: colors.text }]}>
             {task.title}
           </Text>
           <Text style={[typography.meta, { color: colors.textSecondary }]}>
             {target === null
-              ? `${task.dayIndex}. gün`
-              : `${task.dayIndex}. gün · Bugünkü hedef ${formatNumber(target)} ${unit}`}
+              ? t.common.dayN(task.dayIndex)
+              : `${t.common.dayN(task.dayIndex)} · ${tn.todayTarget(formatNumber(target), unit)}`}
           </Text>
         </View>
-        <IconButton icon="close" accessibilityLabel="Kapat" onPress={close} />
+        <IconButton icon="close" accessibilityLabel={t.common.close} onPress={close} />
       </View>
 
       <View style={styles.stepper}>
         <StepButton
           kind="minus"
           onPress={() => set(value - step)}
-          accessibilityLabel={`${formatNumber(step)} ${unitName(unit)} azalt`}
+          accessibilityLabel={tn.decrease(formatNumber(step), unitLabel)}
         />
         <View
           accessible
           accessibilityLiveRegion="polite"
-          accessibilityLabel={`${formatNumber(value)} ${unitName(unit)}`}
+          accessibilityLabel={`${formatNumber(value)} ${unitLabel}`}
           style={styles.valueRow}>
-          <Text style={[t.value, { color: colors.text }]}>{formatNumber(value)}</Text>
-          <Text style={[t.unit, { color: colors.textSecondary }]}>{unit}</Text>
+          <Text style={[ty.value, { color: colors.text }]}>{formatNumber(value)}</Text>
+          <Text style={[ty.unit, { color: colors.textSecondary }]}>{unit}</Text>
         </View>
         <StepButton
           kind="plus"
           onPress={() => set(value + step)}
-          accessibilityLabel={`${formatNumber(step)} ${unitName(unit)} artır`}
+          accessibilityLabel={tn.increase(formatNumber(step), unitLabel)}
         />
       </View>
 
@@ -175,12 +179,12 @@ export default function NumberEntryScreen() {
               key={k}
               onPress={() => set(value + amount)}
               accessibilityRole="button"
-              accessibilityLabel={`${formatNumber(amount)} ${unitName(unit)} ekle`}
+              accessibilityLabel={tn.add(formatNumber(amount), unitLabel)}
               style={({ pressed }) => [
                 styles.quick,
                 { backgroundColor: pressed ? colors.surfaceMuted : c.quickBg, borderColor: c.quickBorder },
               ]}>
-              <Text style={[t.quick, { color: colors.text }]}>{`+${formatNumber(amount)} ${unit}`}</Text>
+              <Text style={[ty.quick, { color: colors.text }]}>{`+${formatNumber(amount)} ${unit}`}</Text>
             </Pressable>
           );
         })}
@@ -195,8 +199,8 @@ export default function NumberEntryScreen() {
                 key={x.label}
                 accessibilityLabel={
                   x.value === null
-                    ? `${x.label}: yok`
-                    : `${x.label}: ${formatNumber(x.value)} ${unitName(unit)}${x.who ? `, ${x.who}` : ''}`
+                    ? `${x.label}: ${tn.stats.none}`
+                    : `${x.label}: ${formatNumber(x.value)} ${unitLabel}${x.who ? `, ${x.who}` : ''}`
                 }
                 style={[typography.caption, { color: c.statsText }]}>
                 {`${x.label}: `}
@@ -213,17 +217,17 @@ export default function NumberEntryScreen() {
             {error.message}
           </Text>
         )}
-        <Button title="Kaydet" onPress={save} loading={checkin.submitNumber.isPending} disabled={checkin.undo.isPending} />
+        <Button title={t.common.save} onPress={save} loading={checkin.submitNumber.isPending} disabled={checkin.undo.isPending} />
         {/* Geri alma sürerken de görünür (iyimser güncelleme görevi hemen "yapılmadı" yapar) */}
         {(task.done || checkin.undo.isPending) && (
           <Button
-            title="Bugünü geri al"
+            title={t.checkin.undoDay}
             variant="text"
             size="md"
             onPress={undoDay}
             loading={checkin.undo.isPending}
             disabled={checkin.submitNumber.isPending}
-            accessibilityHint="Bugünkü kayıt silinir, görev yapılmadı olur"
+            accessibilityHint={tn.undoHint}
           />
         )}
       </View>

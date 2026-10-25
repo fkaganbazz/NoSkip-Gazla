@@ -1,24 +1,27 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { CheckIcon, SolidDropIcon } from '@/components/icons';
-import { celebrationColors as c, momentsMetrics as m, momentsTypography as t } from '@/theme/moments';
+import { formatNumber, useT } from '@/i18n';
+import { celebrationColors as c, momentsMetrics as m, momentsTypography as ty } from '@/theme/moments';
 
 import type { WeekCell } from './logic';
 
 // Completion: seri sayısı ve son 7 gün (Completion.dc.html). Kum zeminli kart iki modda aynı.
 export default function StreakCard({ streak, week }: { streak: number; week: WeekCell[] }) {
+  const t = useT();
+  const ts = t.moments.streakCard;
   return (
     <View style={[styles.card, { backgroundColor: c.cardBg }]}>
-      <View accessible accessibilityLabel={`${streak} günlük seri`} style={styles.column}>
-        <Text style={[t.streakNumber, { color: c.streakNumber }]}>{streak}</Text>
-        <Text style={[t.streakLabel, { color: c.streakLabel }]}>günlük seri</Text>
+      <View accessible accessibilityLabel={ts.a11y(streak)} style={styles.column}>
+        <Text style={[ty.streakNumber, { color: c.streakNumber }]}>{formatNumber(streak)}</Text>
+        <Text style={[ty.streakLabel, { color: c.streakLabel }]}>{ts.label}</Text>
       </View>
       <View style={styles.week}>
         {week.map((d) => (
           <View key={d.key} style={styles.day}>
             <View
               accessible
-              accessibilityLabel={`${d.label}: ${d.state === 'empty' ? 'boş' : d.state === 'saved' ? 'kurtarıldı' : 'tamam'}`}
+              accessibilityLabel={`${d.label}: ${ts.dayState[d.state]}`}
               style={[
                 styles.dot,
                 {
@@ -40,7 +43,7 @@ export default function StreakCard({ streak, week }: { streak: number; week: Wee
               ) : null}
             </View>
             <View style={styles.label}>
-              <Text numberOfLines={1} style={[t.dayLabel, styles.labelText, { color: d.isToday ? c.dayLabelToday : c.dayLabel }]}>
+              <Text numberOfLines={1} style={[ty.dayLabel, styles.labelText, { color: d.isToday ? c.dayLabelToday : c.dayLabel }]}>
                 {d.label}
               </Text>
             </View>

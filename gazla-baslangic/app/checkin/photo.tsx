@@ -22,10 +22,11 @@ import { useCheckin, useTodayTasks } from '@/data';
 import CameraPane from '@/features/checkin/CameraPane';
 import GroupSheet from '@/features/checkin/GroupSheet';
 import { formatClock } from '@/features/checkin/logic';
+import { useLanguage, useT } from '@/i18n';
 import { useCameraAccess, type CameraAccessState } from '@/media/camera';
 import { compressImage } from '@/media/compressImage';
 import { componentMetrics, layout, radius, typography } from '@/theme';
-import { photoProofColors as c, photoProofMetrics as m, photoProofTypography as t } from '@/theme/checkin';
+import { photoProofColors as c, photoProofMetrics as m, photoProofTypography as ty } from '@/theme/checkin';
 
 type Picked = { uri: string; fromCamera: boolean; takenAt: Date };
 
@@ -45,6 +46,9 @@ export default function PhotoProofScreen() {
   // /checkin/photo?challengeId=…&date=YYYY-AA-GG (date: işaretlenecek yerel gün; yoksa my_today'deki ilk satırı)
   const { challengeId, date } = useLocalSearchParams<{ challengeId: string; date?: string }>();
   const router = useRouter();
+  const t = useT();
+  const lang = useLanguage();
+  const tp = t.checkin.photo;
   const today = useTodayTasks();
   const checkin = useCheckin();
   const camera = useCameraAccess();
@@ -72,7 +76,7 @@ export default function PhotoProofScreen() {
         setPhoto({ uri: result.assets[0].uri, fromCamera: false, takenAt: new Date() });
       }
     } catch {
-      setPickError('Galeri açılamadı. Tekrar dene.');
+      setPickError(tp.galleryFailed);
     }
   };
 
@@ -106,7 +110,7 @@ export default function PhotoProofScreen() {
         ) : today.isError ? (
           <ErrorState scheme="dark" onRetry={() => today.refetch()} />
         ) : (
-          <ErrorState scheme="dark" message="Bu görev bugün işaretlenemiyor." actionLabel="Kapat" onRetry={close} />
+          <ErrorState scheme="dark" message={t.checkin.notMarkable} actionLabel={t.common.close} onRetry={close} />
         )}
       </SafeAreaView>
     );
@@ -130,7 +134,13 @@ export default function PhotoProofScreen() {
 
   // Sol buton: önizlemede / gönderilmiş fotoğrafta "Tekrar çek" (kamera yoksa "Başka seç"), kamerada galeri
   const leftTitle =
-    photo || sentUri ? (cameraCapable ? 'Tekrar çek' : 'Başka seç') : cameraCapable ? 'Galeriden seç' : 'Fotoğraf seç';
+    photo || sentUri
+      ? cameraCapable
+        ? tp.retake
+        : tp.pickAnother
+      : cameraCapable
+        ? tp.pickFromGallery
+        : tp.pickPhoto;
   const leftAction = photo || sentUri ? retake : pickFromLibrary;
   const sending = compressing || checkin.submitPhoto.isPending;
   const error = pickError ?? checkin.submitPhoto.error?.message ?? checkin.undo.error?.message ?? null;
@@ -148,12 +158,12 @@ export default function PhotoProofScreen() {
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.header}>
-            <IconButton icon="close" tone="onDark" accessibilityLabel="Kapat" onPress={close} />
+            <IconButton icon="close" tone="onDark" accessibilityLabel={t.common.close} onPress={close} />
             <View style={styles.headerTexts}>
-              <Text accessibilityRole="header" numberOfLines={1} style={[t.title, { color: c.text }]}>
+              <Text accessibilityRole="header" numberOfLines={1} style={[ty.title, { color: c.text }]}>
                 {task.title}
               </Text>
-              <Text style={[typography.meta, { color: c.textSecondary }]}>{`${task.dayIndex}. gün · Fotoğraf kanıtı`}</Text>
+              <Text style={[typography.meta, { color: c.textSecondary }]}>{`${t.common.dayN(task.dayIndex)} · ${tp.photoProof}`}</Text>
             </View>
             <View style={styles.headerSpacer} />
           </View>
@@ -165,11 +175,11 @@ export default function PhotoProofScreen() {
                 style={styles.photo}
                 resizeMode="cover"
                 accessible
-                accessibilityLabel={photo.fromCamera ? 'Çektiğin fotoğraf' : 'Seçtiğin fotoğraf'}
+                accessibilityLabel={photo.fromCamera ? tp.takenPhoto : tp.pickedPhoto}
               />
               {photo.fromCamera && (
                 <View style={[styles.stamp, { backgroundColor: c.stampBg }]}>
-                  <Text style={[t.stamp, { color: c.text }]}>{`Bugün · ${formatClock(photo.takenAt)}`}</Text>
+                  <Text style={[ty.stamp, { color: c.text }]}>{tp.stamp(formatClock(photo.takenAt, lang))}</Text>
                 </View>
               )}
             </View>
@@ -177,7 +187,7 @@ export default function PhotoProofScreen() {
             <Pressable
               onPress={retake}
               accessibilityRole="button"
-              accessibilityLabel={`Bugün gönderdiğin fotoğraf. ${cameraCapable ? 'Yenisini çek' : 'Yenisini seç'}`}
+              accessibilityLabel={tp.sentPhoto(cameraCapable ? tp.takeNew : tp.pickNew)}
               style={[styles.frame, { backgroundColor: c.frameBg }]}>
               <Image source={{ uri: sentUri }} style={styles.photo} resizeMode="cover" />
             </Pressable>
@@ -189,9 +199,9 @@ export default function PhotoProofScreen() {
               }}
               onMountError={() => {
                 setCameraFailed(true);
-                setPickError('Kamera açılamadı. Galeriden seçebilirsin.');
+                setPickError(tp.cameraFailed);
               }}
-              onCaptureError={() => setPickError('Fotoğraf çekilemedi. Tekrar dene.')}
+              onCaptureError={() => setPickError(tp.captureFailed)}
             />
           ) : showCamera ? (
             <PermissionFrame state={camera.state} requesting={camera.requesting} onRequest={camera.request} />
@@ -199,17 +209,17 @@ export default function PhotoProofScreen() {
             <Pressable
               onPress={pickFromLibrary}
               accessibilityRole="button"
-              accessibilityLabel="Fotoğraf seç"
+              accessibilityLabel={tp.pickPhoto}
               style={[styles.frame, styles.emptyFrame, { backgroundColor: c.emptyFrameBg, borderColor: c.emptyFrameBorder }]}>
               <CameraIcon color={c.textSecondary} size={m.emptyIconSize} strokeWidth={m.emptyIconStrokeWidth} />
-              <Text style={[t.emptyLabel, { color: c.text }]}>Fotoğraf seç</Text>
+              <Text style={[ty.emptyLabel, { color: c.text }]}>{tp.pickPhoto}</Text>
             </Pressable>
           )}
 
           <TextField
             scheme="dark"
             size="sm"
-            label="Not ekle (isteğe bağlı)"
+            label={tp.noteLabel}
             value={note}
             onChangeText={setNote}
             maxLength={m.noteMaxLength}
@@ -221,20 +231,20 @@ export default function PhotoProofScreen() {
           <Pressable
             onPress={() => setGroupOpen(true)}
             accessibilityRole="button"
-            accessibilityLabel={`Kimler görecek: Grup, ${task.memberCount} kişi`}
-            accessibilityHint="Grubun üyelerini gösterir"
+            accessibilityLabel={tp.audienceLabel(task.memberCount)}
+            accessibilityHint={tp.audienceHint}
             style={({ pressed }) => [styles.row, { backgroundColor: pressed ? c.rowPressedBg : c.rowBg }]}>
             <LockIcon color={c.rowIcon} size={m.rowIconSize} strokeWidth={m.rowIconStrokeWidth} />
-            <Text style={[t.row, styles.rowText, { color: c.text }]}>
-              {'Kimler görecek: '}
-              <Text style={t.rowStrong}>{`Grup (${task.memberCount} kişi)`}</Text>
+            <Text style={[ty.row, styles.rowText, { color: c.text }]}>
+              {tp.audience}
+              <Text style={ty.rowStrong}>{tp.audienceGroup(task.memberCount)}</Text>
             </Text>
             <ChevronRightIcon color={c.rowIcon} size={m.chevronSize} strokeWidth={m.chevronStrokeWidth} />
           </Pressable>
 
           <View style={styles.footer}>
             {error && (
-              <Text accessibilityLiveRegion="polite" style={[t.row, styles.centerText, { color: c.error }]}>
+              <Text accessibilityLiveRegion="polite" style={[ty.row, styles.centerText, { color: c.error }]}>
                 {error}
               </Text>
             )}
@@ -252,11 +262,11 @@ export default function PhotoProofScreen() {
               <Button
                 scheme="dark"
                 size="md"
-                title="Gönder"
+                title={t.common.send}
                 onPress={send}
                 disabled={!photo || checkin.undo.isPending}
                 loading={sending}
-                accessibilityLabel={sending ? 'Gönderiliyor' : 'Gönder'}
+                accessibilityLabel={sending ? tp.sending : t.common.send}
                 icon={(color) => (
                   <SendIcon color={color} size={componentMetrics.buttonIconSize} strokeWidth={componentMetrics.buttonIconStroke} />
                 )}
@@ -268,11 +278,11 @@ export default function PhotoProofScreen() {
                 scheme="dark"
                 variant="text"
                 size="md"
-                title="Bugünü geri al"
+                title={t.checkin.undoDay}
                 onPress={undoDay}
                 loading={checkin.undo.isPending}
                 disabled={sending}
-                accessibilityHint="Bugünkü fotoğraf kanıtı silinir, görev yapılmadı olur"
+                accessibilityHint={tp.undoHint}
               />
             )}
           </View>
@@ -296,11 +306,13 @@ function PermissionFrame({
   requesting: boolean;
   onRequest: () => void;
 }) {
+  const t = useT();
+  const tp = t.checkin.photo.permission;
   if (state === 'checking' || requesting) {
     return (
       <View
         accessible
-        accessibilityLabel="Kamera hazırlanıyor"
+        accessibilityLabel={tp.preparing}
         style={[styles.frame, styles.emptyFrame, { backgroundColor: c.emptyFrameBg, borderColor: c.emptyFrameBorder }]}>
         <ActivityIndicator color={c.text} />
       </View>
@@ -309,12 +321,8 @@ function PermissionFrame({
 
   const blocked = state === 'blocked';
   const canOpenSettings = blocked && !IS_WEB;
-  const message = blocked
-    ? IS_WEB
-      ? 'Kamera izni kapalı. Tarayıcı ayarlarından açabilir ya da galeriden seçebilirsin.'
-      : 'Kamera izni kapalı. Ayarlar’dan açabilir ya da galeriden seçebilirsin.'
-    : 'Fotoğraf çekmek için kamera izni gerekiyor. Galeriden de seçebilirsin.';
-  const action = blocked ? (canOpenSettings ? 'Ayarları aç' : null) : 'İzin ver';
+  const message = blocked ? (IS_WEB ? tp.blockedWeb : tp.blocked) : tp.needed;
+  const action = blocked ? (canOpenSettings ? t.common.openSettings : null) : tp.allow;
   const onPress = blocked ? (canOpenSettings ? () => Linking.openSettings() : undefined) : onRequest;
 
   return (
@@ -325,11 +333,11 @@ function PermissionFrame({
       accessibilityLabel={action ? `${message} ${action}` : message}
       style={[styles.frame, styles.emptyFrame, { backgroundColor: c.emptyFrameBg, borderColor: c.emptyFrameBorder }]}>
       <CameraIcon color={c.textSecondary} size={m.emptyIconSize} strokeWidth={m.emptyIconStrokeWidth} />
-      <Text style={[t.emptyLabel, { color: c.text }]}>Fotoğraf çek</Text>
-      <Text style={[t.row, styles.centerText, { color: c.textSecondary }]}>{message}</Text>
+      <Text style={[ty.emptyLabel, { color: c.text }]}>{tp.takePhoto}</Text>
+      <Text style={[ty.row, styles.centerText, { color: c.textSecondary }]}>{message}</Text>
       {action && (
         <View style={styles.link}>
-          <Text style={[t.rowStrong, { color: c.action }]}>{action}</Text>
+          <Text style={[ty.rowStrong, { color: c.action }]}>{action}</Text>
         </View>
       )}
     </Pressable>

@@ -14,6 +14,7 @@
 import { useCallback, useRef, useState, type ComponentProps } from 'react';
 import { Share, StyleSheet, View } from 'react-native';
 
+import { getT, useT, type Messages } from '@/i18n';
 import { shareFileName } from '@/media/imageOutput';
 import { captureViewAsPng, shareImageFile } from '@/media/shareImage';
 import { momentsMetrics as m } from '@/theme/moments';
@@ -23,17 +24,16 @@ import ShareCard from './ShareCard';
 export type StoryShareResult = 'shared' | 'downloaded' | 'text' | 'error';
 
 type ShareInput = {
-  /** Dosya adının kökü (challenge adı) → "gazla-uyaninca-1-saat-telefonsuz.png" */
+  /** Dosya adının kökü (challenge adı) → "gazla-uyaninca-1-saat-telefonsuz.png" (İngilizcede "noskip-…") */
   fileBase: string;
   /** Görsel üretilemezse paylaşılacak metin */
   fallbackMessage: string;
 };
 
-const DIALOG_TITLE = "Story'de paylaş";
-
 const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
 export function useStoryShare() {
+  const t = useT();
   const ref = useRef<View>(null);
   const laidOut = useRef(false);
   const [busy, setBusy] = useState(false);
@@ -42,27 +42,32 @@ export function useStoryShare() {
     laidOut.current = true;
   }, []);
 
-  const share = useCallback(async ({ fileBase, fallbackMessage }: ShareInput): Promise<StoryShareResult> => {
-    setBusy(true);
-    try {
+  const share = useCallback(
+    async ({ fileBase, fallbackMessage }: ShareInput): Promise<StoryShareResult> => {
+      const dialogTitle = t.moments.share.dialogTitle;
+      setBusy(true);
       try {
-        // Kart henüz yerleşmediyse bir kare bekle (çizim bitsin)
-        if (!laidOut.current) await nextFrame();
-        await nextFrame();
-        const uri = await captureViewAsPng(ref, { width: m.shareImageWidth, height: m.shareImageHeight });
-        const result = await shareImageFile(uri, { dialogTitle: DIALOG_TITLE, fileName: shareFileName(fileBase) });
-        if (result !== 'unavailable') return result;
+        try {
+          // Kart henüz yerleşmediyse bir kare bekle (çizim bitsin)
+          if (!laidOut.current) await nextFrame();
+          await nextFrame();
+          const uri = await captureViewAsPng(ref, { width: m.shareImageWidth, height: m.shareImageHeight });
+          const fileName = shareFileName(fileBase, t.common.appName);
+          const result = await shareImageFile(uri, { dialogTitle, fileName });
+          if (result !== 'unavailable') return result;
+        } catch {
+          // Görsel üretilemedi ya da dosya paylaşılamadı: metne düş
+        }
+        await Share.share({ message: fallbackMessage, title: dialogTitle });
+        return 'text';
       } catch {
-        // Görsel üretilemedi ya da dosya paylaşılamadı: metne düş
+        return 'error';
+      } finally {
+        setBusy(false);
       }
-      await Share.share({ message: fallbackMessage, title: DIALOG_TITLE });
-      return 'text';
-    } catch {
-      return 'error';
-    } finally {
-      setBusy(false);
-    }
-  }, []);
+    },
+    [t],
+  );
 
   return { ref, onLayout, busy, share };
 }
@@ -84,14 +89,20 @@ export function ShareCardCapture({ story, ...card }: { story: StoryShare } & Com
   );
 }
 
-/** Metin paylaşımı (görsel üretilemezse): "30 GÜN · başlık. Ad başardı. Sıra sende. Gazla'da beni bul · @kullanıcı" */
-export function storyShareMessage({
-  durationDays,
-  title,
-  name,
-  username,
-}: Pick<ComponentProps<typeof ShareCard>, 'durationDays' | 'title' | 'name' | 'username'>) {
-  return `${durationDays} GÜN · ${title}. ${name} başardı. Sıra sende. Gazla'da beni bul · @${username}`;
+/**
+ * Metin paylaşımı (görsel üretilemezse): "30 GÜN · başlık. Ad başardı. Sıra sende. Gazla'da beni bul · @kullanıcı".
+ * `t` verilmezse o anki dilin sözlüğü (çağrı anında).
+ */
+export function storyShareMessage(
+  {
+    durationDays,
+    title,
+    name,
+    username,
+  }: Pick<ComponentProps<typeof ShareCard>, 'durationDays' | 'title' | 'name' | 'username'>,
+  t: Messages = getT(),
+) {
+  return t.moments.share.message(durationDays, title, name, username);
 }
 
 const styles = StyleSheet.create({

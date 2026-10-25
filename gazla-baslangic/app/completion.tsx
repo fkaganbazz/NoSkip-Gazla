@@ -8,13 +8,13 @@ import { AvatarStack } from '@/components/Avatar';
 import Diken from '@/components/Diken';
 import { Button, IconButton } from '@/components/ui';
 import { adConsentShown, useFriendsToday, useRecentDays, useStreak } from '@/data';
-import { accusative, joinNames } from '@/features/challenge/logic';
 import Confetti from '@/features/moments/Confetti';
-import { alsoParticle, weekCells } from '@/features/moments/logic';
+import { weekCells } from '@/features/moments/logic';
 import StreakCard from '@/features/moments/StreakCard';
 import { useCelebrationMotion } from '@/features/moments/useCelebrationMotion';
+import { useT } from '@/i18n';
 import { successHaptic } from '@/media/haptics';
-import { celebrationColors as c, momentsMetrics as m, momentsTypography as t } from '@/theme/moments';
+import { celebrationColors as c, momentsMetrics as m, momentsTypography as ty } from '@/theme/moments';
 import { layout } from '@/theme';
 
 /** Tasarım çerçevesi: 390 genişlik, içerik 56 px üst boşluktan başlar */
@@ -29,6 +29,7 @@ const DESIGN_TOP = 56;
 // (reanimated; "hareketi azalt" açıksa durağan). Hareket bitince görünüm tasarımla birebir.
 export default function CompletionScreen() {
   const router = useRouter();
+  const t = useT();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const streak = useStreak();
@@ -44,7 +45,7 @@ export default function CompletionScreen() {
     successHaptic();
   }, []);
 
-  const week = useMemo(() => weekCells(recent.data ?? []), [recent.data]);
+  const week = useMemo(() => weekCells(recent.data ?? [], t), [recent.data, t]);
   const done = (friends.data ?? []).filter((f) => f.doneToday === true);
   const pending = (friends.data ?? []).filter((f) => f.doneToday === false);
 
@@ -68,16 +69,9 @@ export default function CompletionScreen() {
   const dx = (width - DESIGN_WIDTH) / 2;
   const dy = top - DESIGN_TOP;
 
-  const doneJoined = joinNames(done.map((f) => f.displayName));
-  const doneText = done.length > 0 ? `${doneJoined} ${alsoParticle(doneJoined)} bugünü tamamladı.` : null;
-
-  const pendingNames = pending.map((f) => f.displayName);
-  const pokeText =
-    pending.length === 0
-      ? null
-      : pending.length <= 2
-        ? `${joinNames([...pendingNames.slice(0, -1), accusative(pendingNames[pendingNames.length - 1])])} gazla`
-        : `${pendingNames[0]}, ${pendingNames[1]} ve diğerlerini gazla`;
+  const doneText = done.length > 0 ? t.moments.completion.friendsDone(done.map((f) => f.displayName)) : null;
+  // Bekleyenleri dürtme bağlantısı: "Ece'yi gazla", "Ece ve Selin'i gazla", "Ece, Selin ve diğerlerini gazla"
+  const pokeText = pending.length === 0 ? null : t.moments.completion.hypeUp(pending.map((f) => f.displayName));
 
   return (
     <View style={[styles.screen, { backgroundColor: c.bg }]}>
@@ -104,7 +98,7 @@ export default function CompletionScreen() {
         </Animated.View>
 
         <View style={styles.closeRow}>
-          <IconButton icon="close" tone="onBrand" accessibilityLabel="Kapat" onPress={finish} />
+          <IconButton icon="close" tone="onBrand" accessibilityLabel={t.common.close} onPress={finish} />
         </View>
 
         <Animated.View style={[styles.diken, dikenStyle]}>
@@ -112,11 +106,11 @@ export default function CompletionScreen() {
         </Animated.View>
 
         <View style={styles.texts}>
-          <Text accessibilityRole="header" style={[t.completionTitle, styles.center, { color: c.text }]}>
-            Bugün tamam!
+          <Text accessibilityRole="header" style={[ty.completionTitle, styles.center, { color: c.text }]}>
+            {t.moments.completion.title}
           </Text>
-          <Text style={[t.completionSub, styles.center, { color: c.sub }]}>
-            Diken kana kana su içti. Yarın yine bekliyor.
+          <Text style={[ty.completionSub, styles.center, { color: c.sub }]}>
+            {t.moments.completion.sub}
           </Text>
         </View>
 
@@ -132,14 +126,14 @@ export default function CompletionScreen() {
               people={done.slice(0, 2).map((f) => ({ id: f.id, name: f.displayName, tint: f.avatarTint, url: f.avatarUrl }))}
               size={m.stackAvatar}
               outlineColor={c.stackBorder}
-              initialStyle={t.stackInitial}
+              initialStyle={ty.stackInitial}
             />
-            <Text style={[t.friends, styles.friendsText, { color: c.sub }]}>{doneText}</Text>
+            <Text style={[ty.friends, styles.friendsText, { color: c.sub }]}>{doneText}</Text>
           </View>
         )}
 
         <View style={styles.footer}>
-          <Button title="Süper" variant="onGreen" onPress={finish} />
+          <Button title={t.moments.completion.great} variant="onGreen" onPress={finish} />
           {pokeText && (
             <Button
               title={pokeText}

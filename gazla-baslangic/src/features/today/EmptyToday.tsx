@@ -6,8 +6,9 @@ import Svg, { Circle, Path } from 'react-native-svg';
 import Diken from '@/components/Diken';
 import { Button } from '@/components/ui';
 import { useAuth, useUnreadCount } from '@/data';
+import { useT } from '@/i18n';
 import { layout, todayMetrics, typography, useTheme } from '@/theme';
-import { emptyTodayColors as sc, emptyTodayMetrics as m, emptyTodayTypography as t } from '@/theme/create';
+import { emptyTodayColors as sc, emptyTodayMetrics as m, emptyTodayTypography as ty } from '@/theme/create';
 
 import { formatDayLabel } from './logic';
 import TodayHeader from './TodayHeader';
@@ -21,6 +22,7 @@ type Props = {
 // Bugün'ün boş hali (aktif challenge yok) — design/EmptyToday.dc.html.
 export default function EmptyToday({ name }: Props) {
   const { colors } = useTheme();
+  const t = useT();
   const router = useRouter();
   const now = useNow();
   const { profile } = useAuth();
@@ -30,8 +32,8 @@ export default function EmptyToday({ name }: Props) {
     <SafeAreaView edges={['top']} style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content}>
         <TodayHeader
-          dayLabel={formatDayLabel(now)}
-          title={`Merhaba, ${name ?? profile?.displayName ?? ''}`}
+          dayLabel={formatDayLabel(now, t)}
+          title={t.today.empty.greeting(name ?? profile?.displayName ?? '')}
           unread={unread}
           onPressBell={() => router.push('/activity')}
         />
@@ -44,18 +46,21 @@ export default function EmptyToday({ name }: Props) {
         </View>
 
         <View style={styles.texts}>
-          <Text accessibilityRole="header" style={[t.title, styles.center, { color: colors.text }]}>
-            Burası çöl gibi
+          <Text accessibilityRole="header" style={[ty.title, styles.center, { color: colors.text }]}>
+            {t.today.empty.title}
           </Text>
-          <Text style={[typography.body, styles.center, { color: colors.textBody }]}>
-            Aktif challenge'ın yok. Diken sıkıntıdan uyuyakaldı.
-          </Text>
+          <Text style={[typography.body, styles.center, { color: colors.textBody }]}>{t.today.empty.body}</Text>
         </View>
 
         <View style={styles.buttons}>
-          <Button title="Challenge bul" onPress={() => router.navigate('/explore')} />
+          <Button title={t.today.empty.findChallenge} onPress={() => router.navigate('/explore')} />
           {/* EmptyToday.dc.html: ikincil buton 54 */}
-          <Button title="Kendin oluştur" variant="secondary" size="lgCompact" onPress={() => router.push('/create')} />
+          <Button
+            title={t.today.empty.createOwn}
+            variant="secondary"
+            size="lgCompact"
+            onPress={() => router.push('/create')}
+          />
         </View>
       </ScrollView>
     </SafeAreaView>

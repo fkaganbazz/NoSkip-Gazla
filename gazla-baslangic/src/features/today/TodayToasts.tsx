@@ -3,6 +3,7 @@ import Animated, { FadeInDown, FadeOutDown } from 'react-native-reanimated';
 
 import { Toast, type ToastController } from '@/components/ui';
 import { useIsOnline, usePendingCheckins } from '@/data';
+import { useT } from '@/i18n';
 import { layout, spacing, todayMetrics as m } from '@/theme';
 
 type Props = {
@@ -21,11 +22,9 @@ export default function TodayToasts({ toast, onHeightChange }: Props) {
   const online = useIsOnline();
   const pending = usePendingCheckins();
   const entry = toast.current;
+  const t = useT();
 
-  const offlineMessage =
-    pending > 0
-      ? `Çevrimdışısın. ${pending} işaretleme kaydedildi, bağlanınca gönderilir.`
-      : 'Çevrimdışısın. İşaretlemelerin bağlanınca gönderilir.';
+  const offlineMessage = pending > 0 ? t.today.toasts.offlinePending(pending) : t.today.toasts.offline;
 
   return (
     <View

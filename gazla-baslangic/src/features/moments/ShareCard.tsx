@@ -2,7 +2,8 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import Diken, { type DikenStage } from '@/components/Diken';
 import { DikenFaceIcon } from '@/components/icons';
-import { celebrationColors as c, momentsMetrics as m, momentsTypography as t } from '@/theme/moments';
+import { localeTag, useLanguage, useT } from '@/i18n';
+import { celebrationColors as c, momentsMetrics as m, momentsTypography as ty } from '@/theme/moments';
 import { radius } from '@/theme';
 
 import Confetti from './Confetti';
@@ -16,11 +17,15 @@ type Props = {
 };
 
 // Paylaşım kartı — design/ShareCard.dc.html (360×640, story oranı). Yeşil zemin iki modda aynı.
+// Uygulama adı dile göre (Gazla / NoSkip); challenge adı içerik, o dilin kurallarıyla küçük harfe çevrilir.
 export default function ShareCard({ durationDays, title, name, username, stage }: Props) {
+  const t = useT();
+  const lang = useLanguage();
+  const ts = t.moments.share;
   return (
     <View
       accessible
-      accessibilityLabel={`${durationDays} gün, ${title}. ${name} başardı. Sıra sende.`}
+      accessibilityLabel={ts.a11y(durationDays, title, name)}
       style={[styles.card, { backgroundColor: c.bg }]}>
       <View style={[styles.ring, styles.ringOuter, { backgroundColor: c.ringOuter }]} />
       <View style={[styles.ring, styles.ringInner, { backgroundColor: c.ringInner }]} />
@@ -30,19 +35,19 @@ export default function ShareCard({ durationDays, title, name, username, stage }
         <View style={[styles.logo, { backgroundColor: c.logoBg }]}>
           <DikenFaceIcon size={m.logoSize} />
         </View>
-        <Text style={[t.logo, { color: c.text }]}>Gazla</Text>
+        <Text style={[ty.logo, { color: c.text }]}>{t.common.appName}</Text>
       </View>
 
       <View style={styles.diken}>
         <Diken mood="gurur" stage={stage} gear="gozluk" size={m.cardDiken} />
       </View>
 
-      <Text style={[t.bigNumber, styles.bigNumber, { color: c.bigNumber }]}>{`${durationDays} GÜN`}</Text>
-      <Text style={[t.cardTitle, styles.title, { color: c.text }]}>{title.toLocaleLowerCase('tr-TR')}</Text>
-      <Text style={[t.cardSub, styles.sub, { color: c.sub }]}>{`${name} başardı. Sıra sende.`}</Text>
+      <Text style={[ty.bigNumber, styles.bigNumber, { color: c.bigNumber }]}>{ts.bigDays(durationDays)}</Text>
+      <Text style={[ty.cardTitle, styles.title, { color: c.text }]}>{title.toLocaleLowerCase(localeTag(lang))}</Text>
+      <Text style={[ty.cardSub, styles.sub, { color: c.sub }]}>{ts.sub(name)}</Text>
 
       <View style={[styles.handle, { backgroundColor: c.handleBg }]}>
-        <Text style={[t.handle, { color: c.handleText }]}>{`Gazla'da beni bul · @${username}`}</Text>
+        <Text style={[ty.handle, { color: c.handleText }]}>{ts.handle(username)}</Text>
       </View>
     </View>
   );

@@ -14,8 +14,9 @@ import Svg, { Path } from 'react-native-svg';
 
 import { CameraIcon } from '@/components/icons';
 import { FlatShadowUnderlay, flatShadowStyle } from '@/components/FlatShadow';
+import { useT } from '@/i18n';
 import { componentMetrics, radius } from '@/theme';
-import { photoProofColors as c, photoProofMetrics as m, photoProofTypography as t } from '@/theme/checkin';
+import { photoProofColors as c, photoProofMetrics as m, photoProofTypography as ty } from '@/theme/checkin';
 
 export type CapturedPhoto = { uri: string; width: number; height: number };
 
@@ -31,6 +32,8 @@ type Props = {
 const CAN_FLIP = Platform.OS !== 'web';
 
 export default function CameraPane({ onCapture, onMountError, onCaptureError }: Props) {
+  const t = useT();
+  const tc = t.checkin.photo.camera;
   const camera = useRef<CameraView>(null);
   const [ready, setReady] = useState(false);
   const [facing, setFacing] = useState<CameraType>('back');
@@ -72,7 +75,7 @@ export default function CameraPane({ onCapture, onMountError, onCaptureError }: 
         onCameraReady={() => setReady(true)}
         onMountError={onMountError}
         accessible
-        accessibilityLabel="Kamera görüntüsü"
+        accessibilityLabel={tc.preview}
       />
 
       {Platform.OS === 'android' && size && <RoundedMask width={size.width} height={size.height} />}
@@ -87,22 +90,32 @@ export default function CameraPane({ onCapture, onMountError, onCaptureError }: 
         <Pressable
           onPress={() => setFacing((f) => (f === 'back' ? 'front' : 'back'))}
           accessibilityRole="button"
-          accessibilityLabel={facing === 'back' ? 'Ön kameraya geç' : 'Arka kameraya geç'}
+          accessibilityLabel={facing === 'back' ? tc.toFront : tc.toBack}
           hitSlop={m.flipHitSlop}
           style={({ pressed }) => [styles.flip, { backgroundColor: c.stampBg }, pressed && styles.pressed]}>
-          <Text style={[t.stamp, { color: c.text }]}>Kamerayı çevir</Text>
+          <Text style={[ty.stamp, { color: c.text }]}>{tc.flip}</Text>
         </Pressable>
       )}
 
       <View style={styles.shutterRow}>
-        <Shutter onPress={shoot} disabled={disabled} busy={shooting} />
+        <Shutter onPress={shoot} disabled={disabled} busy={shooting} label={tc.shutter} />
       </View>
     </View>
   );
 }
 
 /** Deklanşör: 64 daire, 4 px kum halka, yeşil dolgu, kamera ikonu; basılınca gölgenin yarısı kadar iner */
-function Shutter({ onPress, disabled, busy }: { onPress: () => void; disabled: boolean; busy: boolean }) {
+function Shutter({
+  onPress,
+  disabled,
+  busy,
+  label,
+}: {
+  onPress: () => void;
+  disabled: boolean;
+  busy: boolean;
+  label: string;
+}) {
   const half = m.shutterShadow / 2;
   return (
     <View style={styles.shutterFrame}>
@@ -111,7 +124,7 @@ function Shutter({ onPress, disabled, busy }: { onPress: () => void; disabled: b
         onPress={onPress}
         disabled={disabled}
         accessibilityRole="button"
-        accessibilityLabel="Fotoğraf çek"
+        accessibilityLabel={label}
         aria-disabled={disabled}
         aria-busy={busy}
         style={({ pressed }) => [

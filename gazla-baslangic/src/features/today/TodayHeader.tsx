@@ -2,6 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { BellIcon } from '@/components/icons';
 import { CountBadge, IconButton } from '@/components/ui';
+import { useT } from '@/i18n';
 import { todayMetrics as m, todayTypography, typography, useTheme } from '@/theme';
 
 type Props = {
@@ -14,6 +15,7 @@ type Props = {
 // Tarih, selamlama ve aktivite zili (Today.dc.html üst satır).
 export default function TodayHeader({ dayLabel, title, unread, onPressBell }: Props) {
   const { colors } = useTheme();
+  const t = useT();
 
   return (
     <View style={styles.row}>
@@ -27,7 +29,7 @@ export default function TodayHeader({ dayLabel, title, unread, onPressBell }: Pr
       <IconButton
         icon={BellIcon}
         onPress={onPressBell}
-        accessibilityLabel={unread > 0 ? `Aktivite, ${unread} yeni` : 'Aktivite'}>
+        accessibilityLabel={unread > 0 ? t.today.header.activityUnread(unread) : t.today.header.activity}>
         {/* Okunmamış rozeti zilin sağ üst köşesinde, ekran zemini renginde 2 px kenarla (Today.dc.html) */}
         {unread > 0 && <CountBadge count={unread} outlineColor={colors.background} style={styles.badge} />}
       </IconButton>

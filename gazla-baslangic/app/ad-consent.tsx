@@ -8,9 +8,10 @@ import Diken from '@/components/Diken';
 import { Button, IconButton, ToastHost, useToast } from '@/components/ui';
 import { adConsentShown } from '@/data';
 import ConsentPoints from '@/features/ad-consent/ConsentPoints';
-import { noPrivacyOptionsMessage, PRIVACY_OPTIONS_FAILED } from '@/features/ad-consent/messages';
+import { noPrivacyOptionsMessage } from '@/features/ad-consent/messages';
+import { useT } from '@/i18n';
 import { layout, typography, useTheme } from '@/theme';
-import { settingsColors, settingsMetrics as m, settingsTypography as t } from '@/theme/settings';
+import { settingsColors, settingsMetrics as m, settingsTypography as ty } from '@/theme/settings';
 
 // Reklam izni — design/AdConsent.dc.html (modal). "Devam": UMP izin formu (yalnızca gerekiyorsa,
 // AB/İngiltere) → iOS'ta ATT sistem isteği → reklam SDK'sı başlar → kapanır. "Reklam tercihlerini yönet":
@@ -18,6 +19,7 @@ import { settingsColors, settingsMetrics as m, settingsTypography as t } from '@
 // sistem uyarısı taklidi yok (Apple kuralı). İzin sonucu cihazda (UMP/ATT) tutulur, sunucuda alan yok.
 export default function AdConsentScreen() {
   const { colors, scheme } = useTheme();
+  const t = useT();
   const router = useRouter();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -42,8 +44,8 @@ export default function AdConsentScreen() {
     setBusy('manage');
     const result = await openPrivacyOptions().catch(() => 'failed' as const);
     setBusy(null);
-    if (result === 'notRequired') toast.show({ message: noPrivacyOptionsMessage() });
-    else if (result === 'failed') toast.show({ message: PRIVACY_OPTIONS_FAILED });
+    if (result === 'notRequired') toast.show({ message: noPrivacyOptionsMessage(t) });
+    else if (result === 'failed') toast.show({ message: t.adConsent.privacyOptions.failed });
   };
 
   return (
@@ -54,7 +56,7 @@ export default function AdConsentScreen() {
           { paddingTop: insets.top + layout.screenTopGap, paddingBottom: insets.bottom + m.adPaddingBottom },
         ]}>
         <View style={styles.closeRow}>
-          <IconButton icon="close" accessibilityLabel="Kapat" onPress={close} disabled={busy !== null} />
+          <IconButton icon="close" accessibilityLabel={t.common.close} onPress={close} disabled={busy !== null} />
         </View>
 
         <View style={styles.hero}>
@@ -65,20 +67,18 @@ export default function AdConsentScreen() {
           </View>
         </View>
 
-        <Text accessibilityRole="header" style={[t.adTitle, styles.title, { color: colors.text }]}>
-          Reklamlar Diken&apos;i ücretsiz tutuyor
+        <Text accessibilityRole="header" style={[ty.adTitle, styles.title, { color: colors.text }]}>
+          {t.adConsent.title}
         </Text>
-        <Text style={[typography.body, styles.lead, { color: colors.textBody }]}>Nasıl çalıştığını baştan söyleyelim:</Text>
+        <Text style={[typography.body, styles.lead, { color: colors.textBody }]}>{t.adConsent.lead}</Text>
 
         <ConsentPoints />
 
         <View style={styles.actions}>
-          <Text style={[t.note, styles.note, { color: colors.textSecondary }]}>
-            Sonraki ekranda telefonun izin soracak. Kararını istediğin zaman Ayarlar&apos;dan değiştirebilirsin.
-          </Text>
-          <Button title="Devam" onPress={onContinue} loading={busy === 'continue'} disabled={busy === 'manage'} />
+          <Text style={[ty.note, styles.note, { color: colors.textSecondary }]}>{t.adConsent.note}</Text>
+          <Button title={t.common.continue} onPress={onContinue} loading={busy === 'continue'} disabled={busy === 'manage'} />
           <Button
-            title="Reklam tercihlerini yönet"
+            title={t.adConsent.manage}
             variant="text"
             onPress={onManage}
             loading={busy === 'manage'}

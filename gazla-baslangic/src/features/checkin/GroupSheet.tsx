@@ -4,6 +4,7 @@ import { FriendRow } from '@/components/FriendRow';
 import Sheet from '@/components/Sheet';
 import { ErrorState, LoadingState } from '@/components/ui';
 import { ApiError, useAuth, useChallengeMembers } from '@/data';
+import { useT } from '@/i18n';
 import { typography, useTheme } from '@/theme';
 import { photoProofMetrics as m } from '@/theme/checkin';
 
@@ -20,10 +21,11 @@ type Props = {
  */
 export default function GroupSheet({ visible, challengeId, onClose }: Props) {
   const { session } = useAuth();
+  const t = useT();
   // Sayfa açılmadan yüklenir (açılınca liste hazır)
   const board = useChallengeMembers(challengeId);
   return (
-    <Sheet visible={visible} onClose={onClose} title="Kimler görecek" surface scrollable scheme="dark">
+    <Sheet visible={visible} onClose={onClose} title={t.checkin.photo.group.title} surface scrollable scheme="dark">
       <GroupSheetBody board={board} meId={session?.userId} />
     </Sheet>
   );
@@ -32,12 +34,13 @@ export default function GroupSheet({ visible, challengeId, onClose }: Props) {
 /** Sayfanın içeriği: Sheet'in koyu modu altında çizilir (useTheme koyu döner) */
 function GroupSheetBody({ board, meId }: { board: ReturnType<typeof useChallengeMembers>; meId?: string }) {
   const { colors } = useTheme();
+  const t = useT();
   const members = board.data ?? [];
 
   return (
     <>
       <Text style={[typography.caption, styles.lead, { color: colors.textBody }]}>
-        Fotoğrafını ve notunu bu challenge&apos;daki herkes görür.
+        {t.checkin.photo.group.lead}
       </Text>
       {board.isPending ? (
         <View style={styles.state}>
@@ -56,7 +59,7 @@ function GroupSheetBody({ board, meId }: { board: ReturnType<typeof useChallenge
             <FriendRow
               key={p.id}
               person={p}
-              sub={p.id === meId ? `Sen · @${p.username}` : `@${p.username}`}
+              sub={p.id === meId ? t.checkin.photo.group.you(p.username) : `@${p.username}`}
               divider={i < members.length - 1}
               style={styles.row}
             />

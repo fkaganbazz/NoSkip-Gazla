@@ -25,8 +25,9 @@ export function toFileUri(uri: string): string {
   return uri.startsWith('/') ? `file://${uri}` : uri;
 }
 
-/** Paylaşılan görselin dosya adı: "gazla-<challenge>.png" (harf, rakam, tire) */
-export function shareFileName(base: string): string {
+/** Paylaşılan görselin dosya adı: "gazla-<challenge>.png" / "noskip-<challenge>.png" (harf, rakam, tire) */
+export function shareFileName(base: string, appName = 'Gazla'): string {
+  const prefix = appName.toLowerCase().replace(/[^a-z0-9]+/g, '') || 'gazla';
   const slug = base
     .toLocaleLowerCase('tr-TR')
     .replace(/ç/g, 'c')
@@ -39,5 +40,5 @@ export function shareFileName(base: string): string {
     .replace(/^-+|-+$/g, '')
     .slice(0, 40)
     .replace(/-+$/g, '');
-  return `gazla${slug ? `-${slug}` : ''}.png`;
+  return `${prefix}${slug ? `-${slug}` : ''}.png`;
 }

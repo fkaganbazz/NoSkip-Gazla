@@ -31,6 +31,7 @@ import {
   toTaskRow,
 } from '@/features/today/logic';
 import { useNow } from '@/features/today/useNow';
+import { useT } from '@/i18n';
 import { layout, spacing, todayColors, todayMetrics as m, useTheme } from '@/theme';
 
 // Bugün — design/Today.dc.html (açık) ve design/TodayDark.dc.html (koyu).
@@ -38,6 +39,7 @@ import { layout, spacing, todayColors, todayMetrics as m, useTheme } from '@/the
 // Durumlar: yükleniyor (iskelet kartlar), hata (Tekrar dene), boş (veri geldi, görev yok), çevrimdışı (alt tost).
 export default function TodayScreen() {
   const { scheme } = useTheme();
+  const t = useT();
   const router = useRouter();
   const now = useNow();
   const { profile } = useAuth();
@@ -53,7 +55,7 @@ export default function TodayScreen() {
   const [toastHeight, setToastHeight] = useState(0);
 
   const tasks = useMemo(() => today.data ?? [], [today.data]);
-  const rows = useMemo(() => tasks.map((t) => toTaskRow(t, now)), [tasks, now]);
+  const rows = useMemo(() => tasks.map((task) => toTaskRow(task, now, t)), [tasks, now, t]);
   const friendRows = useMemo(() => (friends.data ?? []).filter((f) => f.doneToday !== null).map(toFriendRow), [friends.data]);
 
   // Anlar yalnızca Bugün odaktayken açılır: işaretleme alt sayfası/fotoğraf ekranı kapanırken
@@ -61,7 +63,7 @@ export default function TodayScreen() {
   const focused = useIsFocused();
 
   // Günün son görevi işaretlenince tamamlama anı (her gün bir kez; ilk yüklemede değil)
-  const allDone = tasks.length > 0 && tasks.every((t) => t.done);
+  const allDone = tasks.length > 0 && tasks.every((task) => task.done);
   const prevAllDone = useRef<boolean | null>(null);
   const celebrate = useRef<string | null>(null);
   const celebrated = useRef(new Set<string>());
@@ -105,7 +107,7 @@ export default function TodayScreen() {
   }, [focused, allDone, rescues.data, finished.data, router]);
 
   const findTask = useCallback(
-    (rowId: string) => tasks.find((t) => `${t.challengeId}|${t.localDate}` === rowId),
+    (rowId: string) => tasks.find((task) => `${task.challengeId}|${task.localDate}` === rowId),
     [tasks],
   );
   const showError = useCallback((error: Error) => toast.show({ message: error.message }), [toast]);
@@ -154,8 +156,8 @@ export default function TodayScreen() {
 
   const header = (
     <TodayHeader
-      dayLabel={formatDayLabel(now)}
-      title={`${greeting(now)}, ${profile?.displayName ?? ''}`}
+      dayLabel={formatDayLabel(now, t)}
+      title={t.today.greeting.withName(greeting(now, t), profile?.displayName ?? '')}
       unread={unreadCount.data ?? 0}
       onPressBell={() => router.push('/activity')}
     />
@@ -184,9 +186,9 @@ export default function TodayScreen() {
       <SafeAreaView edges={['top']} style={styles.screen}>
         <ScrollView contentContainerStyle={[styles.content, { paddingBottom }]}>
           {header}
-          <View accessible accessibilityLabel="Yükleniyor" accessibilityState={{ busy: true }}>
+          <View accessible accessibilityLabel={t.common.loading} accessibilityState={{ busy: true }}>
             <Skeleton height={m.heroHeight} radius={m.heroRadius} style={styles.hero} />
-            <SectionHeader title="Bugünkü görevler" style={styles.tasksHeader} />
+            <SectionHeader title={t.today.sections.tasks} style={styles.tasksHeader} />
             <View style={styles.tasks}>
               {Array.from({ length: m.skeletonTaskCount }, (_, i) => (
                 <SkeletonTaskCard key={i} />
@@ -209,12 +211,12 @@ export default function TodayScreen() {
   }
 
   const total = tasks.length;
-  const doneCount = tasks.filter((t) => t.done).length;
+  const doneCount = tasks.filter((task) => task.done).length;
   // Sunucu serisi bugünü de sayar (bugün tamamsa); kahraman kartı dünkü seriden hesaplar
   const s = streak.data;
   const serverAllDone = !!s && s.totalToday > 0 && s.doneToday === s.totalToday;
   const streakBefore = s ? s.currentStreak - (serverAllDone ? 1 : 0) : 0;
-  const hero = heroState(doneCount, total, streakBefore, minutesUntilMidnight(now));
+  const hero = heroState(doneCount, total, streakBefore, minutesUntilMidnight(now), t);
   const waiting = friendRows.filter((f) => !f.doneToday).length;
 
   return (
@@ -227,8 +229,8 @@ export default function TodayScreen() {
         <HeroCard done={doneCount} total={total} hero={hero} />
 
         <SectionHeader
-          title="Bugünkü görevler"
-          detail={`${doneCount}/${total} tamam`}
+          title={t.today.sections.tasks}
+          detail={t.today.sections.tasksDone(doneCount, total)}
           style={styles.tasksHeader}
         />
         <View style={styles.tasks}>
@@ -245,8 +247,8 @@ export default function TodayScreen() {
         {friendRows.length > 0 && (
           <>
             <SectionHeader
-              title="Arkadaşların"
-              detail={waiting > 0 ? `${waiting} kişi bekliyor` : undefined}
+              title={t.today.sections.friends}
+              detail={waiting > 0 ? t.today.sections.friendsWaiting(waiting) : undefined}
               detailColor={todayColors[scheme].waitingText}
               style={styles.friendsHeader}
             />

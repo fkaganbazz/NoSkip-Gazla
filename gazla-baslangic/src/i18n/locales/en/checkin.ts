@@ -1,3 +1,82 @@
 import type { checkin as tr } from '../tr/checkin';
 
-export const checkin: typeof tr = {};
+export const checkin: typeof tr = {
+  unitNames: {
+    sec: 'seconds',
+    s: 'seconds',
+    min: 'minutes',
+    hr: 'hours',
+    h: 'hours',
+    sn: 'seconds',
+    dk: 'minutes',
+    sa: 'hours',
+  },
+  notMarkable: "This task can't be checked in today.",
+  undoDay: 'Undo today',
+
+  number: {
+    sheetLabel: 'Enter a number',
+    sheetLabelFor: (title) => `${title}: enter a number`,
+    dikenBubble: (target) => `${target} is plenty, don't overdo it. But if you do, respect.`,
+    todayTarget: (target, unit) => `Today's goal ${target} ${unit}`,
+    decrease: (amount, unit) => `Decrease by ${amount} ${unit}`,
+    increase: (amount, unit) => `Increase by ${amount} ${unit}`,
+    add: (amount, unit) => `Add ${amount} ${unit}`,
+    target: {
+      over: (diff, unit) => `${diff} ${unit} over your goal`,
+      exact: 'Right on target',
+      under: (diff, unit) => `${diff} ${unit} to go`,
+    },
+    stats: {
+      yesterday: 'Yesterday',
+      best: 'Best',
+      groupBest: 'Group',
+      none: 'none',
+    },
+    undoHint: "Deletes today's entry and marks the task as not done",
+  },
+
+  photo: {
+    photoProof: 'Photo proof',
+    galleryFailed: "Couldn't open your gallery. Try again.",
+    cameraFailed: "Couldn't open the camera. You can pick from your gallery.",
+    captureFailed: "Couldn't take the photo. Try again.",
+    retake: 'Retake',
+    pickAnother: 'Pick another',
+    pickFromGallery: 'From gallery',
+    pickPhoto: 'Pick a photo',
+    takenPhoto: 'Photo you took',
+    pickedPhoto: 'Photo you picked',
+    stamp: (time) => `Today · ${time}`,
+    sentPhoto: (action) => `The photo you sent today. ${action}`,
+    takeNew: 'Take a new one',
+    pickNew: 'Pick a new one',
+    noteLabel: 'Add a note (optional)',
+    audience: 'Who can see: ',
+    audienceGroup: (n) => `Group (${n === 1 ? '1 person' : `${n} people`})`,
+    audienceLabel: (n) => `Who can see: Group, ${n === 1 ? '1 person' : `${n} people`}`,
+    audienceHint: 'Shows the group members',
+    sending: 'Sending',
+    undoHint: "Deletes today's photo proof and marks the task as not done",
+    permission: {
+      preparing: 'Getting the camera ready',
+      takePhoto: 'Take a photo',
+      needed: 'Camera access is needed to take a photo. You can also pick one from your gallery.',
+      blocked: 'Camera access is off. Turn it on in Settings, or pick from your gallery.',
+      blockedWeb: 'Camera access is off. Turn it on in your browser settings, or pick from your gallery.',
+      allow: 'Allow',
+    },
+    camera: {
+      preview: 'Camera view',
+      flip: 'Flip camera',
+      toFront: 'Switch to front camera',
+      toBack: 'Switch to back camera',
+      shutter: 'Take photo',
+    },
+    group: {
+      title: 'Who can see',
+      lead: 'Everyone in this challenge sees your photo and note.',
+      you: (username) => `You · @${username}`,
+    },
+  },
+};
