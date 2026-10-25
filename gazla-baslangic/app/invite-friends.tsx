@@ -7,12 +7,14 @@ import { Button, ErrorState, IconButton, LoadingState } from '@/components/ui';
 import { useTodayTasks } from '@/data';
 import InviteFriends from '@/features/invite-friends/InviteFriends';
 import { StepIntro } from '@/features/onboarding/StepScreen';
+import { useT } from '@/i18n';
 import { layout, spacing, useTheme } from '@/theme';
 
 // Arkadaşlarını çağır (modal) — design/InviteFriends.dc.html. `challengeId` verilmezse bugünkü ilk
 // challenge'a davet edilir. Kapatınca geri döner. "Kullanıcı adıyla ara" onboarding'deki gibi alt sayfada.
 export default function InviteFriendsModal() {
   const router = useRouter();
+  const t = useT();
   const { challengeId: param } = useLocalSearchParams<{ challengeId?: string }>();
   const today = useTodayTasks();
   const close = () => (router.canGoBack() ? router.back() : router.replace('/'));
@@ -29,12 +31,8 @@ export default function InviteFriendsModal() {
         ) : (
           // Davet edilecek challenge yok: önce bir tane oluşturulmalı
           <View style={styles.empty}>
-            <StepIntro
-              marginTop={0}
-              title="Önce bir challenge başlat"
-              body="Arkadaşlarını bir challenge'a çağırırsın. Birini seç ya da kendin oluştur, sonra davet linkin hazır."
-            />
-            <Button title="Challenge oluştur" onPress={() => router.replace('/create')} />
+            <StepIntro marginTop={0} title={t.invite.friends.noChallengeTitle} body={t.invite.friends.noChallengeBody} />
+            <Button title={t.invite.friends.createChallenge} onPress={() => router.replace('/create')} />
           </View>
         )}
       </Fallback>
@@ -46,11 +44,12 @@ export default function InviteFriendsModal() {
 
 function Fallback({ onClose, children }: { onClose: () => void; children: ReactNode }) {
   const { colors } = useTheme();
+  const t = useT();
   const insets = useSafeAreaInsets();
   return (
     <View style={[styles.screen, { backgroundColor: colors.background, paddingTop: insets.top + layout.screenTopGap }]}>
       <View style={styles.header}>
-        <IconButton icon="close" accessibilityLabel="Kapat" onPress={onClose} />
+        <IconButton icon="close" accessibilityLabel={t.common.close} onPress={onClose} />
       </View>
       {children}
     </View>

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useCreateChallenge } from '@/data';
+import { getT } from '@/i18n';
 
 import { errorMessage } from './logic';
 import { useOnboarding } from './OnboardingProvider';
@@ -27,7 +28,7 @@ export function useOnboardingChallenge() {
     setError(null);
     createChallenge({ templateId: pickedTemplateId })
       .then((challenge) => setCreatedChallenge(challenge.id))
-      .catch((e: unknown) => setError(errorMessage(e)));
+      .catch((e: unknown) => setError(errorMessage(e, getT())));
   }, [pickedTemplateId, createChallenge, setCreatedChallenge]);
 
   useEffect(() => {

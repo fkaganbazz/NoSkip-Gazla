@@ -6,8 +6,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StreakIcon } from '@/components/icons';
 import { Button } from '@/components/ui';
 import WelcomeArt from '@/features/onboarding/WelcomeArt';
+import { useT } from '@/i18n';
 import { useTheme } from '@/theme';
-import { onboardingColors, onboardingMetrics as m, onboardingTypography as t } from '@/theme/onboarding';
+import { onboardingColors, onboardingMetrics as m, onboardingTypography as ot } from '@/theme/onboarding';
 
 /** Güvenli alanın üstünden sanat alanına kadar logo satırı için ayrılan yer (tasarımda 100 − 47) */
 const LOGO_RESERVE = m.welcomeArtTop - m.designStatusBar;
@@ -15,6 +16,7 @@ const LOGO_RESERVE = m.welcomeArtTop - m.designStatusBar;
 // Karşılama — design/Main.dc.html. "Başlayalım" → PickChallenge, "Zaten hesabım var" → SignIn.
 export default function WelcomeScreen() {
   const router = useRouter();
+  const t = useT();
   const insets = useSafeAreaInsets();
   const { scheme } = useTheme();
   const c = onboardingColors[scheme];
@@ -25,8 +27,8 @@ export default function WelcomeScreen() {
       <StatusBar style="light" />
       <View style={[styles.logo, { top: insets.top + m.welcomeLogoTop }]}>
         <StreakIcon color={c.welcomeLogo} size={m.welcomeLogoIconSize} strokeWidth={m.welcomeLogoIconStroke} />
-        <Text accessibilityRole="header" style={[t.welcomeLogo, { color: c.welcomeLogo }]}>
-          Gazla
+        <Text accessibilityRole="header" style={[ot.welcomeLogo, { color: c.welcomeLogo }]}>
+          {t.common.appName}
         </Text>
       </View>
 
@@ -41,15 +43,17 @@ export default function WelcomeScreen() {
             minHeight: m.sheetHeight - m.sheetPaddingBottom + sheetPaddingBottom,
           },
         ]}>
-        <Text accessibilityRole="header" style={[t.welcomeTitle, { color: c.sheetTitle }]}>
-          Seri senden, laf Diken'den.
+        <Text accessibilityRole="header" style={[ot.welcomeTitle, { color: c.sheetTitle }]}>
+          {t.onboarding.welcome.title}
         </Text>
-        <Text style={[t.lead, { color: c.sheetBody }]}>
-          Arkadaşlarınla 7, 10 ya da 30 günlük challenge'lara gir. Birbirinizi gazlayın, günü kaçıranı Diken dürtsün.
-        </Text>
+        <Text style={[ot.lead, { color: c.sheetBody }]}>{t.onboarding.welcome.lead}</Text>
         <View style={styles.buttons}>
-          <Button title="Başlayalım" onPress={() => router.push('/(onboarding)/pick-challenge')} />
-          <Button title="Zaten hesabım var" variant="text" onPress={() => router.push('/(onboarding)/sign-in')} />
+          <Button title={t.onboarding.welcome.start} onPress={() => router.push('/(onboarding)/pick-challenge')} />
+          <Button
+            title={t.onboarding.welcome.haveAccount}
+            variant="text"
+            onPress={() => router.push('/(onboarding)/sign-in')}
+          />
         </View>
       </View>
     </View>

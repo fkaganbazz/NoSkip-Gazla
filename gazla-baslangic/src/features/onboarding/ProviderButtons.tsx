@@ -16,6 +16,7 @@ import { useEffect, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/ui';
+import { useT } from '@/i18n';
 import { componentMetrics, useTheme } from '@/theme';
 import { onboardingMetrics as m } from '@/theme/onboarding';
 
@@ -54,6 +55,7 @@ function useAppleNative(): boolean | null {
 
 export function AppleSignInButton({ onPress, loading, disabled }: ProviderButtonProps) {
   const { scheme } = useTheme();
+  const t = useT();
   const native = useAppleNative();
 
   // iOS'ta kontrol sürerken (bir an) satırın yeri ayrılır, yanlış buton yanıp sönmez
@@ -79,7 +81,7 @@ export function AppleSignInButton({ onPress, loading, disabled }: ProviderButton
 
   return (
     <Button
-      title="Apple ile devam et"
+      title={t.auth.signIn.continueWithApple}
       variant="apple"
       size="lgCompact"
       onPress={onPress}
@@ -116,12 +118,13 @@ function loadGoogleButton(): GoogleButtonComponent | null {
 
 export function GoogleSignInButton({ onPress, loading, disabled }: ProviderButtonProps) {
   const { scheme } = useTheme();
+  const t = useT();
   const GoogleSigninButton = loadGoogleButton();
 
   if (!GoogleSigninButton) {
     return (
       <Button
-        title="Google ile devam et"
+        title={t.auth.signIn.continueWithGoogle}
         variant="google"
         size="lgCompact"
         onPress={onPress}

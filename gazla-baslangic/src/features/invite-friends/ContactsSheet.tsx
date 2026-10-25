@@ -5,6 +5,7 @@ import { ShareIcon } from '@/components/icons';
 import Sheet from '@/components/Sheet';
 import { Button, ErrorState, LoadingState } from '@/components/ui';
 import { ApiError, hashContactEmails, useFindContacts, type SearchResult } from '@/data';
+import { useT } from '@/i18n';
 import { spacing, typography, useTheme } from '@/theme';
 import { onboardingMetrics as m } from '@/theme/onboarding';
 
@@ -18,7 +19,8 @@ type Phase =
   /** `noEmails`: rehberde e-postası olan kişi yok; değilse eşleşen yok */
   | { kind: 'empty'; noEmails: boolean; limited: boolean }
   | { kind: 'results'; people: SearchResult[]; limited: boolean }
-  | { kind: 'error'; message: string };
+  /** `message`: veri katmanının metni; yoksa genel metin */
+  | { kind: 'error'; message: string | null };
 
 type Props = {
   visible: boolean;
@@ -36,6 +38,8 @@ type Props = {
  */
 export default function ContactsSheet({ visible, onClose, shareMessage }: Props) {
   const { colors } = useTheme();
+  const t = useT();
+  const tx = t.invite.contacts;
   const [phase, setPhase] = useState<Phase>({ kind: 'loading' });
   const { mutateAsync: findContacts } = useFindContacts();
   const run = useRef(0);
@@ -68,7 +72,7 @@ export default function ContactsSheet({ visible, onClose, shareMessage }: Props)
       if (current()) {
         setPhase({
           kind: 'error',
-          message: e instanceof ApiError ? e.message : 'Rehberine şu an bakamadık. Tekrar dener misin?',
+          message: e instanceof ApiError ? e.message : null,
         });
       }
     }
@@ -93,10 +97,10 @@ export default function ContactsSheet({ visible, onClose, shareMessage }: Props)
   const limitedNote = (phase.kind === 'results' || phase.kind === 'empty') && phase.limited && (
     <View style={styles.limited}>
       <Text style={[typography.meta, styles.center, { color: colors.textSecondary }]}>
-        Yalnızca paylaşmayı seçtiğin kişilere baktık.
+        {tx.limited}
       </Text>
       <Button
-        title="Kişi seç"
+        title={tx.pickMore}
         variant="text"
         size="md"
         onPress={async () => {
@@ -119,30 +123,28 @@ export default function ContactsSheet({ visible, onClose, shareMessage }: Props)
         return (
           <View style={styles.state}>
             <Text style={[typography.body, styles.center, { color: colors.textBody }]}>
-              {phase.canAskAgain
-                ? 'Arkadaşlarını bulmak için rehberine bakmamız gerekiyor. İzin verirsen yalnızca e-posta adreslerinin özetlerini karşılaştırırız.'
-                : 'Rehber izni kapalı. Arkadaşlarını bulmak için Ayarlar’dan Kişiler iznini açabilirsin.'}
+              {phase.canAskAgain ? tx.askBody : tx.deniedBody}
             </Text>
             {phase.canAskAgain ? (
-              <Button title="İzin ver" onPress={load} />
+              <Button title={tx.allow} onPress={load} />
             ) : (
-              <Button title="Ayarları aç" onPress={() => Linking.openSettings().catch(() => {})} />
+              <Button title={t.common.openSettings} onPress={() => Linking.openSettings().catch(() => {})} />
             )}
           </View>
         );
       case 'error':
-        return <ErrorState message={phase.message} onRetry={load} />;
+        return <ErrorState message={phase.message ?? tx.readFailed} onRetry={load} />;
       case 'empty':
         return (
           <View style={styles.state}>
             <Text style={[typography.cardTitle, styles.center, { color: colors.text }]}>
-              {phase.noEmails ? 'Rehberinde e-posta adresi olan kimse yok' : 'Rehberinden henüz kimse Gazla’da değil'}
+              {phase.noEmails ? tx.noEmails : tx.noMatches}
             </Text>
             <Text style={[typography.body, styles.center, { color: colors.textBody }]}>
-              Davet linkini gönder, katılınca birlikte başlarsınız.
+              {tx.emptyBody}
             </Text>
             <Button
-              title="Davet linkini paylaş"
+              title={tx.shareLink}
               variant="secondary"
               disabled={!shareMessage}
               icon={(color) => <ShareIcon color={color} size={m.shareIconSize} strokeWidth={m.shareIconStroke} />}
@@ -162,10 +164,8 @@ export default function ContactsSheet({ visible, onClose, shareMessage }: Props)
   };
 
   return (
-    <Sheet visible={visible} onClose={onClose} title="Rehberden bul" scrollable contentStyle={styles.body}>
-      <Text style={[typography.meta, { color: colors.textSecondary }]}>
-        E-posta adresleri telefonundan çıkmaz; eşleştirmek için yalnızca özetleri gönderilir.
-      </Text>
+    <Sheet visible={visible} onClose={onClose} title={tx.title} scrollable contentStyle={styles.body}>
+      <Text style={[typography.meta, { color: colors.textSecondary }]}>{tx.privacy}</Text>
       {body()}
     </Sheet>
   );

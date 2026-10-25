@@ -11,6 +11,7 @@ import GazlaLogo from '@/features/invite-landing/GazlaLogo';
 import { InviteChallengeCard, InviterMessage } from '@/features/invite-landing/InviteCard';
 import { useOnboarding } from '@/features/onboarding/OnboardingProvider';
 import { challengeMeta, deviceLocalDate, isEnded } from '@/features/invite-landing/logic';
+import { useT } from '@/i18n';
 import { layout, typography, useTheme } from '@/theme';
 import { inviteColors, inviteMetrics as m, inviteTypography } from '@/theme/explore';
 
@@ -20,6 +21,8 @@ import { inviteColors, inviteMetrics as m, inviteTypography } from '@/theme/expl
 export default function InviteLandingScreen() {
   const { code } = useLocalSearchParams<{ code: string }>();
   const router = useRouter();
+  const t = useT();
+  const tx = t.invite.landing;
   const insets = useSafeAreaInsets();
   const { colors, scheme } = useTheme();
   const c = inviteColors[scheme];
@@ -88,16 +91,14 @@ export default function InviteLandingScreen() {
         <View style={styles.invalid}>
           <Diken mood="endise" stage="tam" size={m.invalidDikenSize} />
           <Text accessibilityRole="header" style={[inviteTypography.title, styles.center, { color: colors.text }]}>
-            {ended ? 'Bu challenge bitti' : 'Bu davet linki geçersiz'}
+            {ended ? tx.endedTitle : tx.invalidTitle}
           </Text>
           <Text style={[typography.body, styles.center, { color: colors.textBody }]}>
-            {ended
-              ? "Bu davetin challenge'ı sona erdi. Yeni bir tane başlatıp arkadaşlarını sen çağır."
-              : 'Linkin süresi dolmuş ya da yanlış kopyalanmış olabilir. Davet edenden yeni bir link iste.'}
+            {ended ? tx.endedBody : tx.invalidBody}
           </Text>
         </View>
         <View style={styles.actions}>
-          <Button title="Ana sayfaya dön" onPress={goHome} />
+          <Button title={tx.goHome} onPress={goHome} />
         </View>
       </ScrollView>
     );
@@ -110,16 +111,16 @@ export default function InviteLandingScreen() {
       <InviterMessage inviter={data.inviter} message={data.challenge.inviteMessage} />
 
       <Text accessibilityRole="header" style={[inviteTypography.title, styles.title, { color: colors.text }]}>
-        {`${data.inviter.displayName} seni bir challenge'a çağırıyor`}
+        {tx.title(data.inviter.displayName)}
       </Text>
 
-      <InviteChallengeCard preview={data} meta={challengeMeta(data.challenge, today)} />
+      <InviteChallengeCard preview={data} meta={challengeMeta(t, data.challenge, today)} />
 
       <View style={styles.dikenRow}>
         <Diken mood="cosku" stage="tam" size={m.dikenSize} />
         {/* Tasarımdaki satır davet mesajına özeldi ("Baklavayı sen ısmarlama da."); genel hali */}
         <SpeechBubble size="sm" style={styles.dikenBubble}>
-          Kaçıran sen olma da.
+          {tx.dikenLine}
         </SpeechBubble>
       </View>
 
@@ -129,8 +130,8 @@ export default function InviteLandingScreen() {
             {join.error.message}
           </Text>
         )}
-        <Button title="Katıl ve başla" onPress={onPrimary} loading={join.isPending} />
-        <Button title="Şimdilik değil" variant="text" onPress={goHome} />
+        <Button title={tx.joinAndStart} onPress={onPrimary} loading={join.isPending} />
+        <Button title={tx.notNow} variant="text" onPress={goHome} />
       </View>
     </ScrollView>
   );

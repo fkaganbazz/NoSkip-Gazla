@@ -4,6 +4,7 @@ import { Avatar, AvatarStack } from '@/components/Avatar';
 import { CategoryTile } from '@/components/CategoryTile';
 import SpeechBubble from '@/components/SpeechBubble';
 import type { InvitePreview } from '@/data';
+import { useT } from '@/i18n';
 import { borderWidth, typography, useTheme } from '@/theme';
 import { inviteColors, inviteMetrics as m, inviteTypography } from '@/theme/explore';
 
@@ -39,6 +40,7 @@ type CardProps = {
 // Challenge kartı: ikon, ad, alt bilgi ve katılanlar (InviteLanding.dc.html).
 export function InviteChallengeCard({ preview, meta }: CardProps) {
   const { colors, scheme } = useTheme();
+  const t = useT();
   const c = inviteColors[scheme];
   const people = preview.members.map((mem) => ({ name: mem.initial, tint: mem.avatarTint }));
 
@@ -55,10 +57,10 @@ export function InviteChallengeCard({ preview, meta }: CardProps) {
       <View style={[styles.members, { borderTopColor: c.cardDivider }]}>
         <View style={styles.membersLeft}>
           {people.length > 0 && <AvatarStack people={people} size={m.memberAvatar} outlineColor={colors.surface} />}
-          <Text style={[typography.captionStrong, { color: colors.textBody }]}>{`${preview.memberCount} kişi katıldı`}</Text>
+          <Text style={[typography.captionStrong, { color: colors.textBody }]}>{t.invite.landing.membersJoined(preview.memberCount)}</Text>
         </View>
         {!preview.alreadyMember && (
-          <Text style={[typography.metaStrong, { color: colors.actionText }]}>Sıra sende</Text>
+          <Text style={[typography.metaStrong, { color: colors.actionText }]}>{t.invite.landing.yourTurn}</Text>
         )}
       </View>
     </View>

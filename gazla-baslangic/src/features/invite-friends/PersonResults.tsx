@@ -9,6 +9,7 @@ import {
   useSendFriendRequest,
   type SearchResult,
 } from '@/data';
+import { useT } from '@/i18n';
 import { componentTypography, useTheme } from '@/theme';
 import { onboardingMetrics as m } from '@/theme/onboarding';
 
@@ -19,6 +20,7 @@ import { onboardingMetrics as m } from '@/theme/onboarding';
  */
 export default function PersonResults({ people }: { people: SearchResult[] }) {
   const { colors } = useTheme();
+  const t = useT();
   const requests = useFriendRequests();
   const sendRequest = useSendFriendRequest();
   const accept = useAcceptFriendRequest();
@@ -39,7 +41,7 @@ export default function PersonResults({ people }: { people: SearchResult[] }) {
         key={p.id}
         divider={i < all.length - 1}
         person={p}
-        sub={friend ? `@${p.username} · Arkadaşın` : `@${p.username}`}
+        sub={friend ? t.invite.people.friendSub(p.username) : `@${p.username}`}
         action={
           friend || incoming
             ? undefined
@@ -55,10 +57,10 @@ export default function PersonResults({ people }: { people: SearchResult[] }) {
         trailing={
           incoming ? (
             <FriendRowButton
-              title="Kabul et"
+              title={t.common.accept}
               variant="action"
               loading={accept.isPending && accept.variables === incoming.id}
-              accessibilityLabel={`${p.displayName} isteğini kabul et`}
+              accessibilityLabel={t.invite.people.acceptA11y(p.displayName)}
               onPress={() => accept.mutate(incoming.id, { onSuccess: () => setAccepted((s) => new Set(s).add(p.id)) })}
             />
           ) : undefined

@@ -4,10 +4,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, Share } from 'react-native';
 
 import { ApiError, useInvite } from '@/data';
+import { getT } from '@/i18n';
 
-/** Paylaşılan metin */
-export const inviteMessage = (title: string, url: string) =>
-  `Gazla'da "${title}" challenge'ına katıl, birlikte gazlayalım: ${url}`;
+// Paylaşılan metin sözlükte: `invite.friends.shareMessage(başlık, link)`
 
 /**
  * Challenge'ın davet linki (`useInvite().createLink`, create_invite). Aynı kişi için sunucu aynı kodu döner;
@@ -25,7 +24,7 @@ export function useInviteCode(challengeId: string | null) {
     setError(null);
     createLink(challengeId)
       .then((link) => requested.current === challengeId && setUrl(link))
-      .catch((e: unknown) => setError(e instanceof ApiError ? e.message : 'Davet linki şu an oluşturulamadı.'));
+      .catch((e: unknown) => setError(e instanceof ApiError ? e.message : getT().invite.friends.linkFailed));
   }, [challengeId, createLink]);
 
   useEffect(() => {

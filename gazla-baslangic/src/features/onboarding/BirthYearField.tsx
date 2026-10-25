@@ -3,8 +3,9 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { CheckIcon, ChevronDownIcon } from '@/components/icons';
 import Sheet, { SheetFlatList, type SheetHandle } from '@/components/Sheet';
+import { useT } from '@/i18n';
 import { borderWidth, componentTypography as ct, useTheme } from '@/theme';
-import { onboardingColors, onboardingMetrics as m, onboardingTypography as t } from '@/theme/onboarding';
+import { onboardingColors, onboardingMetrics as m, onboardingTypography as ot } from '@/theme/onboarding';
 
 import { birthYearOptions } from './logic';
 
@@ -19,6 +20,8 @@ const DEFAULT_AGE = 20;
 // "Doğum yılın" seçimi (Profile.dc.html): kenarlı buton + aşağı ok; dokununca yıl listesi alt sayfada açılır.
 export default function BirthYearField({ value, onChange }: Props) {
   const { colors, scheme } = useTheme();
+  const t = useT();
+  const tx = t.onboarding.profile.birthYear;
   const c = onboardingColors[scheme];
   const [open, setOpen] = useState(false);
   const sheet = useRef<SheetHandle>(null);
@@ -28,22 +31,20 @@ export default function BirthYearField({ value, onChange }: Props) {
   return (
     <View style={styles.field}>
       <Text nativeID="birth-year-label" style={[ct.inputLabel, { color: colors.text }]}>
-        Doğum yılın
+        {tx.label}
       </Text>
       <Pressable
         onPress={() => setOpen(true)}
         accessibilityRole="button"
-        accessibilityLabel={`Doğum yılın${value ? `, ${value}` : ''}`}
-        accessibilityHint="Yıl listesini açar"
+        accessibilityLabel={tx.a11yLabel(value)}
+        accessibilityHint={tx.a11yHint}
         style={[styles.button, { backgroundColor: c.fieldBg, borderColor: c.fieldBorder }]}>
-        <Text style={[t.fieldValue, { color: value ? colors.text : colors.textSecondary }]}>{value ?? 'Seç'}</Text>
+        <Text style={[ot.fieldValue, { color: value ? colors.text : colors.textSecondary }]}>{value ?? tx.placeholder}</Text>
         <ChevronDownIcon color={colors.textSecondary} size={m.chevronSize} strokeWidth={m.chevronStroke} />
       </Pressable>
-      <Text style={[t.fieldNote, { color: colors.textSecondary }]}>
-        Profilinde görünmez, sadece yaş kontrolü için sorulur.
-      </Text>
+      <Text style={[ot.fieldNote, { color: colors.textSecondary }]}>{tx.note}</Text>
 
-      <Sheet ref={sheet} visible={open} onClose={() => setOpen(false)} title="Doğum yılın" surface>
+      <Sheet ref={sheet} visible={open} onClose={() => setOpen(false)} title={tx.label} surface>
         <SheetFlatList
           data={years}
           keyExtractor={(y) => String(y)}
@@ -64,7 +65,7 @@ export default function BirthYearField({ value, onChange }: Props) {
                   styles.row,
                   { backgroundColor: selected ? colors.actionTint : pressed ? colors.surfaceMuted : 'transparent' },
                 ]}>
-                <Text style={[t.fieldValue, { color: selected ? colors.actionText : colors.text }]}>{item}</Text>
+                <Text style={[ot.fieldValue, { color: selected ? colors.actionText : colors.text }]}>{item}</Text>
                 {selected && <CheckIcon color={colors.actionText} size={m.chevronSize} strokeWidth={m.chevronStroke} />}
               </Pressable>
             );

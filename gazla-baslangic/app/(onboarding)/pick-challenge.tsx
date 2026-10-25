@@ -9,6 +9,7 @@ import { nextStepAfterProfile } from '@/features/onboarding/logic';
 import { useOnboarding } from '@/features/onboarding/OnboardingProvider';
 import StepScreen, { StepIntro } from '@/features/onboarding/StepScreen';
 import TemplateTile from '@/features/onboarding/TemplateTile';
+import { useT } from '@/i18n';
 import { onboardingMetrics as m } from '@/theme/onboarding';
 
 // İlk challenge'ını seç — design/PickChallenge.dc.html (adım 1/4). Seçim girişten sonra
@@ -16,6 +17,7 @@ import { onboardingMetrics as m } from '@/theme/onboarding';
 // Profil tamamlandıktan sonra da (davet adımından geri) açılır: seçim değiştirilip doğrudan devam edilir.
 export default function PickChallengeScreen() {
   const router = useRouter();
+  const t = useT();
   const { status } = useAuth();
   const onboarding = useOnboarding();
   const { pickedTemplateId, pickTemplate, chooseCustom } = onboarding;
@@ -27,7 +29,7 @@ export default function PickChallengeScreen() {
   const [choice, setChoice] = useState<string | null>(pickedTemplateId);
   // Seçim yoksa 2. şablon seçili gelir (tasarımda bir kart hep seçili; EKRANLAR.md 1.2 kabul)
   const selectedId =
-    choice && list.some((t) => t.id === choice) ? choice : (list[DEFAULT_INDEX]?.id ?? list[0]?.id ?? null);
+    choice && list.some((x) => x.id === choice) ? choice : (list[DEFAULT_INDEX]?.id ?? list[0]?.id ?? null);
 
   const rows = useMemo(() => {
     const out: (typeof list)[] = [];
@@ -48,7 +50,7 @@ export default function PickChallengeScreen() {
       footer={
         <>
           <Button
-            title="Devam"
+            title={t.common.continue}
             disabled={!selectedId}
             onPress={() => {
               pickTemplate(selectedId);
@@ -56,7 +58,7 @@ export default function PickChallengeScreen() {
             }}
           />
           <Button
-            title="Kendim oluşturacağım"
+            title={t.onboarding.pick.custom}
             variant="text"
             onPress={() => {
               // Kendi challenge'ı hesap açılıp profil tamamlanınca Create'te oluşturulur
@@ -67,10 +69,7 @@ export default function PickChallengeScreen() {
         </>
       }>
       <OnboardingHeader step={1} onBack={goBack} />
-      <StepIntro
-        title="İlk challenge'ını seç"
-        body="Sonra istediğin kadar ekleyebilirsin. Arkadaşların da aynı challenge'a katılabilir."
-      />
+      <StepIntro title={t.onboarding.pick.title} body={t.onboarding.pick.body} />
 
       {templates.isPending ? (
         <View style={styles.state}>
@@ -84,8 +83,8 @@ export default function PickChallengeScreen() {
         <View accessibilityRole="radiogroup" style={styles.grid}>
           {rows.map((row) => (
             <View key={row[0].id} style={styles.row}>
-              {row.map((t) => (
-                <TemplateTile key={t.id} template={t} selected={t.id === selectedId} onPick={setChoice} />
+              {row.map((x) => (
+                <TemplateTile key={x.id} template={x} selected={x.id === selectedId} onPick={setChoice} />
               ))}
               {row.length === 1 && <View style={styles.filler} />}
             </View>

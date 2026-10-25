@@ -9,9 +9,10 @@ import SpeechBubble from '@/components/SpeechBubble';
 import { Button, ToastHost, useToast } from '@/components/ui';
 import { useOnboarding } from '@/features/onboarding/OnboardingProvider';
 import StepScreen from '@/features/onboarding/StepScreen';
+import { useT } from '@/i18n';
 import { useEnablePushNotifications } from '@/notifications';
 import { borderWidth, componentMetrics, typography, useTheme } from '@/theme';
-import { onboardingColors, onboardingMetrics as m, onboardingTypography as t } from '@/theme/onboarding';
+import { onboardingColors, onboardingMetrics as m, onboardingTypography as ot } from '@/theme/onboarding';
 
 // Seni dürtmeme izin ver — design/NotifPermission.dc.html (adım 4/4). İki buton da onboarding'i
 // bitirir; uygulama açılınca kök düzen sekmelere geçer. "Bildirimlere izin ver": sistem izni, verildiyse Expo push
@@ -20,6 +21,8 @@ import { onboardingColors, onboardingMetrics as m, onboardingTypography as t } f
 // (davet adımı atlandı, profil tamamlandı).
 export default function NotifPermissionScreen() {
   const router = useRouter();
+  const t = useT();
+  const tx = t.onboarding.notifications;
   const { colors, scheme } = useTheme();
   const c = onboardingColors[scheme];
   const { finish, pickedTemplateId, createdChallengeId, joinedViaInvite, inviteError, clearInviteError } =
@@ -53,8 +56,8 @@ export default function NotifPermissionScreen() {
         backgroundColor={c.permissionBg}
         footer={
           <>
-            <Button title="Bildirimlere izin ver" onPress={allow} loading={push.pending} />
-            <Button title="Şimdi değil" variant="text" onPress={done} disabled={push.pending} />
+            <Button title={tx.allow} onPress={allow} loading={push.pending} />
+            <Button title={tx.notNow} variant="text" onPress={done} disabled={push.pending} />
           </>
         }>
         <OnboardingHeader step={4} tone="permission" onBack={joinedViaInvite ? undefined : goBack} />
@@ -62,11 +65,9 @@ export default function NotifPermissionScreen() {
         {/* Diken'in sözü: kuyruk aşağıda Diken'in başına bakar */}
         <SpeechBubble size="lg" tail="bottom-left" tailOffset={m.permissionTailOffset} style={styles.card}>
           <Text accessibilityRole="header" style={[typography.screenTitle, { color: colors.text }]}>
-            Seni dürtmeme izin ver.
+            {tx.title}
           </Text>
-          <Text style={[t.lead, styles.cardBody, { color: colors.textBody }]}>
-            Söz, sadece gün bitmek üzereyken ve arkadaşların seni dürttüğünde yazarım.
-          </Text>
+          <Text style={[ot.lead, styles.cardBody, { color: colors.textBody }]}>{tx.body}</Text>
         </SpeechBubble>
 
         <View style={styles.diken}>
@@ -76,20 +77,18 @@ export default function NotifPermissionScreen() {
         {/* Örnek bildirim */}
         <View
           accessible
-          accessibilityLabel="Örnek bildirim: Diken, Gün bitiyor, 2 görevin duruyor. Susuz kaldım burada."
+          accessibilityLabel={tx.previewA11y(tx.previewBody)}
           style={[styles.preview, { backgroundColor: c.previewBg, borderColor: c.previewBorder }]}>
           <View style={[styles.appIcon, { backgroundColor: c.appIconBg }]}>
             <DikenFaceIcon size={m.appIconSize} />
           </View>
           <View style={styles.previewTexts}>
             <View style={styles.previewMeta}>
-              <Text style={[typography.meta, { color: colors.textSecondary }]}>Gazla</Text>
-              <Text style={[typography.meta, { color: colors.textSecondary }]}>21:30</Text>
+              <Text style={[typography.meta, { color: colors.textSecondary }]}>{t.common.appName}</Text>
+              <Text style={[typography.meta, { color: colors.textSecondary }]}>{tx.previewTime}</Text>
             </View>
-            <Text style={[t.previewTitle, { color: colors.text }]}>Diken</Text>
-            <Text style={[t.previewBody, { color: colors.textBody }]}>
-              Gün bitiyor, 2 görevin duruyor. Susuz kaldım burada.
-            </Text>
+            <Text style={[ot.previewTitle, { color: colors.text }]}>{t.common.mascot}</Text>
+            <Text style={[ot.previewBody, { color: colors.textBody }]}>{tx.previewBody}</Text>
           </View>
         </View>
       </StepScreen>

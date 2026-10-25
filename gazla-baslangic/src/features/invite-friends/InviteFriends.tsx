@@ -8,13 +8,14 @@ import OnboardingHeader from '@/components/OnboardingHeader';
 import { Button, Card, ErrorState, IconButton, LoadingState, ToastHost, useToast } from '@/components/ui';
 import { useChallenge, useChallengeMembers } from '@/data';
 import StepScreen, { StepIntro } from '@/features/onboarding/StepScreen';
+import { useT } from '@/i18n';
 import { borderWidth, cardColors, componentMetrics, componentTypography as ct, typography, useTheme } from '@/theme';
-import { onboardingColors, onboardingMetrics as m, onboardingTypography as t } from '@/theme/onboarding';
+import { onboardingColors, onboardingMetrics as m, onboardingTypography as ot } from '@/theme/onboarding';
 
 import { CONTACTS_SUPPORTED } from './contacts';
 import ContactsSheet from './ContactsSheet';
 import { ContactsIcon, UserSearchIcon } from './icons';
-import { copyText, inviteMessage, sendAsMessage, shareText, useInviteCode, type InviteCode } from './share';
+import { copyText, sendAsMessage, shareText, useInviteCode, type InviteCode } from './share';
 import UsernameSearchSheet from './UsernameSearchSheet';
 
 type Props = {
@@ -52,6 +53,8 @@ export default function InviteFriends({
   onNoticeShown,
 }: Props) {
   const onboarding = variant === 'onboarding';
+  const t = useT();
+  const tx = t.invite.friends;
   const toast = useToast();
   const { show } = toast;
   const [searchOpen, setSearchOpen] = useState(false);
@@ -59,7 +62,7 @@ export default function InviteFriends({
   // Davet kodu ve challenge burada: link kutusu ve "Rehberden bul"un boş durumu aynı paylaşım metnini kullanır
   const invite = useInviteCode(challengeId);
   const challenge = useChallenge(challengeId ?? undefined);
-  const message = invite.url && challenge.data ? inviteMessage(challenge.data.title, invite.url) : null;
+  const message = invite.url && challenge.data ? tx.shareMessage(challenge.data.title, invite.url) : null;
 
   useEffect(() => {
     if (!notice) return;
@@ -73,8 +76,8 @@ export default function InviteFriends({
         footer={
           onboarding && onContinue ? (
             <>
-              <Button title="Devam" onPress={onContinue} />
-              <Button title="Şimdilik atla" variant="text" onPress={onContinue} />
+              <Button title={t.common.continue} onPress={onContinue} />
+              <Button title={t.common.skipForNow} variant="text" onPress={onContinue} />
             </>
           ) : undefined
         }>
@@ -82,13 +85,10 @@ export default function InviteFriends({
           <OnboardingHeader step={3} onBack={onBack} />
         ) : (
           <View style={styles.modalHeader}>
-            <IconButton icon="close" accessibilityLabel="Kapat" onPress={onClose} />
+            <IconButton icon="close" accessibilityLabel={t.common.close} onPress={onClose} />
           </View>
         )}
-        <StepIntro
-          title="Tek başına sıkıcı. Arkadaşlarını çağır."
-          body="Katılan her arkadaşın seni gazlar. Günü kaçırırsan da laf sokar."
-        />
+        <StepIntro title={tx.title} body={tx.body} />
 
         {challengeId ? (
           <InviteBody
@@ -96,8 +96,8 @@ export default function InviteFriends({
             invite={invite}
             message={message}
             onCopy={async (url) => {
-              if (await copyText(url)) toast.show({ message: 'Davet linki kopyalandı', kind: 'success' });
-              else toast.show({ message: 'Link kopyalanamadı. Paylaş ile gönderebilirsin.' });
+              if (await copyText(url)) toast.show({ message: tx.copied, kind: 'success' });
+              else toast.show({ message: tx.copyFailed });
             }}
           />
         ) : challengeError ? (
@@ -112,9 +112,9 @@ export default function InviteFriends({
 
         <FriendList style={styles.list}>
           {CONTACTS_SUPPORTED && (
-            <LinkRow title="Rehberden bul" onPress={() => setContactsOpen(true)} icon={ContactsIcon} divider />
+            <LinkRow title={tx.findInContacts} onPress={() => setContactsOpen(true)} icon={ContactsIcon} divider />
           )}
-          <LinkRow title="Kullanıcı adıyla ara" onPress={() => setSearchOpen(true)} icon={UserSearchIcon} />
+          <LinkRow title={tx.searchByUsername} onPress={() => setSearchOpen(true)} icon={UserSearchIcon} />
         </FriendList>
       </StepScreen>
 
@@ -141,6 +141,8 @@ function InviteBody({
   onCopy: (url: string) => void;
 }) {
   const { colors, scheme } = useTheme();
+  const t = useT();
+  const tx = t.invite.friends;
   const c = onboardingColors[scheme];
   const challenge = useChallenge(challengeId);
   const board = useChallengeMembers(challengeId);
@@ -162,7 +164,7 @@ function InviteBody({
 
   const ch = challenge.data;
   const members = board.data?.length ?? 1;
-  const group = members <= 1 ? 'Grupta şimdilik sadece sen' : `Grupta ${members} kişi`;
+  const group = members <= 1 ? tx.groupSolo : tx.groupCount(members);
 
   return (
     <>
@@ -173,26 +175,26 @@ function InviteBody({
             {ch.title}
           </Text>
           <Text style={[typography.meta, { color: colors.textSecondary }]}>
-            {ch.durationDays} gün · {group}
+            {t.common.days(ch.durationDays)} · {group}
           </Text>
         </View>
       </Card>
 
       <View style={styles.linkSection}>
-        <Text style={[ct.inputLabel, { color: colors.text }]}>Davet linkin</Text>
+        <Text style={[ct.inputLabel, { color: colors.text }]}>{tx.linkLabel}</Text>
         <View style={[styles.linkBox, { backgroundColor: c.fieldBg, borderColor: c.linkBorder }]}>
           {invite.url ? (
             <Text
               numberOfLines={1}
               ellipsizeMode="middle"
               selectable
-              style={[t.link, styles.linkText, { color: c.linkText }]}>
+              style={[ot.link, styles.linkText, { color: c.linkText }]}>
               {invite.url}
             </Text>
           ) : invite.error ? (
             <Pressable onPress={invite.retry} accessibilityRole="button" style={styles.linkText}>
               <Text numberOfLines={2} style={[typography.meta, { color: colors.dangerText }]}>
-                {invite.error} Tekrar dene
+                {invite.error} {t.common.retry}
               </Text>
             </Pressable>
           ) : (
@@ -202,19 +204,19 @@ function InviteBody({
           )}
           {/* InviteFriends.dc.html: 40, 0 14, köşe 12, gece moru (koyuda kum) */}
           <FriendRowButton
-            title="Kopyala"
+            title={t.common.copy}
             variant="ink"
             size="lg"
             wide
             icon={CopyIcon}
             disabled={!invite.url}
-            accessibilityLabel="Davet linkini kopyala"
+            accessibilityLabel={tx.copyA11y}
             onPress={() => invite.url && onCopy(invite.url)}
           />
         </View>
         <View style={styles.shareRow}>
           <Button
-            title="Mesajla gönder"
+            title={tx.sendAsMessage}
             variant="secondary"
             size="mdCompact"
             icon={(color) => <MessageIcon color={color} size={m.shareIconSize} strokeWidth={m.shareIconStroke} />}
@@ -223,7 +225,7 @@ function InviteBody({
             style={styles.share}
           />
           <Button
-            title="Paylaş"
+            title={t.common.share}
             variant="secondary"
             size="mdCompact"
             icon={(color) => <ShareIcon color={color} size={m.shareIconSize} strokeWidth={m.shareIconStroke} />}

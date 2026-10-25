@@ -4,6 +4,7 @@ import Svg, { Circle, Path } from 'react-native-svg';
 
 import Diken from '@/components/Diken';
 import SpeechBubble from '@/components/SpeechBubble';
+import { useT } from '@/i18n';
 import { useTheme } from '@/theme';
 import { onboardingColors, onboardingMetrics as m } from '@/theme/onboarding';
 
@@ -20,6 +21,7 @@ type Props = {
 // (Main.dc.html). Alt sayfanın hemen üstüne oturur; kısa ekranlarda alttan küçülür.
 export default function WelcomeArt({ reservedTop }: Props) {
   const { scheme } = useTheme();
+  const t = useT();
   const c = onboardingColors[scheme];
   const [height, setHeight] = useState(0);
   const scale = height > 0 ? Math.min(1, (height - reservedTop) / ART_HEIGHT) : 1;
@@ -80,7 +82,7 @@ export default function WelcomeArt({ reservedTop }: Props) {
 
         {/* Yeşil zemin koyu modda da yeşil: balon beyaz kalır */}
         <SpeechBubble tail="bottom-right" shadow="deep" tone="light" style={styles.bubble}>
-          Ben Diken. Seni dürtmeye geldim.
+          {t.onboarding.welcome.bubble}
         </SpeechBubble>
 
         <View style={styles.diken}>

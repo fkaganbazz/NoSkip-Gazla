@@ -1,6 +1,6 @@
 /** Davet karşılama metin kuralları — design/InviteLanding.dc.html */
 import type { InvitePreview, LocalDate } from '@/data';
-import { TASK_TYPE_NAMES } from '@/features/explore/labels';
+import type { Messages } from '@/i18n';
 
 /** Cihazın yerel günü 'YYYY-MM-DD' (oturumsuz da açıldığı için kullanıcı saat dilimi yok) */
 export function deviceLocalDate(d: Date = new Date()): LocalDate {
@@ -16,17 +16,19 @@ function daysBetween(a: LocalDate, b: LocalDate) {
 }
 
 /** "Yarın başlıyor", "Bugün başlıyor", "3 gün sonra başlıyor", "Başladı" */
-export function startLabel(startDate: LocalDate, today: LocalDate) {
+export function startLabel(t: Messages, startDate: LocalDate, today: LocalDate) {
+  const tx = t.invite.landing;
   const diff = daysBetween(today, startDate);
-  if (diff <= -1) return 'Başladı';
-  if (diff === 0) return 'Bugün başlıyor';
-  if (diff === 1) return 'Yarın başlıyor';
-  return `${diff} gün sonra başlıyor`;
+  if (diff <= -1) return tx.started;
+  if (diff === 0) return tx.startsToday;
+  if (diff === 1) return tx.startsTomorrow;
+  return tx.startsInDays(diff);
 }
 
 /** "10 gün · İşaretle · Yarın başlıyor" */
-export function challengeMeta(challenge: InvitePreview['challenge'], today: LocalDate) {
-  return `${challenge.durationDays} gün · ${TASK_TYPE_NAMES[challenge.taskType]} · ${startLabel(challenge.startDate, today)}`;
+export function challengeMeta(t: Messages, challenge: InvitePreview['challenge'], today: LocalDate) {
+  const type = t.invite.landing.taskTypes[challenge.taskType];
+  return `${t.common.days(challenge.durationDays)} · ${type} · ${startLabel(t, challenge.startDate, today)}`;
 }
 
 /** Challenge'ın son günü geçti mi */

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { CheckIcon } from '@/components/icons';
+import { useT } from '@/i18n';
 import {
   borderWidth,
   componentColors,
@@ -10,7 +11,7 @@ import {
   typography,
   useTheme,
 } from '@/theme';
-import { onboardingColors, onboardingMetrics as m, onboardingTypography as t } from '@/theme/onboarding';
+import { onboardingColors, onboardingMetrics as m, onboardingTypography as ot } from '@/theme/onboarding';
 
 /** Sunucunun cevabına göre kullanıcı adı durumu */
 export type UsernameState = 'empty' | 'short' | 'checking' | 'available' | 'unavailable' | 'error';
@@ -21,15 +22,11 @@ type Props = {
   state: UsernameState;
 };
 
-const MESSAGES: Partial<Record<UsernameState, string>> = {
-  short: 'En az 3 karakter olmalı',
-  available: 'Bu kullanıcı adı boşta',
-  unavailable: 'Bu kullanıcı adı alınmış ya da kullanılamıyor',
-};
-
 // "Kullanıcı adın" alanı (Profile.dc.html): solda @, sağda boşta tiki, altında durum satırı.
 export default function UsernameField({ value, onChangeText, state }: Props) {
   const { colors, scheme } = useTheme();
+  const t = useT();
+  const tx = t.onboarding.profile.username;
   const c = onboardingColors[scheme];
   const cc = componentColors[scheme];
   const [focused, setFocused] = useState(false);
@@ -42,13 +39,14 @@ export default function UsernameField({ value, onChangeText, state }: Props) {
         : focused
           ? colors.action
           : c.fieldBorder;
-  const message = MESSAGES[state];
+  const message =
+    state === 'short' ? tx.short : state === 'available' ? tx.available : state === 'unavailable' ? tx.unavailable : null;
   const messageColor =
     state === 'available' ? c.availableText : state === 'unavailable' ? colors.dangerText : colors.textSecondary;
 
   return (
     <View style={styles.field}>
-      <Text style={[ct.inputLabel, { color: colors.text }]}>Kullanıcı adın</Text>
+      <Text style={[ct.inputLabel, { color: colors.text }]}>{tx.label}</Text>
       <View>
         <TextInput
           value={value}
@@ -60,11 +58,11 @@ export default function UsernameField({ value, onChangeText, state }: Props) {
           autoComplete="username-new"
           textContentType="username"
           maxLength={21}
-          accessibilityLabel="Kullanıcı adın"
+          accessibilityLabel={tx.label}
           placeholderTextColor={cc.placeholder}
           style={[
             styles.input,
-            t.fieldValue,
+            ot.fieldValue,
             {
               color: colors.text,
               backgroundColor: c.fieldBg,
@@ -74,7 +72,7 @@ export default function UsernameField({ value, onChangeText, state }: Props) {
             },
           ]}
         />
-        <Text style={[t.fieldPrefix, styles.prefix, { color: c.fieldPrefix }]} pointerEvents="none">
+        <Text style={[ot.fieldPrefix, styles.prefix, { color: c.fieldPrefix }]} pointerEvents="none">
           @
         </Text>
         {state === 'available' && (

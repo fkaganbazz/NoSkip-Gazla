@@ -7,7 +7,7 @@ import Diken from '@/components/Diken';
 import { CheckIcon, MailIcon } from '@/components/icons';
 import OnboardingHeader from '@/components/OnboardingHeader';
 import { Button, Chip, TextField, ToastHost, useToast } from '@/components/ui';
-import { legalLinks, type LegalLink as LegalLinkKind } from '@/config/links';
+import { legalLinkFor, type LegalLink as LegalLinkKind } from '@/config/links';
 import {
   isCancelledError,
   type OAuthProvider,
@@ -19,8 +19,9 @@ import { errorMessage } from '@/features/onboarding/logic';
 import { useOnboarding } from '@/features/onboarding/OnboardingProvider';
 import { AppleSignInButton, GoogleSignInButton } from '@/features/onboarding/ProviderButtons';
 import StepScreen, { StepIntro } from '@/features/onboarding/StepScreen';
+import { useLanguage, useT, type Messages } from '@/i18n';
 import { typography, useTheme } from '@/theme';
-import { onboardingColors, onboardingMetrics as m, onboardingTypography as t } from '@/theme/onboarding';
+import { onboardingColors, onboardingMetrics as m, onboardingTypography as ot } from '@/theme/onboarding';
 
 // Hesabını aç — design/SignIn.dc.html (adım 2/4, yarım). Apple, Google (resmi butonlar, ProviderButtons) ya da
 // e-posta bağlantısı. Oturum açılınca (onboarding)/_layout profil adımına geçirir. Giriş penceresini kapatmak hata
@@ -28,6 +29,7 @@ import { onboardingColors, onboardingMetrics as m, onboardingTypography as t } f
 
 export default function SignInScreen() {
   const router = useRouter();
+  const t = useT();
   const { colors, scheme } = useTheme();
   const c = onboardingColors[scheme];
   const { pickedTemplateId } = useOnboarding();
@@ -53,7 +55,7 @@ export default function SignInScreen() {
     providerSignIn.mutate(provider, {
       // Kullanıcı pencereyi kapattı: sonuç 'cancelled' (ya da CANCELLED kodlu hata) — sessiz
       onError: (e) => {
-        if (!isCancelledError(e)) toast.show({ message: errorMessage(e), kind: 'info' });
+        if (!isCancelledError(e)) toast.show({ message: errorMessage(e, t), kind: 'info' });
       },
       onSettled: () => setPendingProvider(null),
     });
@@ -64,7 +66,7 @@ export default function SignInScreen() {
     setEmailSent(false);
     emailSignIn.mutate(email.trim(), {
       onSuccess: () => setEmailSent(true),
-      onError: (e) => setError(errorMessage(e)),
+      onError: (e) => setError(errorMessage(e, t)),
     });
   };
 
@@ -80,7 +82,7 @@ export default function SignInScreen() {
             {emailOpen ? (
               <>
                 <TextField
-                  label="E-posta adresin"
+                  label={t.auth.signIn.emailLabel}
                   value={email}
                   onChangeText={(v) => {
                     setEmail(v);
@@ -93,16 +95,16 @@ export default function SignInScreen() {
                   textContentType="emailAddress"
                   returnKeyType="send"
                   onSubmitEditing={sendEmail}
-                  hint={emailSent ? 'Giriş bağlantısını e-postana gönderdik. Bağlantıyı bu cihazda açınca devam edersin.' : null}
+                  hint={emailSent ? t.auth.signIn.emailSent : null}
                 />
                 <Button
-                  title="Bağlantı gönder"
+                  title={t.auth.signIn.sendLink}
                   onPress={sendEmail}
                   loading={emailSignIn.isPending}
                   disabled={!email.trim()}
                 />
                 <Button
-                  title="Vazgeç"
+                  title={t.common.cancel}
                   variant="text"
                   onPress={() => {
                     setEmailOpen(false);
@@ -124,7 +126,7 @@ export default function SignInScreen() {
                   disabled={busy && pendingProvider !== 'google'}
                 />
                 <Button
-                  title="E-posta ile devam et"
+                  title={t.auth.signIn.continueWithEmail}
                   variant="text"
                   disabled={busy}
                   icon={<MailIcon color={colors.text} size={m.mailIconSize} strokeWidth={m.mailIconStroke} />}
@@ -140,10 +142,8 @@ export default function SignInScreen() {
                 {error}
               </Text>
             )}
-            <Text style={[t.legal, styles.legal, { color: c.legalText }]}>
-              Devam ederek <LegalLink kind="terms">Kullanım Koşulları</LegalLink>'nı ve{' '}
-              <LegalLink kind="privacy">Gizlilik Politikası</LegalLink>'nı kabul edersin. Verilerini nasıl işlediğimizi{' '}
-              <LegalLink kind="kvkk">KVKK Aydınlatma Metni</LegalLink>'nde anlatıyoruz.
+            <Text style={[ot.legal, styles.legal, { color: c.legalText }]}>
+              <LegalText template={t.auth.signIn.legal} labels={t.auth.signIn.legalLinks} />
             </Text>
           </>
         }>
@@ -155,7 +155,7 @@ export default function SignInScreen() {
             // Seçilen challenge: yeşil durum çipi, solda tikli yeşil nokta (SignIn.dc.html)
             <Chip
               tone="success"
-              label={`${picked.title} · ${picked.defaultDurationDays} gün`}
+              label={`${picked.title} · ${t.common.days(picked.defaultDurationDays)}`}
               numberOfLines={1}
               icon={
                 <View style={[styles.chipDot, { backgroundColor: colors.action }]}>
@@ -166,11 +166,7 @@ export default function SignInScreen() {
           )}
         </View>
 
-        <StepIntro
-          marginTop={m.signInIntroMarginTop}
-          title="Serin kaybolmasın, hesabını aç"
-          body="Arkadaşların seni bulabilsin. Telefon değiştirsen de serin ve bahçen seninle gelsin."
-        />
+        <StepIntro marginTop={m.signInIntroMarginTop} title={t.auth.signIn.title} body={t.auth.signIn.body} />
       </StepScreen>
       {/* Sağlayıcı hatası: ekranın altında, yasal metnin üzerinde (giriş butonlarını örtmez) */}
       <ToastHost toast={toast} />
@@ -178,16 +174,43 @@ export default function SignInScreen() {
   );
 }
 
-/** Yasal metindeki bağlantı: altı çizili, uygulama içi tarayıcıda açılır */
+type LegalTextLink = keyof Messages['auth']['signIn']['legalLinks'];
+const LEGAL_TEXT_LINKS: readonly string[] = ['terms', 'privacy', 'kvkk'] satisfies LegalTextLink[];
+const isLegalTextLink = (value: string): value is LegalTextLink => LEGAL_TEXT_LINKS.includes(value);
+
+/**
+ * Yasal metin: sözlükteki `{terms}`, `{privacy}`, `{kvkk}` yer tutucuları bağlantıya çevrilir (cümle içindeki sıra
+ * dile göre değişir).
+ */
+function LegalText({ template, labels }: { template: string; labels: Record<LegalTextLink, string> }) {
+  // split yakalanan grubu tek sıralarda döndürür: ["Devam ederek ", "terms", "'nı ve ", "privacy", …]
+  const parts = template.split(/\{(\w+)\}/);
+  return (
+    <>
+      {parts.map((part, i) =>
+        i % 2 === 1 && isLegalTextLink(part) ? (
+          <LegalLink key={i} kind={part}>
+            {labels[part]}
+          </LegalLink>
+        ) : (
+          part
+        ),
+      )}
+    </>
+  );
+}
+
+/** Yasal metindeki bağlantı: altı çizili, uygulama dilindeki sayfa uygulama içi tarayıcıda açılır */
 function LegalLink({ kind, children }: { kind: LegalLinkKind; children: ReactNode }) {
   const { scheme } = useTheme();
+  const language = useLanguage();
   return (
     <Text
       accessibilityRole="link"
       onPress={() => {
-        WebBrowser.openBrowserAsync(legalLinks[kind]).catch(() => {});
+        WebBrowser.openBrowserAsync(legalLinkFor(kind, language)).catch(() => {});
       }}
-      style={[t.legalLink, { color: onboardingColors[scheme].legalLink }]}>
+      style={[ot.legalLink, { color: onboardingColors[scheme].legalLink }]}>
       {children}
     </Text>
   );

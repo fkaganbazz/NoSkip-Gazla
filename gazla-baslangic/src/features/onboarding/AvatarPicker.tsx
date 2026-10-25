@@ -3,8 +3,9 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { CameraIcon } from '@/components/icons';
 import { Avatar, IconButton } from '@/components/ui';
+import { useT } from '@/i18n';
 import { componentColors, componentMetrics as cm, typography, useTheme } from '@/theme';
-import { onboardingMetrics as m, onboardingTypography as t } from '@/theme/onboarding';
+import { onboardingMetrics as m, onboardingTypography as ot } from '@/theme/onboarding';
 
 type Props = {
   name: string;
@@ -16,6 +17,7 @@ type Props = {
 // Fotoğraf isteğe bağlı; seçilen dosya profil tamamlanınca yüklenir.
 export default function AvatarPicker({ name, uri, onChange }: Props) {
   const { colors, scheme } = useTheme();
+  const t = useT();
   const camera = cm.cameraBadge;
 
   const pick = async () => {
@@ -38,7 +40,7 @@ export default function AvatarPicker({ name, uri, onChange }: Props) {
           self
           url={uri}
           size={m.avatarSize}
-          accessibilityLabel="Profil fotoğrafın"
+          accessibilityLabel={t.onboarding.profile.avatar.label}
           decorative={!uri}
         />
         {/* Kamera rozeti: dış 36 (3 px ekran zemini kenarı dahil), dokunma alanı 44 */}
@@ -50,14 +52,14 @@ export default function AvatarPicker({ name, uri, onChange }: Props) {
           iconSize={camera.iconSize}
           iconStrokeWidth={camera.iconStroke}
           iconColor={componentColors[scheme].cameraBadgeIcon}
-          accessibilityLabel={uri ? 'Profil fotoğrafını değiştir' : 'Profil fotoğrafı ekle'}
+          accessibilityLabel={uri ? t.onboarding.profile.avatar.change : t.onboarding.profile.avatar.add}
           onPress={pick}
           style={styles.camera}
         />
       </View>
       <View style={styles.texts}>
-        <Text style={[typography.cardTitle, { color: colors.text }]}>Profil fotoğrafı</Text>
-        <Text style={[t.avatarNote, { color: colors.textSecondary }]}>İstersen sonra da ekleyebilirsin.</Text>
+        <Text style={[typography.cardTitle, { color: colors.text }]}>{t.onboarding.profile.avatar.title}</Text>
+        <Text style={[ot.avatarNote, { color: colors.textSecondary }]}>{t.onboarding.profile.avatar.note}</Text>
       </View>
     </View>
   );

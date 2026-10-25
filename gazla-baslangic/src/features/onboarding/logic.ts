@@ -1,4 +1,5 @@
-import { ApiError, type AuthStatus, type ChallengeCategory, type Template } from '@/data';
+import { ApiError, type AuthStatus, type Template } from '@/data';
+import type { Messages } from '@/i18n';
 
 /** (onboarding) grubundaki ekranlar (dosya adları) */
 export type OnboardingScreen =
@@ -86,19 +87,9 @@ export function onboardingRedirect({
   }
 }
 
-/** Kategori adları (Explore.dc.html çip listesi) */
-export const categoryLabels: Record<ChallengeCategory, string> = {
-  detox: 'Detoks',
-  social_courage: 'Sosyal cesaret',
-  sport: 'Spor',
-  food_drink: 'Yeme-içme',
-  reading: 'Okuma',
-  money: 'Para',
-  quirky: 'Tuhaf',
-};
-
-/** "Yeme-içme · 7 gün" */
-export const templateMeta = (t: Template) => `${categoryLabels[t.category]} · ${t.defaultDurationDays} gün`;
+/** "Yeme-içme · 7 gün" (kategori adları Explore.dc.html çip listesiyle aynı; sözlükte `onboarding.categories`) */
+export const templateMeta = (t: Messages, template: Template) =>
+  `${t.onboarding.categories[template.category]} · ${t.common.days(template.defaultDurationDays)}`;
 
 /** Kullanıcı adı sunucuya bu haliyle gider (baştaki @ ve büyük harf atılır) */
 export const normalizeUsername = (value: string) => value.trim().replace(/^@/, '').toLowerCase();
@@ -109,9 +100,9 @@ export function birthYearOptions(now = new Date()) {
   return Array.from({ length: 101 }, (_, i) => current - i);
 }
 
-/** Hata metni: ApiError zaten Türkçe kullanıcı metni */
-export const errorMessage = (error: unknown) =>
-  error instanceof ApiError ? error.message : 'Bir şeyler ters gitti. Bağlantını kontrol edip tekrar dene.';
+/** Hata metni: ApiError zaten kullanıcı metni; değilse genel hata */
+export const errorMessage = (error: unknown, t: Messages) =>
+  error instanceof ApiError ? error.message : t.onboarding.genericError;
 
 /** Cihazın saat dilimi (yerel gün hesabı sunucuda bu dilime göre yapılır) */
 export function deviceTimezone() {

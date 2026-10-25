@@ -11,6 +11,7 @@ import { useOnboarding } from '@/features/onboarding/OnboardingProvider';
 import StepScreen, { StepIntro } from '@/features/onboarding/StepScreen';
 import { useDebouncedValue } from '@/features/onboarding/useDebouncedValue';
 import UsernameField, { type UsernameState } from '@/features/onboarding/UsernameField';
+import { useLanguage, useT } from '@/i18n';
 import { typography, useTheme } from '@/theme';
 import { onboardingMetrics as m } from '@/theme/onboarding';
 
@@ -21,6 +22,8 @@ import { onboardingMetrics as m } from '@/theme/onboarding';
 // 13 yaş altı kaydı sunucu reddeder; mesajı (nötr, yaş sınırını söylemez) olduğu gibi gösterilir.
 export default function ProfileScreen() {
   const { colors } = useTheme();
+  const t = useT();
+  const language = useLanguage();
   const { status } = useAuth();
   const { start } = useOnboarding();
   // create: profili tamamla, update: fotoğrafı yükle
@@ -68,10 +71,11 @@ export default function ProfileScreen() {
         displayName: name.trim(),
         birthYear,
         timezone: deviceTimezone(),
-        locale: 'tr',
+        // Sunucudaki metinler (bildirimler) uygulama diliyle
+        locale: language,
       });
     } catch (e) {
-      setError(errorMessage(e));
+      setError(errorMessage(e, t));
       return;
     }
     // Fotoğraf isteğe bağlı: yüklenemezse akış durmaz, sonra Ayarlar'dan eklenebilir
@@ -88,7 +92,7 @@ export default function ProfileScreen() {
             </Text>
           )}
           <Button
-            title="Devam"
+            title={t.common.continue}
             onPress={submit}
             disabled={!canSubmit && !finishing}
             loading={create.isPending || finishing}
@@ -102,13 +106,13 @@ export default function ProfileScreen() {
           if (!signOut.isPending && !finishing) signOut.mutate();
         }}
       />
-      <StepIntro title="Seni nasıl çağıralım?" body="Arkadaşların seni kullanıcı adınla bulur." />
+      <StepIntro title={t.onboarding.profile.title} body={t.onboarding.profile.body} />
 
       <AvatarPicker name={name} uri={avatarUri} onChange={setAvatarUri} />
 
       <View style={styles.fields}>
         <TextField
-          label="Adın"
+          label={t.onboarding.profile.nameLabel}
           value={name}
           onChangeText={setName}
           autoCapitalize="words"

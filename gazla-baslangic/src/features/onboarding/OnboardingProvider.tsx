@@ -18,6 +18,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import { takePendingInvite, useAuth, useInvite, useLeaveChallenge } from '@/data';
+import { getT } from '@/i18n';
 
 import { errorMessage, type OnboardingFlow } from './logic';
 
@@ -88,7 +89,8 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
           createdFor.current = null;
           setJoinedViaInvite(true);
         } catch (e) {
-          setInviteError(`Davete katılamadın: ${errorMessage(e)}`);
+          const t = getT();
+          setInviteError(t.onboarding.inviteJoinFailed(errorMessage(e, t)));
         }
       }
       setInviteCheck('done');

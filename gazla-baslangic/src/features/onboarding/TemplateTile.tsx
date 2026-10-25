@@ -4,8 +4,9 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { CategoryTile } from '@/components/CategoryTile';
 import { CheckIcon } from '@/components/icons';
 import type { Template } from '@/data';
+import { useT } from '@/i18n';
 import { borderWidth, typography, useTheme } from '@/theme';
-import { onboardingColors, onboardingMetrics as m, onboardingTypography as t } from '@/theme/onboarding';
+import { onboardingColors, onboardingMetrics as m, onboardingTypography as ot } from '@/theme/onboarding';
 
 import { templateMeta } from './logic';
 
@@ -19,8 +20,9 @@ type Props = {
 // yeşil halka ve sağ üstte tik.
 function TemplateTile({ template, selected, onPick }: Props) {
   const { colors, scheme } = useTheme();
+  const t = useT();
   const c = onboardingColors[scheme];
-  const meta = templateMeta(template);
+  const meta = templateMeta(t, template);
 
   const shadow = selected
     ? `0 0 0 ${m.tileRing}px ${c.tileSelected}`
@@ -46,7 +48,7 @@ function TemplateTile({ template, selected, onPick }: Props) {
         },
       ]}>
       <CategoryTile icon={template.icon} tint={template.tint} size={36} />
-      <Text numberOfLines={3} style={[t.tileTitle, styles.title, { color: colors.text }]}>
+      <Text numberOfLines={3} style={[ot.tileTitle, styles.title, { color: colors.text }]}>
         {template.title}
       </Text>
       <Text numberOfLines={1} style={[typography.meta, styles.meta, { color: colors.textSecondary }]}>
