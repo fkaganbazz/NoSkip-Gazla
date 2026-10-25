@@ -11,7 +11,7 @@ import { useOnboarding } from '@/features/onboarding/OnboardingProvider';
 import StepScreen, { StepIntro } from '@/features/onboarding/StepScreen';
 import { useDebouncedValue } from '@/features/onboarding/useDebouncedValue';
 import UsernameField, { type UsernameState } from '@/features/onboarding/UsernameField';
-import { useLanguage, useT } from '@/i18n';
+import { useT } from '@/i18n';
 import { typography, useTheme } from '@/theme';
 import { onboardingMetrics as m } from '@/theme/onboarding';
 
@@ -23,7 +23,6 @@ import { onboardingMetrics as m } from '@/theme/onboarding';
 export default function ProfileScreen() {
   const { colors } = useTheme();
   const t = useT();
-  const language = useLanguage();
   const { status } = useAuth();
   const { start } = useOnboarding();
   // create: profili tamamla, update: fotoğrafı yükle
@@ -71,8 +70,6 @@ export default function ProfileScreen() {
         displayName: name.trim(),
         birthYear,
         timezone: deviceTimezone(),
-        // Sunucudaki metinler (bildirimler) uygulama diliyle
-        locale: language,
       });
     } catch (e) {
       setError(errorMessage(e, t));

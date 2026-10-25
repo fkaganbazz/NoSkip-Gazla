@@ -117,12 +117,12 @@ export const settings: typeof tr = {
         title: 'Diken',
         body: "The day's almost over and 2 tasks are left. I'm getting thirsty here.",
       },
-      hype: { when: 'A friend hyped you up', title: 'Selin hyped you up', body: '"We\'re finishing this together"' },
-      roast: { when: 'A friend roasted you', title: 'Ece roasted you', body: '"Even a cactus grows faster than you"' },
+      hype: { when: 'A friend hyped you up', title: 'Selin hyped you up', body: '"We\'ll finish together"' },
+      roast: { when: 'A friend roasted you', title: 'Ece roasted you', body: '"Even cacti grow faster than you"' },
       finished: {
         when: 'A friend finished a challenge',
         title: 'Mert finished',
-        body: '10 days no sugar, done. Want to send congrats?',
+        body: '10-day sugar detox, done. Want to send congrats?',
       },
       streakLost: {
         when: 'Streak lost (next morning 09:00)',

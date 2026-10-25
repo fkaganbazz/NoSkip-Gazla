@@ -126,8 +126,7 @@ export type CompleteProfileInput = {
   displayName: string;
   birthYear: number;
   timezone: string;
-  /** @deprecated Yok sayılır: sunucuya o anki uygulama dili yazılır (`getLanguage()`) */
-  locale?: Locale;
+  // Dil gönderilmez: veri katmanı o anki uygulama dilini yazar (`getLanguage()`)
 };
 
 // Bugün ve seri (my_today, my_streak, my_pending_rescues, my_recent_days) ------------------------

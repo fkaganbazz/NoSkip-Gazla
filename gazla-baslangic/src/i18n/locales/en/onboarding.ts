@@ -57,7 +57,7 @@ export const onboarding: typeof tr = {
     allow: 'Allow notifications',
     notNow: 'Not now',
     previewTime: '9:30 PM',
-    previewBody: "Day's almost over and 2 tasks are still waiting. I'm thirsty over here.",
+    previewBody: "The day's almost over and 2 tasks are left. I'm getting thirsty here.",
     previewA11y: (body) => `Sample notification: Diken, ${body}`,
   },
 
