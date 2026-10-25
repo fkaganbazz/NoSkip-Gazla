@@ -2,11 +2,11 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { Avatar, IconButton } from '@/components/ui';
 import type { Profile } from '@/data';
+import { useT } from '@/i18n';
 import { typography, useTheme } from '@/theme';
 import { gardenMetrics as m } from '@/theme/garden';
 
 import { GearIcon } from './icons';
-import { possessive } from './logic';
 
 type Props = {
   profile: Profile;
@@ -16,14 +16,15 @@ type Props = {
 // Profil satırı: avatar, "Deniz'in bahçesi", kullanıcı adı ve ayarlar (Garden.dc.html).
 export default function GardenHeader({ profile, onSettings }: Props) {
   const { colors } = useTheme();
-  const sub = `@${profile.username} · Sert mod ${profile.harshMode ? 'açık' : 'kapalı'}`;
+  const t = useT();
+  const sub = t.garden.header.sub(profile.username, profile.harshMode);
 
   return (
     <View style={styles.row}>
       <Avatar name={profile.displayName} tint={profile.avatarTint} self url={profile.avatarUrl} size={m.avatarSize} />
       <View style={styles.texts}>
         <Text accessibilityRole="header" numberOfLines={2} style={[typography.screenTitle, { color: colors.text }]}>
-          {`${possessive(profile.displayName)} bahçesi`}
+          {t.garden.header.title(profile.displayName)}
         </Text>
         <Text numberOfLines={1} style={[typography.caption, { color: colors.textSecondary }]}>
           {sub}
@@ -31,7 +32,7 @@ export default function GardenHeader({ profile, onSettings }: Props) {
       </View>
       <IconButton
         icon={GearIcon}
-        accessibilityLabel="Ayarlar"
+        accessibilityLabel={t.common.settings}
         onPress={onSettings}
         iconStrokeWidth={m.settingsIconStrokeWidth}
       />

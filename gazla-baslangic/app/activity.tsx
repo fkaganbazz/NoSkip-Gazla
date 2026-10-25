@@ -27,7 +27,7 @@ import {
 } from '@/data';
 import ActivityRow, { type ActivityActions } from '@/features/activity/ActivityRow';
 import { groupByDay } from '@/features/activity/logic';
-import { toDative } from '@/features/friends/names';
+import { useT } from '@/i18n';
 import { componentTypography, layout, radius, typography, useTheme } from '@/theme';
 import { socialMetrics as m } from '@/theme/social';
 
@@ -39,6 +39,7 @@ const LOAD_MORE_THRESHOLD = 400;
 // "Tümü okundu" hepsini okundu yapar; "Tebrik et" hazır gaz mesajını sayfa açmadan gönderir.
 export default function ActivityScreen() {
   const { colors } = useTheme();
+  const t = useT();
   const router = useRouter();
   const toast = useToast();
 
@@ -59,7 +60,7 @@ export default function ActivityScreen() {
   const items = useMemo(() => activity.data?.pages.flatMap((p) => p.items) ?? [], [activity.data]);
   // Zaman etiketleri veri her geldiğinde yeniden hesaplanır
   const now = useMemo(() => new Date(activity.dataUpdatedAt || Date.now()), [activity.dataUpdatedAt]);
-  const groups = useMemo(() => groupByDay(items, now), [items, now]);
+  const groups = useMemo(() => groupByDay(items, now, t), [items, now, t]);
   // Okunmamış sayısı sunucudan (yüklenmemiş sayfalardakiler de); gelene kadar yüklenenlerden
   const unread = unreadCount.data ?? items.filter((a) => !a.readAt).length;
 
@@ -95,9 +96,9 @@ export default function ActivityScreen() {
         onSuccess: (sent) => {
           setCongratulated((s) => ({ ...s, [item.id]: sent.id }));
           toast.show({
-            message: `${toDative(actor.displayName)} tebrik gönderildi`,
+            message: t.activity.congratsSent(actor.displayName),
             action: {
-              label: 'Geri al',
+              label: t.common.undo,
               onPress: () =>
                 poke.undo(sent.id, {
                   onSuccess: () =>
@@ -132,7 +133,7 @@ export default function ActivityScreen() {
   // Metin buton: 44 yükseklik, 14/800 yeşil (okunmamış yokken pasif gri)
   const markAll = (
     <Button
-      title="Tümü okundu"
+      title={t.activity.markAllRead}
       variant="text"
       size="sm"
       color={unread > 0 ? colors.actionText : undefined}
@@ -145,7 +146,7 @@ export default function ActivityScreen() {
   const footer = () => {
     if (isFetchingNextPage) {
       return (
-        <View style={styles.more} accessibilityLabel="Daha eski bildirimler yükleniyor">
+        <View style={styles.more} accessibilityLabel={t.activity.loadingMore}>
           <ActivityIndicator color={colors.action} />
         </View>
       );
@@ -153,8 +154,8 @@ export default function ActivityScreen() {
     if (isFetchNextPageError) {
       return (
         <View style={styles.more}>
-          <Text style={[typography.meta, { color: colors.textBody }]}>Daha eskiler yüklenemedi.</Text>
-          <Button title="Tekrar dene" variant="text" size="sm" onPress={() => fetchNextPage()} />
+          <Text style={[typography.meta, { color: colors.textBody }]}>{t.activity.loadMoreFailed}</Text>
+          <Button title={t.common.retry} variant="text" size="sm" onPress={() => fetchNextPage()} />
         </View>
       );
     }
@@ -167,7 +168,7 @@ export default function ActivityScreen() {
     if (items.length === 0) {
       return (
         <Text style={[typography.body, styles.empty, { color: colors.textBody }]}>
-          Henüz bir hareket yok. Arkadaşların seni dürttüğünde ya da davet ettiğinde burada görünür.
+          {t.activity.empty}
         </Text>
       );
     }
@@ -207,7 +208,7 @@ export default function ActivityScreen() {
         onContentSizeChange={(_, height) => setContent({ height, items: items.length })}
         onLayout={(e) => setViewportHeight(e.nativeEvent.layout.height)}
         refreshControl={<RefreshControl refreshing={activity.isRefetching && !isFetchingNextPage} onRefresh={() => activity.refetch()} />}>
-        <ScreenHeader title="Aktivite" trailing={markAll} />
+        <ScreenHeader title={t.activity.title} trailing={markAll} />
         {error && (
           <Text
             accessibilityLiveRegion="polite"

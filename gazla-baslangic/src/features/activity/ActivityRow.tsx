@@ -6,6 +6,7 @@ import { FriendRowButton } from '@/components/FriendRow';
 import { DikenFaceIcon, MessageIcon, StarIcon } from '@/components/icons';
 import SpeechBubble from '@/components/SpeechBubble';
 import { useMyMembership, useRespondToInvite, type ActivityItem } from '@/data';
+import { useT } from '@/i18n';
 import { borderWidth, cardColors, cardTypography, useTheme } from '@/theme';
 import { socialColors, socialMetrics as m, socialTypography } from '@/theme/social';
 
@@ -40,9 +41,11 @@ type Props = {
 // aksiyon (Karşılık ver, Tebrik et). Arkadaşlık isteği ve açık challenge daveti her zaman butonlu.
 export default function ActivityRow({ item, now, rich, divider, actions }: Props) {
   const { colors, scheme } = useTheme();
+  const t = useT();
+  const a = t.activity.actions;
   const c = socialColors[scheme];
   const actor = item.actor;
-  const text = activityText(item);
+  const text = activityText(item, t);
   const poke = isPoke(item);
   // Challenge davetinde üyelik durumu: hâlâ "invited" ise Katıl / Reddet
   const inviteId = item.kind === 'challenge_invite' ? (item.challengeId ?? undefined) : undefined;
@@ -78,19 +81,19 @@ export default function ActivityRow({ item, now, rich, divider, actions }: Props
     action = (
       <View style={styles.buttons}>
         <FriendRowButton
-          title="Kabul et"
+          title={t.common.accept}
           variant="action"
           loading={actions.busyFriendshipId === friendshipId}
           onPress={() => actions.onAccept(friendshipId)}
-          accessibilityLabel={`${actor.displayName} isteğini kabul et`}
+          accessibilityLabel={a.acceptLabel(actor.displayName)}
           wide
         />
         <FriendRowButton
-          title="Sil"
+          title={t.common.delete}
           variant="muted"
           loading={actions.busyUserId === actor.id}
           onPress={() => actions.onDecline(actor.id)}
-          accessibilityLabel={`${actor.displayName} isteğini sil`}
+          accessibilityLabel={a.declineLabel(actor.displayName)}
           wide
         />
       </View>
@@ -100,10 +103,10 @@ export default function ActivityRow({ item, now, rich, divider, actions }: Props
   } else if (rich && actor && poke) {
     action = (
       <FriendRowButton
-        title="Karşılık ver"
+        title={a.reply}
         variant="ink"
         onPress={() => actions.onReply(actor.id)}
-        accessibilityLabel={`${actor.displayName} kişisine karşılık ver`}
+        accessibilityLabel={a.replyLabel(actor.displayName)}
         wide
         style={styles.alignStart}
       />
@@ -112,12 +115,12 @@ export default function ActivityRow({ item, now, rich, divider, actions }: Props
     const sent = !!actions.congratulatedIds[item.id];
     action = (
       <FriendRowButton
-        title={sent ? 'Tebrik edildi' : 'Tebrik et'}
+        title={sent ? a.congratsDone : a.congrats}
         variant="hype"
         onPress={() => actions.onCongrats(item)}
         loading={actions.congratsBusyId === item.id}
         disabled={sent}
-        accessibilityLabel={sent ? `${actor.displayName} tebrik edildi` : `${actor.displayName} kişisini tebrik et`}
+        accessibilityLabel={sent ? a.congratsDoneLabel(actor.displayName) : a.congratsLabel(actor.displayName)}
         wide
         style={styles.alignStart}
       />
@@ -133,7 +136,7 @@ export default function ActivityRow({ item, now, rich, divider, actions }: Props
       <View style={styles.titleRow}>
         <Text style={[socialTypography.activityTitle, styles.title, { color: colors.text }]}>{text.title}</Text>
         <Text style={[cardTypography.rowSub, styles.time, { color: colors.textSecondary }]}>
-          {timeLabel(item.createdAt, now)}
+          {timeLabel(item.createdAt, now, t)}
         </Text>
       </View>
       {showBubble ? (
@@ -156,7 +159,7 @@ export default function ActivityRow({ item, now, rich, divider, actions }: Props
     <>
       {avatar}
       {content}
-      {!item.readAt && <View accessibilityLabel="Okunmadı" style={[styles.dot, { backgroundColor: c.unreadDot }]} />}
+      {!item.readAt && <View accessibilityLabel={t.activity.unread} style={[styles.dot, { backgroundColor: c.unreadDot }]} />}
     </>
   );
 
@@ -178,12 +181,13 @@ export default function ActivityRow({ item, now, rich, divider, actions }: Props
 function InviteActions({ challengeId }: { challengeId: string }) {
   const respond = useRespondToInvite();
   const { colors } = useTheme();
+  const t = useT();
   const busy = respond.isPending ? respond.variables?.accept : undefined;
   return (
     <View style={styles.actionColumn}>
       <View style={styles.buttons}>
         <FriendRowButton
-          title="Katıl"
+          title={t.common.join}
           variant="action"
           wide
           loading={busy === true}
@@ -191,7 +195,7 @@ function InviteActions({ challengeId }: { challengeId: string }) {
           onPress={() => respond.mutate({ challengeId, accept: true })}
         />
         <FriendRowButton
-          title="Reddet"
+          title={t.activity.actions.declineInvite}
           variant="muted"
           wide
           loading={busy === false}

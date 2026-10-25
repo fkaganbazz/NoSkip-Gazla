@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 
+import { useT } from '@/i18n';
 import { borderWidth, typography, useTheme } from '@/theme';
 import { gardenMetrics as m, gardenTypography } from '@/theme/garden';
 
@@ -12,11 +13,12 @@ type Props = {
 // Üç istatistik kartı: aktif seri, tamamlanan, en uzun seri (Garden.dc.html). Sayılar sunucudan.
 export default function StatRow({ currentStreak, completed, longestStreak }: Props) {
   const { colors } = useTheme();
+  const t = useT();
   return (
     <View style={styles.row}>
-      <Stat value={currentStreak} label="Aktif seri" valueColor={colors.actionText} />
-      <Stat value={completed} label="Tamamlanan" valueColor={colors.text} />
-      <Stat value={longestStreak} label="En uzun seri" valueColor={colors.text} />
+      <Stat value={currentStreak} label={t.garden.stats.currentStreak} valueColor={colors.actionText} />
+      <Stat value={completed} label={t.garden.stats.completed} valueColor={colors.text} />
+      <Stat value={longestStreak} label={t.garden.stats.longestStreak} valueColor={colors.text} />
     </View>
   );
 }

@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { CategoryTile } from '@/components/CategoryTile';
 import { FriendList, FriendRowButton } from '@/components/FriendRow';
 import type { JoinableChallenge } from '@/data';
+import { useT } from '@/i18n';
 import { borderWidth, cardColors, cardTypography, useTheme } from '@/theme';
 import { socialMetrics as m } from '@/theme/social';
 
@@ -19,11 +20,12 @@ type Props = {
 // listesiyle aynı kart ve karo; ad + "7 gün · 2 kişi · yarın başlıyor", sağda "Katıl".
 export default function JoinableChallenges({ items, onJoin, joiningId }: Props) {
   const { colors, scheme } = useTheme();
+  const t = useT();
 
   return (
     <FriendList style={styles.card}>
       {items.map((item, i) => {
-        const sub = joinableSub(item);
+        const sub = joinableSub(item, t);
         return (
           <View
             key={item.challengeId}
@@ -43,12 +45,12 @@ export default function JoinableChallenges({ items, onJoin, joiningId }: Props) 
               </View>
             </View>
             <FriendRowButton
-              title="Katıl"
+              title={t.common.join}
               variant="action"
               onPress={() => onJoin(item)}
               loading={joiningId === item.challengeId}
               disabled={!!joiningId && joiningId !== item.challengeId}
-              accessibilityLabel={`${item.title} challenge'ına katıl`}
+              accessibilityLabel={t.profile.joinable.joinLabel(item.title)}
             />
           </View>
         );

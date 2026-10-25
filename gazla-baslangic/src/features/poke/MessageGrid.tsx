@@ -1,7 +1,9 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { CheckIcon } from '@/components/icons';
+import { pokeText } from '@/content/pokes';
 import type { PokeMessage } from '@/data';
+import { useLanguage } from '@/i18n';
 import { useTheme } from '@/theme';
 import { socialColors, socialMetrics as m, socialTypography } from '@/theme/social';
 
@@ -15,6 +17,7 @@ type Props = {
 // tasarımdaki <button> gibi: aynı satırdaki kısa metin dikeyde ortalı.
 export default function MessageGrid({ messages, selectedKey, onSelect }: Props) {
   const { colors, scheme } = useTheme();
+  const lang = useLanguage();
   const c = socialColors[scheme];
 
   // İkişerli satırlar: aynı satırdaki kartlar aynı yükseklikte
@@ -39,7 +42,9 @@ export default function MessageGrid({ messages, selectedKey, onSelect }: Props) 
                   { backgroundColor: colors.surface, borderColor: selected ? c.selectedBorder : colors.border },
                   pressed && !selected && { backgroundColor: colors.surfaceMuted },
                 ]}>
-                <Text style={[socialTypography.message, { color: colors.text }]}>{msg.text}</Text>
+                <Text style={[socialTypography.message, { color: colors.text }]}>
+                  {pokeText(msg.key, msg.tone, lang) ?? msg.text}
+                </Text>
                 {selected && (
                   <View style={[styles.badge, { backgroundColor: c.selectedBorder }]}>
                     <CheckIcon

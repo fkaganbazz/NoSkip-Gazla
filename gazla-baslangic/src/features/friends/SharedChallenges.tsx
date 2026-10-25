@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text } from 'react-native';
 import { CategoryTile } from '@/components/CategoryTile';
 import { FriendList } from '@/components/FriendRow';
 import type { FriendProfile } from '@/data';
+import { useT } from '@/i18n';
 import { borderWidth, cardColors, cardTypography, typography, useTheme } from '@/theme';
 import { socialMetrics as m } from '@/theme/social';
 
@@ -14,11 +15,12 @@ type Props = {
 // Ortak challenge listesi: renkli ikon karosu, ad, arkadaşın ilerlemesi "11/30" (FriendProfile.dc.html).
 export default function SharedChallenges({ items, onOpen }: Props) {
   const { colors, scheme } = useTheme();
+  const t = useT();
 
   return (
     <FriendList style={styles.card}>
       {items.map((item, i) => {
-        const progress = item.dayIndex === 0 ? 'Başlamadı' : `${item.daysDone}/${item.durationDays}`;
+        const progress = item.dayIndex === 0 ? t.profile.shared.notStarted : `${item.daysDone}/${item.durationDays}`;
         return (
           <Pressable
             key={item.challengeId}

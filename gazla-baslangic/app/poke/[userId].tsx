@@ -15,8 +15,8 @@ import {
   type PokeTone,
 } from '@/data';
 import { ShieldIcon } from '@/features/friends/icons';
-import { toAccusative, toDative } from '@/features/friends/names';
 import MessageGrid from '@/features/poke/MessageGrid';
+import { useT } from '@/i18n';
 import { componentMetrics as cm, componentTypography, typography, useTheme } from '@/theme';
 import { sheetDikenMetrics } from '@/theme/sheet';
 import { socialColors, socialMetrics as m, socialTypography } from '@/theme/social';
@@ -39,6 +39,7 @@ export default function PokeSheet() {
   const router = useRouter();
   const sheet = useRef<SheetHandle>(null);
   const { colors, scheme } = useTheme();
+  const t = useT();
   const c = socialColors[scheme];
 
   const friends = useFriendsToday();
@@ -86,25 +87,25 @@ export default function PokeSheet() {
 
   const body = () => {
     if (loading) return <LoadingState />;
-    if (!person) return <ErrorState message="Bu kişiyi şu an dürtemezsin." />;
+    if (!person) return <ErrorState message={t.poke.unavailable} />;
 
     const name = person.displayName;
     const doneToday = friend?.doneToday ?? null;
     const title =
-      doneToday === false ? `${name} bugün hâlâ yok` : doneToday === true ? `${name} bugünü tamamladı` : name;
+      doneToday === false ? t.poke.title.pending(name) : doneToday === true ? t.poke.title.done(name) : name;
     const sub = friend
-      ? [friend.sharedChallengeTitle, `${friend.streak} gün seri`].filter(Boolean).join(' · ')
+      ? [friend.sharedChallengeTitle, t.poke.streak(friend.streak)].filter(Boolean).join(' · ')
       : profile.data
-        ? `${profile.data.streak} gün seri`
+        ? t.poke.streak(profile.data.streak)
         : '';
     const note = !harsh
-      ? `${name} sert modu açmamış, sadece gaz verebilirsin.`
+      ? t.poke.note.harshOff(name)
       : activeTone === 'roast'
-        ? `${name} sert modu açtı, laf sokabilirsin.`
-        : 'Gaz mesajları herkese her zaman açık.';
+        ? t.poke.note.harshOn(name)
+        : t.poke.note.hypeAlways;
     const error = [poke.send.error, poke.undo.error].find((e) => e instanceof ApiError) as ApiError | undefined;
     const limitNote =
-      status.data?.remaining === 0 ? `Bugün ${toAccusative(name)} ${status.data.dailyLimit} kez dürttün, yarın yine dene.` : null;
+      status.data?.remaining === 0 ? t.poke.limitReached(name, status.data.dailyLimit) : null;
 
     return (
       <>
@@ -123,7 +124,7 @@ export default function PokeSheet() {
             </Text>
             {!!sub && <Text style={[typography.meta, { color: colors.textSecondary }]}>{sub}</Text>}
           </View>
-          <IconButton icon="close" accessibilityLabel="Kapat" onPress={close} />
+          <IconButton icon="close" accessibilityLabel={t.common.close} onPress={close} />
         </View>
 
         <View style={styles.segment}>
@@ -131,18 +132,18 @@ export default function PokeSheet() {
             size="lg"
             textSize="lg"
             role="tabs"
-            accessibilityLabel="Mesaj türü"
+            accessibilityLabel={t.poke.toneLabel}
             // Sert mod kapalıyken "Laf sok" pasif (soluk, basılamaz); nedeni alttaki açıklama satırında
             options={[
-              { value: 'hype', label: 'Gaz ver' },
-              { value: 'roast', label: 'Laf sok', disabled: !harsh },
+              { value: 'hype', label: t.common.hype },
+              { value: 'roast', label: t.common.roast, disabled: !harsh },
             ]}
             value={activeTone}
-            onChange={(t) => {
-              setTone(t);
+            onChange={(next) => {
+              setTone(next);
               setPickedKey(null);
             }}
-            selectedColor={(t) => (t === 'roast' ? c.roastText : colors.actionText)}
+            selectedColor={(value) => (value === 'roast' ? c.roastText : colors.actionText)}
           />
         </View>
 
@@ -168,15 +169,15 @@ export default function PokeSheet() {
           )}
           {sentId ? (
             <Toast
-              message={`${toDative(name)} gönderildi`}
+              message={t.poke.sent(name)}
               action={{
-                label: 'Geri al',
+                label: t.common.undo,
                 onPress: () => poke.undo(sentId, { onSuccess: () => setSentId(null) }),
               }}
             />
           ) : (
             <Button
-              title={`${toDative(name)} gönder`}
+              title={t.poke.send(name)}
               icon={(color) => <SendIcon color={color} size={cm.buttonIconSize} strokeWidth={cm.buttonIconStroke} />}
               loading={poke.send.isPending}
               disabled={!selectedKey || limitReached}
@@ -207,7 +208,7 @@ export default function PokeSheet() {
         <Diken mood="laf" stage="tam" size={sheetDikenMetrics.dikenSize} />
       </View>
       <SpeechBubble size="sm" tail="left" tailOffset={d.tailTop} shadow="none" style={styles.bubble}>
-        {harsh ? `${person.displayName} sert modu açmış. Acıma.` : `${person.displayName} sert modu açmamış. Gazla bari.`}
+        {harsh ? t.poke.diken.harshOn(person.displayName) : t.poke.diken.harshOff(person.displayName)}
       </SpeechBubble>
     </View>
   ) : null;
@@ -218,7 +219,7 @@ export default function PokeSheet() {
       onClose={leave}
       top={top}
       minHeight={m.sheetMinHeight}
-      accessibilityLabel={person ? `${person.displayName} için dürt` : 'Dürt'}>
+      accessibilityLabel={person ? t.poke.sheetLabel(person.displayName) : t.common.poke}>
       {body()}
     </Sheet>
   );

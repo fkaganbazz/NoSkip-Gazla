@@ -23,6 +23,7 @@ import { UserPlusIcon } from '@/features/friends/icons';
 import InviteCard from '@/features/friends/InviteCard';
 import { friendSub, groupFriends, personSub, searchTerm, useDebounced } from '@/features/friends/logic';
 import { shareFriendInvite } from '@/features/friends/share';
+import { useT } from '@/i18n';
 import { componentTypography, layout, typography, useTheme } from '@/theme';
 import { socialMetrics as m } from '@/theme/social';
 
@@ -31,6 +32,7 @@ import { socialMetrics as m } from '@/theme/social';
 // Hiç arkadaş yokken davet kartı büyür ("Henüz arkadaşın yok"). "Paylaş" sistem paylaşımını açar.
 export default function FriendsScreen() {
   const { colors } = useTheme();
+  const t = useT();
   const router = useRouter();
   const searchRef = useRef<TextInput>(null);
   const { profile } = useAuth();
@@ -59,8 +61,8 @@ export default function FriendsScreen() {
     | undefined;
 
   const onShare = async () => {
-    const result = await shareFriendInvite(profile?.username);
-    if (result === 'copied') toast.show({ message: 'Davet metni kopyalandı', kind: 'success' });
+    const result = await shareFriendInvite(t, profile?.username);
+    if (result === 'copied') toast.show({ message: t.friends.screen.inviteCopied, kind: 'success' });
   };
 
   const openProfile = (id: string) => router.push({ pathname: '/user/[id]', params: { id } });
@@ -72,7 +74,7 @@ export default function FriendsScreen() {
       key={r.id}
       divider={i < all.length - 1}
       person={r.person}
-      sub={personSub(r.person.username, r.mutualCount)}
+      sub={personSub(r.person.username, r.mutualCount, t)}
       action={{
         type: 'request',
         onAccept: r.direction === 'incoming' ? () => accept.mutate(r.id) : undefined,
@@ -88,10 +90,10 @@ export default function FriendsScreen() {
       key={f.id}
       divider={i < all.length - 1}
       onPress={() => openProfile(f.id)}
-      accessibilityLabel={`${f.displayName} profili`}
+      accessibilityLabel={t.friends.screen.profileLabel(f.displayName)}
       person={f}
       status={f.doneToday === true ? 'done' : f.doneToday === false ? 'pending' : null}
-      sub={friendSub(f)}
+      sub={friendSub(f, t)}
       action={
         f.doneToday === false
           ? { type: 'poke', onPress: () => openPoke(f.id) }
@@ -110,7 +112,7 @@ export default function FriendsScreen() {
         divider={i < all.length - 1}
         onPress={p.isFriend ? () => openProfile(p.id) : undefined}
         person={p}
-        sub={personSub(p.username, p.mutualCount)}
+        sub={personSub(p.username, p.mutualCount, t)}
         action={
           p.isFriend || incoming
             ? undefined
@@ -126,7 +128,7 @@ export default function FriendsScreen() {
         trailing={
           !p.isFriend && incoming ? (
             <FriendRowButton
-              title="Kabul et"
+              title={t.common.accept}
               variant="action"
               loading={accept.isPending && accept.variables === incoming.id}
               onPress={() => accept.mutate(incoming.id)}
@@ -151,7 +153,7 @@ export default function FriendsScreen() {
     const results = search.data ?? [];
     if (results.length === 0) {
       return (
-        <Text style={[typography.body, styles.status, { color: colors.textBody }]}>Bu kullanıcı adıyla kimse yok.</Text>
+        <Text style={[typography.body, styles.status, { color: colors.textBody }]}>{t.friends.screen.noResults}</Text>
       );
     }
     return <FriendList style={styles.list}>{results.map(resultRow)}</FriendList>;
@@ -177,10 +179,10 @@ export default function FriendsScreen() {
     }
     // Bölümler: istekler, bekleyenler, tamamlayanlar, bugün görevi olmayanlar (boşlar gösterilmez)
     const all: { key: string; label: string; tone: SectionLabelTone; rows: ReactNode[] }[] = [
-      { key: 'requests', label: 'İSTEKLER', tone: 'default', rows: requestList.map(requestRow) },
-      { key: 'pending', label: 'BUGÜN BEKLEYENLER', tone: 'orange', rows: groups.pending.map(friendRow) },
-      { key: 'done', label: 'BUGÜNÜ TAMAMLAYANLAR', tone: 'green', rows: groups.done.map(friendRow) },
-      { key: 'idle', label: 'BUGÜN GÖREVİ OLMAYANLAR', tone: 'default', rows: groups.idle.map(friendRow) },
+      { key: 'requests', label: t.friends.sections.requests, tone: 'default', rows: requestList.map(requestRow) },
+      { key: 'pending', label: t.friends.sections.pending, tone: 'orange', rows: groups.pending.map(friendRow) },
+      { key: 'done', label: t.friends.sections.done, tone: 'green', rows: groups.done.map(friendRow) },
+      { key: 'idle', label: t.friends.sections.idle, tone: 'default', rows: groups.idle.map(friendRow) },
     ];
     const sections = all.filter((s) => s.rows.length > 0);
     return (
@@ -216,14 +218,14 @@ export default function FriendsScreen() {
         }>
         <View style={styles.header}>
           <Text accessibilityRole="header" style={[typography.title1, { color: colors.text }]}>
-            Arkadaşlar
+            {t.friends.screen.title}
           </Text>
           <IconButton
             icon={UserPlusIcon}
             tone="ink"
             iconStrokeWidth={m.addIconStrokeWidth}
             onPress={() => searchRef.current?.focus()}
-            accessibilityLabel="Arkadaş ekle"
+            accessibilityLabel={t.friends.screen.addFriend}
           />
         </View>
 
@@ -231,7 +233,7 @@ export default function FriendsScreen() {
           ref={searchRef}
           value={query}
           onChangeText={setQuery}
-          placeholder="Kullanıcı adıyla ara"
+          placeholder={t.friends.screen.searchPlaceholder}
           autoCapitalize="none"
           style={styles.search}
         />

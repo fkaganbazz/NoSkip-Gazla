@@ -1,21 +1,13 @@
 /** Bahçem metin ve yerleşim kuralları — design/Garden.dc.html */
 import type { DikenGear, DikenMood, DikenStage } from '@/components/Diken';
 import type { Badge, GardenItem } from '@/data';
+import type { Messages } from '@/i18n';
 
-const BACK_VOWELS = 'aıou';
-const VOWELS = 'aeıioöuü';
-
-/** Türkçe tamlayan eki: Deniz'in, Can'ın, Ece'nin, Mert'in, Selin'in, Utku'nun */
-export function possessive(name: string) {
-  const lower = name.toLocaleLowerCase('tr');
-  const last = [...lower].reverse().find((ch) => VOWELS.includes(ch)) ?? 'e';
-  const vowel = BACK_VOWELS.includes(last) ? (last === 'o' || last === 'u' ? 'u' : 'ı') : last === 'ö' || last === 'ü' ? 'ü' : 'i';
-  const buffer = VOWELS.includes(lower.charAt(lower.length - 1)) ? 'n' : '';
-  return `${name}'${buffer}${vowel}n`;
-}
+// "Deniz'in bahçesi" tamlayan eki Türkçe sözlükte (locales/tr/garden.ts)
 
 /** Raf etiketi: "7 gün kahvesiz", "30 gün okuma" */
-export const plantLabel = (item: GardenItem) => `${item.durationDays} gün ${item.shortTitle ?? item.title}`;
+export const plantLabel = (item: GardenItem, t: Messages) =>
+  t.garden.shelves.plantLabel(item.durationDays, item.shortTitle ?? item.title);
 
 /** Raf sırası: en eski bitirilen solda, en yenisi "Sıradaki"nin yanında (my_garden yeniden eskiye döner) */
 export const gardenOrder = (items: GardenItem[]) => [...items].sort((a, b) => a.finishedAt.localeCompare(b.finishedAt));

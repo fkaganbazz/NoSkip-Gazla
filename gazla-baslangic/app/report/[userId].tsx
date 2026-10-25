@@ -6,8 +6,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ClockIcon } from '@/components/icons';
 import { Button, Checkbox, ScreenHeader, TextField } from '@/components/ui';
 import { useFriendProfile, useReport, type ReportReason, type ReportTarget } from '@/data';
-import { toAccusative } from '@/features/friends/names';
 import ReasonList from '@/features/report/ReasonList';
+import { useT } from '@/i18n';
 import { componentTypography, layout, typography, useTheme } from '@/theme';
 import { socialMetrics as m, socialTypography } from '@/theme/social';
 
@@ -41,6 +41,7 @@ export default function ReportScreen() {
   const params = useLocalSearchParams<Params>();
   const router = useRouter();
   const { colors } = useTheme();
+  const t = useT();
 
   const target = toTarget(params.target);
   const userId = params.userId;
@@ -61,15 +62,12 @@ export default function ReportScreen() {
   const title =
     target === 'user'
       ? name
-        ? `${name} hakkında ne oldu?`
-        : 'Ne oldu?'
+        ? t.report.question.user(name)
+        : t.report.question.generic
       : target === 'photo'
-        ? 'Bu fotoğrafta ne oldu?'
-        : "Bu challenge'da ne oldu?";
-  const intro =
-    target === 'user' && name
-      ? `Şikayetin gizli kalır. ${name} bunu kimin bildirdiğini görmez.`
-      : 'Şikayetin gizli kalır. Kimin bildirdiğini kimse görmez.';
+        ? t.report.question.photo
+        : t.report.question.challenge;
+  const intro = target === 'user' && name ? t.report.intro.named(name) : t.report.intro.generic;
 
   const onSubmit = () => {
     setSentName(name);
@@ -84,7 +82,7 @@ export default function ReportScreen() {
     });
   };
 
-  const header = <ScreenHeader title="Şikayet et" leading="close" onLeadingPress={close} size="compact" align="center" />;
+  const header = <ScreenHeader title={t.common.report} leading="close" onLeadingPress={close} size="compact" align="center" />;
 
   if (sent) {
     return (
@@ -93,19 +91,17 @@ export default function ReportScreen() {
           {header}
           <View style={styles.thanks}>
             <Text accessibilityRole="header" style={[socialTypography.reportTitle, { color: colors.text }]}>
-              Teşekkürler
+              {t.report.thanks.title}
             </Text>
-            <Text style={[typography.body, { color: colors.textBody }]}>
-              Şikayetin bize ulaştı. Ekibimiz 24 saat içinde inceleyecek.
-            </Text>
+            <Text style={[typography.body, { color: colors.textBody }]}>{t.report.thanks.body}</Text>
             {blocked && (
               <Text style={[typography.body, { color: colors.textBody }]}>
-                {sentName ? `${toAccusative(sentName)} engelledin.` : 'Bu kişiyi engelledin.'}
+                {sentName ? t.report.thanks.blocked(sentName) : t.report.thanks.blockedGeneric}
               </Text>
             )}
           </View>
           <View style={styles.footer}>
-            <Button title="Tamam" onPress={() => (blocked ? router.dismissTo('/friends') : close())} />
+            <Button title={t.common.done} onPress={() => (blocked ? router.dismissTo('/friends') : close())} />
           </View>
         </View>
       </SafeAreaView>
@@ -128,10 +124,10 @@ export default function ReportScreen() {
           <ReasonList value={reason} onChange={setReason} />
 
           <TextField
-            label="Ayrıntı ekle (isteğe bağlı)"
+            label={t.report.detailsLabel}
             value={details}
             onChangeText={setDetails}
-            placeholder="Ne olduğunu kısaca yaz"
+            placeholder={t.report.detailsPlaceholder}
             size="sm"
             multiline
             maxLength={DETAILS_MAX}
@@ -147,7 +143,7 @@ export default function ReportScreen() {
               style={styles.block}>
               <Checkbox checked={alsoBlock} />
               <Text style={[socialTypography.blockLabel, { color: colors.text }]}>
-                {name ? `${toAccusative(name)} de engelle` : 'Bu kişiyi de engelle'}
+                {name ? t.report.alsoBlock.named(name) : t.report.alsoBlock.generic}
               </Text>
             </Pressable>
           )}
@@ -155,7 +151,7 @@ export default function ReportScreen() {
           <View style={styles.note}>
             <ClockIcon color={colors.textSecondary} size={m.noteIconSize} strokeWidth={m.noteIconStrokeWidth} />
             <Text style={[typography.meta, styles.noteText, { color: colors.textBody }]}>
-              Ekibimiz şikayetleri 24 saat içinde inceler.
+              {t.report.reviewNote}
             </Text>
           </View>
 
@@ -167,7 +163,7 @@ export default function ReportScreen() {
                 {submit.error.message}
               </Text>
             )}
-            <Button title="Şikayeti gönder" variant="ink" onPress={onSubmit} loading={submit.isPending} />
+            <Button title={t.report.submit} variant="ink" onPress={onSubmit} loading={submit.isPending} />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

@@ -10,6 +10,7 @@ import GardenHeader from '@/features/garden/GardenHeader';
 import GardenShelves from '@/features/garden/GardenShelves';
 import { gardenOrder } from '@/features/garden/logic';
 import StatRow from '@/features/garden/StatRow';
+import { useT } from '@/i18n';
 import { layout, spacing, typography, useTheme } from '@/theme';
 import { gardenMetrics as m } from '@/theme/garden';
 
@@ -17,6 +18,7 @@ import { gardenMetrics as m } from '@/theme/garden';
 // my_badges (rozetler; ayrı yüklenir, hatası raflara dokunmaz).
 export default function GardenScreen() {
   const { colors } = useTheme();
+  const t = useT();
   const router = useRouter();
   const { profile } = useAuth();
   const garden = useGarden();
@@ -76,7 +78,7 @@ export default function GardenScreen() {
         />
         {items.length === 0 && (
           <Text style={[typography.body, styles.emptyText, { color: colors.textBody }]}>
-            Bitirdiğin her challenge rafına yeni bir kaktüs ekler.
+            {t.garden.shelves.empty}
           </Text>
         )}
 
@@ -85,7 +87,7 @@ export default function GardenScreen() {
         ) : (
           <View style={styles.badgesState}>
             {badges.isError ? (
-              <ErrorState message="Rozetler yüklenemedi." onRetry={() => badges.refetch()} />
+              <ErrorState message={t.garden.badges.loadFailed} onRetry={() => badges.refetch()} />
             ) : (
               <LoadingState />
             )}

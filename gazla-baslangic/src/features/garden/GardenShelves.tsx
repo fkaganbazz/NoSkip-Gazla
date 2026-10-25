@@ -4,6 +4,7 @@ import Diken from '@/components/Diken';
 import { flatShadowStyle } from '@/components/FlatShadow';
 import { AddIcon } from '@/components/icons';
 import type { GardenItem } from '@/data';
+import { useT } from '@/i18n';
 import { useTheme } from '@/theme';
 import { gardenColors, gardenMetrics as m, gardenTypography } from '@/theme/garden';
 
@@ -19,6 +20,7 @@ type Props = {
 // `items` raf sırasıyla (gardenOrder).
 export default function GardenShelves({ items, onOpen, onNext }: Props) {
   const { colors, scheme } = useTheme();
+  const t = useT();
   const c = gardenColors[scheme];
   const shelves = toShelves(items, m.perShelf);
   const looks = plantLooks(items);
@@ -37,7 +39,7 @@ export default function GardenShelves({ items, onOpen, onNext }: Props) {
                     <Pressable
                       onPress={onNext}
                       accessibilityRole="button"
-                      accessibilityLabel="Yeni challenge bul"
+                      accessibilityLabel={t.garden.shelves.findNew}
                       style={({ pressed }) => [styles.addTile, { borderColor: c.addTileBorder, opacity: pressed ? 0.7 : 1 }]}>
                       <AddIcon color={c.addTileIcon} size={m.addIconSize} strokeWidth={m.addIconStrokeWidth} />
                     </Pressable>
@@ -50,7 +52,7 @@ export default function GardenShelves({ items, onOpen, onNext }: Props) {
                   key={slot.challengeId}
                   onPress={() => onOpen(slot.challengeId)}
                   accessibilityRole="button"
-                  accessibilityLabel={`${slot.title}, tamamlandı`}
+                  accessibilityLabel={t.garden.shelves.plantA11y(slot.title)}
                   style={({ pressed }) => [styles.cell, pressed && { opacity: 0.8 }]}>
                   <Diken mood={look.mood} gear={look.gear} stage={slot.stage} size={m.plantSize} />
                 </Pressable>
@@ -68,7 +70,7 @@ export default function GardenShelves({ items, onOpen, onNext }: Props) {
                   importantForAccessibility="no"
                   accessibilityElementsHidden
                   style={[gardenTypography.plantLabel, styles.label, { color: next ? colors.actionText : c.plantLabel }]}>
-                  {slot === undefined ? '' : next ? 'Sıradaki' : plantLabel(slot)}
+                  {slot === undefined ? '' : next ? t.garden.shelves.next : plantLabel(slot, t)}
                 </Text>
               );
             })}

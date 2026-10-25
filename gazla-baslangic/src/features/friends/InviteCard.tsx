@@ -2,6 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import Diken from '@/components/Diken';
 import { FriendRowButton } from '@/components/FriendRow';
+import { useT } from '@/i18n';
 import { typography, useTheme } from '@/theme';
 import { socialColors, socialMetrics as m, socialTypography } from '@/theme/social';
 
@@ -17,14 +18,15 @@ type Props = {
 // "Arkadaşını davet et" yeşil kartı: metin, Paylaş butonu, sağ altta selam veren Diken (Friends.dc.html).
 export default function InviteCard({ onShare, expanded = false }: Props) {
   const { scheme } = useTheme();
+  const t = useT();
   const c = socialColors[scheme];
 
   const share = (
     <FriendRowButton
-      title="Paylaş"
+      title={t.common.share}
       variant="ink"
       onPress={onShare}
-      accessibilityLabel="Arkadaş davetini paylaş"
+      accessibilityLabel={t.friends.invite.shareLabel}
       size="lg"
       style={expanded ? styles.shareExpanded : styles.share}
     />
@@ -35,10 +37,10 @@ export default function InviteCard({ onShare, expanded = false }: Props) {
       <View style={[styles.card, styles.expanded, { backgroundColor: c.inviteCardBg }]}>
         <Diken mood="selam" stage="tam" size={m.inviteEmptyDikenSize} />
         <Text accessibilityRole="header" style={[typography.title2, styles.emptyTitle, { color: c.inviteTitle }]}>
-          Henüz arkadaşın yok
+          {t.friends.invite.emptyTitle}
         </Text>
         <Text style={[socialTypography.inviteSub, styles.emptySub, { color: c.inviteSub }]}>
-          Arkadaşını davet et ya da kullanıcı adıyla ara. Linkle gelen, doğrudan grubuna katılır.
+          {t.friends.invite.emptySub}
         </Text>
         {share}
       </View>
@@ -48,10 +50,8 @@ export default function InviteCard({ onShare, expanded = false }: Props) {
   return (
     <View style={[styles.card, styles.compact, { backgroundColor: c.inviteCardBg }]}>
       <View style={styles.texts}>
-        <Text style={[typography.cardTitle, { color: c.inviteTitle }]}>Arkadaşını davet et</Text>
-        <Text style={[socialTypography.inviteSub, { color: c.inviteSub }]}>
-          Linkle gelen, doğrudan grubuna katılır.
-        </Text>
+        <Text style={[typography.cardTitle, { color: c.inviteTitle }]}>{t.friends.invite.title}</Text>
+        <Text style={[socialTypography.inviteSub, { color: c.inviteSub }]}>{t.friends.invite.sub}</Text>
       </View>
       {share}
       <View style={styles.diken}>

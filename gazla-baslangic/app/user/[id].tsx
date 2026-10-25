@@ -15,9 +15,9 @@ import {
   type JoinableChallenge,
 } from '@/data';
 import { BlockIcon, FlagIcon, UserMinusIcon } from '@/features/friends/icons';
-import { toAccusative } from '@/features/friends/names';
 import JoinableChallenges from '@/features/friends/JoinableChallenges';
 import SharedChallenges from '@/features/friends/SharedChallenges';
+import { useT } from '@/i18n';
 import { borderWidth, componentTypography, layout, typography, useTheme } from '@/theme';
 import { socialMetrics as m, socialTypography } from '@/theme/social';
 
@@ -28,6 +28,7 @@ export default function FriendProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { colors } = useTheme();
+  const t = useT();
 
   const profile = useFriendProfile(id);
   const remove = useRemoveFriendship();
@@ -45,8 +46,8 @@ export default function FriendProfileScreen() {
 
   const header = (trailing?: boolean) => (
     <View style={styles.topRow}>
-      <IconButton icon="back" accessibilityLabel="Geri" />
-      {trailing && <IconButton icon="options" accessibilityLabel="Seçenekler" onPress={() => setMenuOpen(true)} />}
+      <IconButton icon="back" accessibilityLabel={t.common.back} />
+      {trailing && <IconButton icon="options" accessibilityLabel={t.common.options} onPress={() => setMenuOpen(true)} />}
     </View>
   );
 
@@ -64,7 +65,7 @@ export default function FriendProfileScreen() {
       <SafeAreaView edges={['top']} style={styles.screen}>
         <View style={styles.content}>{header()}</View>
         <ErrorState
-          message={profile.isError ? undefined : 'Bu profil görüntülenemiyor.'}
+          message={profile.isError ? undefined : t.profile.notViewable}
           onRetry={profile.isError ? () => profile.refetch() : undefined}
         />
       </SafeAreaView>
@@ -73,7 +74,7 @@ export default function FriendProfileScreen() {
 
   const p: FriendProfile = profile.data;
   const shared = p.sharedChallenges;
-  const sub = shared.length > 0 ? `@${p.username} · ${shared.length} ortak challenge` : `@${p.username}`;
+  const sub = shared.length > 0 ? t.profile.sharedCount(p.username, shared.length) : `@${p.username}`;
 
   const done = () => {
     closeMenu();
@@ -83,14 +84,14 @@ export default function FriendProfileScreen() {
   // Katılınca profil yenilenir: challenge bu listeden düşer, ortak challenge'lara geçer
   const joinChallenge = (c: JoinableChallenge) =>
     join.mutate(c.challengeId, {
-      onSuccess: () => toast.show({ message: `"${c.title}" challenge'ına katıldın`, kind: 'success' }),
+      onSuccess: () => toast.show({ message: t.profile.joined(c.title), kind: 'success' }),
     });
 
   // Onaysız satırlar sayfa kapandıktan sonra çalışır; onaylı satırlar işlem bitince ekranı kapatır
   const items: ActionSheetItem[] = [
     {
       key: 'poke',
-      label: `${toAccusative(p.displayName)} dürt`,
+      label: t.profile.menu.poke(p.displayName),
       icon: HandIcon,
       onPress: () => {
         // Arkadaş değilse dürtme yalnızca ortak challenge üzerinden
@@ -102,12 +103,12 @@ export default function FriendProfileScreen() {
       ? [
           {
             key: 'remove',
-            label: 'Arkadaşlıktan çıkar',
+            label: t.profile.menu.remove,
             icon: UserMinusIcon,
             confirm: {
-              title: `${p.displayName} arkadaşlıktan çıkarılsın mı?`,
-              message: 'İstersen sonra yeniden arkadaşlık isteği gönderebilirsin.',
-              confirmLabel: 'Arkadaşlıktan çıkar',
+              title: t.profile.menu.removeTitle(p.displayName),
+              message: t.profile.menu.removeMessage,
+              confirmLabel: t.profile.menu.remove,
               loading: remove.isPending,
               error: remove.error?.message,
             },
@@ -117,13 +118,13 @@ export default function FriendProfileScreen() {
       : []),
     {
       key: 'block',
-      label: 'Engelle',
+      label: t.common.block,
       danger: true,
       icon: BlockIcon,
       confirm: {
-        title: `${toAccusative(p.displayName)} engelle?`,
-        message: "Engellediğin kişi seni bulamaz ve dürtemez. Engeli Ayarlar'dan kaldırabilirsin.",
-        confirmLabel: 'Engelle',
+        title: t.profile.menu.blockTitle(p.displayName),
+        message: t.profile.menu.blockMessage,
+        confirmLabel: t.common.block,
         loading: block.isPending,
         error: block.error?.message,
       },
@@ -131,7 +132,7 @@ export default function FriendProfileScreen() {
     },
     {
       key: 'report',
-      label: 'Şikayet et',
+      label: t.common.report,
       danger: true,
       icon: FlagIcon,
       onPress: () => router.push({ pathname: '/report/[userId]', params: { userId: p.id } }),
@@ -152,14 +153,14 @@ export default function FriendProfileScreen() {
         </View>
 
         <View style={styles.stats}>
-          <Stat value={String(p.streak)} label="gün seri" />
-          <Stat value={String(p.completedCount)} label="tamamlanan" />
-          <Stat value={p.harshMode ? 'Açık' : 'Kapalı'} label="sert mod" />
+          <Stat value={String(p.streak)} label={t.profile.stats.streak} />
+          <Stat value={String(p.completedCount)} label={t.profile.stats.completed} />
+          <Stat value={p.harshMode ? t.profile.stats.on : t.profile.stats.off} label={t.profile.stats.harshMode} />
         </View>
 
         {shared.length > 0 && (
           <>
-            <SectionLabel style={styles.section}>ORTAK CHALLENGE&apos;LAR</SectionLabel>
+            <SectionLabel style={styles.section}>{t.profile.sections.shared}</SectionLabel>
             <SharedChallenges
               items={shared}
               onOpen={(challengeId) => router.push({ pathname: '/challenge/[id]', params: { id: challengeId } })}
@@ -169,9 +170,7 @@ export default function FriendProfileScreen() {
 
         {p.joinableChallenges.length > 0 && (
           <>
-            <SectionLabel style={styles.section}>
-              KATILABİLECEĞİN CHALLENGE&apos;LAR
-            </SectionLabel>
+            <SectionLabel style={styles.section}>{t.profile.sections.joinable}</SectionLabel>
             <JoinableChallenges
               items={p.joinableChallenges}
               onJoin={joinChallenge}
@@ -194,7 +193,7 @@ export default function FriendProfileScreen() {
         visible={menuOpen}
         onClose={closeMenu}
         title={`${p.displayName} · @${p.username}`}
-        accessibilityLabel={`${p.displayName} için işlemler`}
+        accessibilityLabel={t.profile.menu.label(p.displayName)}
         items={items}
       />
     </SafeAreaView>

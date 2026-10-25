@@ -3,16 +3,17 @@ import { Pressable, StyleSheet, Text } from 'react-native';
 import { FriendList } from '@/components/FriendRow';
 import { Radio } from '@/components/ui';
 import type { ReportReason } from '@/data';
+import { useT } from '@/i18n';
 import { borderWidth, cardColors, useTheme } from '@/theme';
 import { socialColors, socialMetrics as m, socialTypography } from '@/theme/social';
 
-/** Şikayet nedenleri, tasarımdaki sırayla (report_reason enum'u) */
-export const REPORT_REASONS: { value: ReportReason; label: string }[] = [
-  { value: 'harassment', label: 'Hakaret veya zorbalık' },
-  { value: 'inappropriate_photo', label: 'Uygunsuz fotoğraf' },
-  { value: 'spam_or_fake', label: 'Spam veya sahte hesap' },
-  { value: 'dangerous_challenge', label: 'Tehlikeli bir challenge' },
-  { value: 'other', label: 'Başka bir şey' },
+/** Şikayet nedenleri, tasarımdaki sırayla (report_reason enum'u); metinler `t.report.reasons` */
+export const REPORT_REASONS: ReportReason[] = [
+  'harassment',
+  'inappropriate_photo',
+  'spam_or_fake',
+  'dangerous_challenge',
+  'other',
 ];
 
 type Props = {
@@ -23,16 +24,17 @@ type Props = {
 // Neden seçimi: kart içinde radio satırları, seçili satır açık yeşil (Report.dc.html).
 export default function ReasonList({ value, onChange }: Props) {
   const { colors, scheme } = useTheme();
+  const t = useT();
   const c = socialColors[scheme];
 
   return (
     <FriendList style={styles.card}>
       {REPORT_REASONS.map((r) => {
-        const selected = r.value === value;
+        const selected = r === value;
         return (
           <Pressable
-            key={r.value}
-            onPress={() => onChange(r.value)}
+            key={r}
+            onPress={() => onChange(r)}
             accessibilityRole="radio"
             accessibilityState={{ checked: selected }}
             aria-checked={selected}
@@ -44,7 +46,7 @@ export default function ReasonList({ value, onChange }: Props) {
               },
             ]}>
             <Radio selected={selected} />
-            <Text style={[socialTypography.reason, styles.label, { color: colors.text }]}>{r.label}</Text>
+            <Text style={[socialTypography.reason, styles.label, { color: colors.text }]}>{t.report.reasons[r]}</Text>
           </Pressable>
         );
       })}

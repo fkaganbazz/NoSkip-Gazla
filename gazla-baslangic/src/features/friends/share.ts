@@ -5,11 +5,10 @@
 import { Platform, Share } from 'react-native';
 
 import { WEB_BASE_URL } from '@/config/links';
+import type { Messages } from '@/i18n';
 
-export const friendInviteMessage = (username: string | null | undefined) =>
-  username
-    ? `Gazla'da birlikte challenge yapalım. Uygulamayı indir, Arkadaşlar'da beni @${username} diye ara: ${WEB_BASE_URL}`
-    : `Gazla'da birlikte challenge yapalım. Uygulamayı indir: ${WEB_BASE_URL}`;
+export const friendInviteMessage = (t: Messages, username: string | null | undefined) =>
+  t.friends.invite.message(username, WEB_BASE_URL);
 
 type ClipboardLike = { writeText: (text: string) => Promise<void> };
 
@@ -17,8 +16,11 @@ type ClipboardLike = { writeText: (text: string) => Promise<void> };
  * Paylaşım sayfasını açar. Web'de tarayıcı paylaşımı (navigator.share) yoksa metni panoya kopyalar ve
  * 'copied' döner (ekran tost gösterir).
  */
-export async function shareFriendInvite(username: string | null | undefined): Promise<'shared' | 'copied' | 'failed'> {
-  const message = friendInviteMessage(username);
+export async function shareFriendInvite(
+  t: Messages,
+  username: string | null | undefined,
+): Promise<'shared' | 'copied' | 'failed'> {
+  const message = friendInviteMessage(t, username);
   try {
     await Share.share({ message });
     return 'shared';

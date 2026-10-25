@@ -5,6 +5,7 @@
 import { useEffect, useState } from 'react';
 
 import type { FriendToday, JoinableChallenge } from '@/data';
+import type { Messages } from '@/i18n';
 
 export type FriendGroups = {
   /** Bugün görevi olup henüz bitirmeyenler */
@@ -27,17 +28,18 @@ export function groupFriends(friends: FriendToday[]): FriendGroups {
  * "11 gün seri · telefonsuz sabah" (ortak challenge'ın kısa adı; yoksa tam adı) ya da ortak challenge
  * yoksa "12 gün seri · 2 challenge"
  */
-export function friendSub(f: FriendToday) {
+export function friendSub(f: FriendToday, t: Messages) {
   const detail =
     f.challengeShortTitle ??
     f.sharedChallengeTitle ??
-    (f.activeChallenges > 0 ? `${f.activeChallenges} challenge` : null);
-  return detail ? `${f.streak} gün seri · ${detail}` : `${f.streak} gün seri`;
+    (f.activeChallenges > 0 ? t.friends.rows.activeChallenges(f.activeChallenges) : null);
+  const streak = t.friends.rows.streak(f.streak);
+  return detail ? `${streak} · ${detail}` : streak;
 }
 
 /** İstek ve arama satırı: "@kerem.a · 3 ortak" (ortak arkadaş yoksa yalnızca kullanıcı adı) */
-export const personSub = (username: string, mutualCount: number) =>
-  mutualCount > 0 ? `@${username} · ${mutualCount} ortak` : `@${username}`;
+export const personSub = (username: string, mutualCount: number, t: Messages) =>
+  mutualCount > 0 ? `@${username} · ${t.friends.rows.mutual(mutualCount)}` : `@${username}`;
 
 /** Arama terimi: baştaki @ ve boşluklar atılır; 2 harften kısaysa arama yapılmaz */
 export const searchTerm = (query: string) => query.trim().replace(/^@/, '');
@@ -63,13 +65,14 @@ const deviceToday = () => {
 };
 
 /** Katılınabilir challenge alt satırı: "7 gün · 2 kişi · yarın başlıyor" / "30 gün · 4 kişi · 12. gün" */
-export function joinableSub(c: JoinableChallenge) {
+export function joinableSub(c: JoinableChallenge, t: Messages) {
+  const j = t.profile.joinable;
   let when: string;
   if (c.dayIndex > 0) {
-    when = `${c.dayIndex}. gün`;
+    when = t.common.dayN(c.dayIndex);
   } else {
     const days = Math.round(dayNumber(c.startDate) - deviceToday());
-    when = days <= 0 ? 'bugün başlıyor' : days === 1 ? 'yarın başlıyor' : `${days} gün sonra başlıyor`;
+    when = days <= 0 ? j.startsToday : days === 1 ? j.startsTomorrow : j.startsIn(days);
   }
-  return `${c.durationDays} gün · ${c.memberCount} kişi · ${when}`;
+  return `${t.common.days(c.durationDays)} · ${t.common.people(c.memberCount)} · ${when}`;
 }
