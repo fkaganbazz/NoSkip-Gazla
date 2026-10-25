@@ -5,6 +5,8 @@
  */
 import * as Linking from 'expo-linking';
 
+import { getLanguage, type Language } from '../i18n/language';
+
 const env = (value: string | undefined, fallback: string) => (value && value.trim() ? value.trim().replace(/\/+$/, '') : fallback);
 
 /** Web sitesi kökü (yasal sayfalar bunun altında) */
@@ -24,6 +26,18 @@ export const legalLinks = {
 } as const;
 
 export type LegalLink = keyof typeof legalLinks;
+
+/** İngilizce sayfalar (`/en/…`); KVKK aydınlatma metni yalnızca Türkçe */
+const legalLinksEn: Record<LegalLink, string> = {
+  terms: `${WEB_BASE_URL}/en/terms`,
+  privacy: `${WEB_BASE_URL}/en/privacy`,
+  kvkk: `${WEB_BASE_URL}/kvkk`,
+  help: `${WEB_BASE_URL}/en/help`,
+};
+
+/** Yasal sayfanın uygulama dilindeki adresi */
+export const legalLinkFor = (key: LegalLink, lang: Language = getLanguage()) =>
+  lang === 'en' ? legalLinksEn[key] : legalLinks[key];
 
 /** Paylaşılan davet linki (universal link). Uygulama içinde `/d/<kod>` route'u açar. */
 export const inviteLink = (code: string) => `${INVITE_BASE_URL}/${encodeURIComponent(code)}`;
