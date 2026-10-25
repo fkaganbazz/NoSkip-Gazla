@@ -19,20 +19,12 @@ import {
   useTodayTasks,
 } from '@/data';
 import BoardCard from '@/features/challenge/BoardCard';
-import {
-  CATEGORY_LABELS,
-  accusative,
-  buildDays,
-  challengePhase,
-  formatShortDate,
-  hhmm,
-  isoDate,
-  addDays,
-} from '@/features/challenge/logic';
+import { buildDays, challengePhase, formatShortDate, hhmm, isoDate, addDays } from '@/features/challenge/logic';
 import ProgressCard from '@/features/challenge/ProgressCard';
 import ReminderSheet from '@/features/challenge/ReminderSheet';
 import { useNow } from '@/features/today/useNow';
-import { challengeMetrics as m, challengeTypography as t } from '@/theme/challenge';
+import { useT } from '@/i18n';
+import { challengeMetrics as m, challengeTypography as typo } from '@/theme/challenge';
 import { componentMetrics as cm, layout, useTheme } from '@/theme';
 
 // Challenge detayı — design/Detail.dc.html (açık) ve design/DetailDark.dc.html (koyu).
@@ -43,6 +35,7 @@ export default function ChallengeDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
+  const t = useT();
   const now = useNow();
   const { session } = useAuth();
   const meId = session?.userId;
@@ -100,7 +93,7 @@ export default function ChallengeDetailScreen() {
     return (
       <View style={[styles.screen, { paddingTop: top }]}>
         <View style={styles.headerRow}>
-          <IconButton icon="back" accessibilityLabel="Geri" />
+          <IconButton icon="back" accessibilityLabel={t.common.back} />
         </View>
         <LoadingState />
       </View>
@@ -111,7 +104,7 @@ export default function ChallengeDetailScreen() {
     return (
       <View style={[styles.screen, { paddingTop: top }]}>
         <View style={styles.headerRow}>
-          <IconButton icon="back" accessibilityLabel="Geri" />
+          <IconButton icon="back" accessibilityLabel={t.common.back} />
         </View>
         <ErrorState message={challenge.error?.message} onRetry={refetchAll} />
       </View>
@@ -125,40 +118,43 @@ export default function ChallengeDetailScreen() {
   // Etkin hatırlatma saati: üyelikte kişisel, yoksa grubun (üye değilse grubun saati)
   const reminderTime = membership.data ? membership.data.reminderTime : ch.reminderTime;
 
-  const progressTitle =
-    phase.kind === 'upcoming' ? `Gün 0/${ch.durationDays}` : `Gün ${phase.dayIndex}/${ch.durationDays}`;
+  const progressTitle = t.challenge.detail.progress(phase.kind === 'upcoming' ? 0 : phase.dayIndex, ch.durationDays);
   const progressDetail =
     phase.kind === 'running'
       ? phase.daysLeft > 0
-        ? `${phase.daysLeft} gün kaldı`
-        : 'Son gün'
+        ? t.challenge.detail.daysLeft(phase.daysLeft)
+        : t.challenge.detail.lastDay
       : phase.kind === 'upcoming'
         ? phase.startDate === addDays(isoDate(now), 1)
-          ? 'Yarın başlıyor'
-          : `${formatShortDate(phase.startDate)} başlıyor`
-        : 'Bitti';
+          ? t.challenge.detail.startsTomorrow
+          : t.challenge.detail.startsOn(formatShortDate(phase.startDate, t))
+        : t.challenge.detail.finished;
 
   // Alt buton: bitti → özet; bugün bekliyor → işaretle; bekleyen arkadaş → dürt; yoksa davet
   const waitingFriend = phase.kind === 'running' ? members.find((x) => x.id !== meId && !x.doneToday) : undefined;
   let cta: ReactNode = null;
   if (phase.kind === 'finished' && membership.data && membership.data.status !== 'left') {
-    cta = <Button title="Özeti gör" onPress={() => router.push({ pathname: '/challenge/[id]/finished', params: { id: ch.id } })} />;
+    cta = <Button title={t.challenge.detail.seeSummary} onPress={() => router.push({ pathname: '/challenge/[id]/finished', params: { id: ch.id } })} />;
   } else if (active && openTask) {
     const markIcon = openTask.taskType === 'photo' ? CameraIcon : openTask.taskType === 'number' ? AddIcon : CheckIcon;
     const markTitle =
-      openTask.taskType === 'photo' ? 'Fotoğrafla tamamla' : openTask.taskType === 'number' ? 'Bugünkü değeri gir' : 'Bugünü tamamla';
+      openTask.taskType === 'photo'
+        ? t.challenge.detail.completePhoto
+        : openTask.taskType === 'number'
+          ? t.challenge.detail.completeNumber
+          : t.challenge.detail.completeCheck;
     cta = <Button title={markTitle} icon={ctaIcon(markIcon)} loading={checkin.mark.isPending} onPress={onMark} />;
   } else if (waitingFriend) {
     cta = (
       <Button
-        title={`${accusative(waitingFriend.displayName)} dürt`}
+        title={t.challenge.detail.pokeName(waitingFriend.displayName)}
         variant="orange"
         icon={ctaIcon(HandIcon)}
         onPress={() => goPoke(waitingFriend.id)}
       />
     );
   } else if (active && phase.kind !== 'finished') {
-    cta = <Button title="Arkadaş davet et" variant="secondary" onPress={() => router.push({ pathname: '/invite-friends', params: { challengeId: ch.id } })} />;
+    cta = <Button title={t.challenge.detail.inviteFriends} variant="secondary" onPress={() => router.push({ pathname: '/invite-friends', params: { challengeId: ch.id } })} />;
   }
 
   const ctaBottom = Math.max(m.ctaBottom, insets.bottom);
@@ -170,12 +166,12 @@ export default function ChallengeDetailScreen() {
     ? [
         {
           key: 'leave',
-          label: "Challenge'dan ayrıl",
+          label: t.challenge.menu.leave,
           danger: true,
           confirm: {
-            title: "Challenge'dan ayrıl?",
-            message: 'Bu challenge artık Bugün listende görünmez ve grup sıralamasından çıkarsın.',
-            confirmLabel: 'Ayrıl',
+            title: t.challenge.menu.leaveTitle,
+            message: t.challenge.menu.leaveMessage,
+            confirmLabel: t.challenge.menu.leaveConfirm,
             loading: leave.isPending,
             error: leave.error?.message ?? null,
           },
@@ -189,12 +185,12 @@ export default function ChallengeDetailScreen() {
         },
         {
           key: 'reminder',
-          label: 'Hatırlatma saatini değiştir',
+          label: t.challenge.menu.changeReminder,
           onPress: () => setReminderOpen(true),
         },
         {
           key: 'invite',
-          label: 'Arkadaş davet et',
+          label: t.challenge.menu.invite,
           onPress: () => router.push({ pathname: '/invite-friends', params: { challengeId: ch.id } }),
         },
       ]
@@ -208,7 +204,7 @@ export default function ChallengeDetailScreen() {
       ? [
           {
             key: 'report',
-            label: 'Şikayet et',
+            label: t.common.report,
             onPress: () =>
               router.push({
                 pathname: '/report/[userId]',
@@ -231,24 +227,24 @@ export default function ChallengeDetailScreen() {
         ]}
         refreshControl={<RefreshControl refreshing={challenge.isRefetching || board.isRefetching} onRefresh={refetchAll} />}>
         <View style={styles.headerRow}>
-          <IconButton icon="back" accessibilityLabel="Geri" />
+          <IconButton icon="back" accessibilityLabel={t.common.back} />
           {menuItems.length > 0 && (
-            <IconButton icon="options" accessibilityLabel="Challenge seçenekleri" onPress={() => setMenuOpen(true)} />
+            <IconButton icon="options" accessibilityLabel={t.challenge.detail.options} onPress={() => setMenuOpen(true)} />
           )}
         </View>
 
         <View style={styles.titleRow}>
           <CategoryTile icon={ch.icon} tint={ch.tint} size={56} />
-          <Text accessibilityRole="header" style={[t.title, styles.title, { color: colors.text }]}>
+          <Text accessibilityRole="header" style={[typo.title, styles.title, { color: colors.text }]}>
             {ch.title}
           </Text>
         </View>
 
         <View style={styles.chips}>
-          <Chip size="xs" tone="ink" label={`${ch.durationDays} gün`} />
-          {ch.category && <Chip size="xs" tint={ch.tint} label={CATEGORY_LABELS[ch.category]} />}
-          {ch.memberCount > 0 && <Chip size="xs" tone="warning" label={`${ch.memberCount} kişi`} />}
-          {reminderTime && <Chip size="xs" tone="muted" label={`Hatırlatma ${hhmm(reminderTime)}`} />}
+          <Chip size="xs" tone="ink" label={t.common.days(ch.durationDays)} />
+          {ch.category && <Chip size="xs" tint={ch.tint} label={t.challenge.categories[ch.category]} />}
+          {ch.memberCount > 0 && <Chip size="xs" tone="warning" label={t.common.people(ch.memberCount)} />}
+          {reminderTime && <Chip size="xs" tone="muted" label={t.challenge.detail.reminderChip(hhmm(reminderTime))} />}
         </View>
 
         <ProgressCard
@@ -279,7 +275,7 @@ export default function ChallengeDetailScreen() {
           leave.reset();
         }}
         title={ch.title}
-        accessibilityLabel="Challenge seçenekleri"
+        accessibilityLabel={t.challenge.detail.options}
         items={menuItems}
       />
 

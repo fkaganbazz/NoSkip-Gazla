@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import Diken from '@/components/Diken';
+import { useT } from '@/i18n';
 import { typography, useTheme } from '@/theme';
 import { exploreColors, exploreMetrics as m, exploreTypography } from '@/theme/explore';
 
@@ -15,24 +16,25 @@ type Props = {
 export default function FeaturedCard({ title, activeCount, onPress }: Props) {
   const { scheme } = useTheme();
   const c = exploreColors[scheme];
+  const t = useT();
 
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`Haftanın challenge'ı: ${title}. İncele`}
+      accessibilityLabel={t.explore.featured.a11y(title)}
       style={({ pressed }) => [styles.card, { backgroundColor: c.featuredBg, opacity: pressed ? 0.92 : 1 }]}>
       <View style={[styles.circle, { backgroundColor: c.featuredCircle }]} />
       <View style={styles.column}>
-        <Text style={[exploreTypography.featuredLabel, { color: c.featuredLabel }]}>HAFTANIN CHALLENGE&apos;I</Text>
+        <Text style={[exploreTypography.featuredLabel, { color: c.featuredLabel }]}>{t.explore.featured.label}</Text>
         <Text numberOfLines={2} style={[exploreTypography.featuredTitle, { color: c.featuredTitle }]}>
           {title}
         </Text>
         {activeCount !== null && activeCount > 0 && (
-          <Text style={[typography.meta, { color: c.featuredSub }]}>{`${activeCount} kişi şu an yapıyor`}</Text>
+          <Text style={[typography.meta, { color: c.featuredSub }]}>{t.explore.featured.doingNow(activeCount)}</Text>
         )}
         <View style={[styles.button, { backgroundColor: c.featuredButtonBg }]}>
-          <Text style={[typography.captionStrong, { color: c.featuredButtonText }]}>İncele</Text>
+          <Text style={[typography.captionStrong, { color: c.featuredButtonText }]}>{t.explore.featured.open}</Text>
         </View>
       </View>
       <View style={styles.diken} pointerEvents="none">

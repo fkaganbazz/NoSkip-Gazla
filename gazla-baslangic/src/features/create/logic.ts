@@ -1,26 +1,30 @@
 /**
  * Yeni challenge formunun yardımcıları: süre seçenekleri, saat/gün biçimi, sayı ayrıştırma, ad denetimi,
  * formdan CreateChallengeInput üretimi. Sınırlar (ad 3–60, süre 3–60, başlangıç bugün/yarın) sunucuda da denetlenir.
+ * Metinler sözlükten (`t.create`, `t.common`).
  */
 import type { ChallengeVisibility, CreateChallengeInput, FriendToday, TaskType, Template } from '@/data';
 import { addLocalDays, deviceToday } from '@/features/checkin/logic';
-import { formatDayLabel } from '@/features/today/logic';
+import { joinNames } from '@/features/challenge/logic';
+import type { Messages } from '@/i18n';
 import { createMetrics } from '@/theme/create';
 
 export type DurationChoice = 7 | 10 | 30 | 'custom';
 
-export const DURATION_OPTIONS: { value: DurationChoice; label: string }[] = [
-  { value: 7, label: '7 gün' },
-  { value: 10, label: '10 gün' },
-  { value: 30, label: '30 gün' },
-  { value: 'custom', label: 'Özel' },
-];
+/** Süre hücreleri: "7 gün" / "10 gün" / "30 gün" / "Özel" */
+export function durationOptions(t: Messages): { value: DurationChoice; label: string }[] {
+  return [
+    ...([7, 10, 30] as const).map((value) => ({ value, label: t.common.days(value) })),
+    { value: 'custom' as const, label: t.create.duration.custom },
+  ];
+}
 
-export const TASK_OPTIONS: { value: TaskType; title: string; desc: string }[] = [
-  { value: 'check', title: 'İşaretle', desc: 'Tek dokunuşla günü tamamla' },
-  { value: 'number', title: 'Sayı gir', desc: 'Dakika, adım, sayfa gibi' },
-  { value: 'photo', title: 'Fotoğraf kanıtı', desc: 'Grup görsün, tepki versin' },
-];
+const TASK_TYPES: TaskType[] = ['check', 'number', 'photo'];
+
+/** "Nasıl tamamlanır?" kartları */
+export function taskOptions(t: Messages): Choice<TaskType>[] {
+  return TASK_TYPES.map((value) => ({ value, ...t.create.taskTypes[value] }));
+}
 
 /** Başlangıç: spesifikasyon "yarın veya bugün" */
 export type StartOffset = 0 | 1;
@@ -43,33 +47,42 @@ export type CreateForm = {
 /** Seçim sayfasındaki seçenek (TaskOption kartıyla çizilir) */
 export type Choice<T> = { value: T; title: string; desc: string };
 
-export const VISIBILITY_OPTIONS: Choice<ChallengeVisibility>[] = [
-  { value: 'invited', title: 'Davetliler', desc: 'Yalnızca davet ettiğin kişiler görür' },
-  { value: 'friends', title: 'Arkadaşlarım', desc: 'Arkadaşların profilinde görür ve katılabilir' },
-];
+const VISIBILITIES: ChallengeVisibility[] = ['invited', 'friends'];
 
-export const visibilityLabel = (v: ChallengeVisibility) =>
-  VISIBILITY_OPTIONS.find((o) => o.value === v)?.title ?? '';
+export function visibilityOptions(t: Messages): Choice<ChallengeVisibility>[] {
+  return VISIBILITIES.map((value) => ({ value, ...t.create.visibility.options[value] }));
+}
 
-export const startLabel = (offset: StartOffset) => (offset === 0 ? 'Bugün' : 'Yarın');
+export const visibilityLabel = (v: ChallengeVisibility, t: Messages) => t.create.visibility.options[v].title;
 
-/** "Bugün" / "Yarın" + takvim günü ("Salı, 21 Ekim") */
-export function startOptions(now: Date): Choice<StartOffset>[] {
+export const startLabel = (offset: StartOffset, t: Messages) =>
+  offset === 0 ? t.common.dates.today : t.common.dates.tomorrow;
+
+/** "Bugün" / "Yarın" + takvim günü ("Salı, 21 Ekim" / "Tuesday, October 21") */
+export function startOptions(now: Date, t: Messages): Choice<StartOffset>[] {
   return ([0, 1] as const).map((offset) => ({
     value: offset,
-    title: startLabel(offset),
-    desc: formatDayLabel(new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset)),
+    title: startLabel(offset, t),
+    desc: t.common.dates.weekdayDayMonth(new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset)),
   }));
 }
 
 /** Ad uzunluğu (baştaki/sondaki boşluk sayılmaz; harf sayısı, UTF-16 birimi değil) */
 const titleLength = (title: string) => Array.from(title.trim()).length;
 
-/** Ad 3–60 karakter değilse alanın altındaki hata metni */
-export function titleError(title: string): string | null {
+/** Ad 3–60 karakter değilse sorun */
+export function titleProblem(title: string): 'short' | 'long' | null {
   const n = titleLength(title);
-  if (n < createMetrics.titleMinLength) return `Ad en az ${createMetrics.titleMinLength} karakter olmalı`;
-  if (n > createMetrics.titleMaxLength) return `Ad en fazla ${createMetrics.titleMaxLength} karakter olabilir`;
+  if (n < createMetrics.titleMinLength) return 'short';
+  if (n > createMetrics.titleMaxLength) return 'long';
+  return null;
+}
+
+/** Ad 3–60 karakter değilse alanın altındaki hata metni */
+export function titleError(title: string, t: Messages): string | null {
+  const problem = titleProblem(title);
+  if (problem === 'short') return t.create.name.tooShort(createMetrics.titleMinLength);
+  if (problem === 'long') return t.create.name.tooLong(createMetrics.titleMaxLength);
   return null;
 }
 
@@ -81,12 +94,11 @@ export function parseAmount(text: string) {
   return Number.isFinite(n) && n >= 0 ? n : null;
 }
 
-/** "Mert", "Mert ve Ece", "Mert, Ece ve Can" davet edilecek */
-export function inviteSummary(friends: Pick<FriendToday, 'displayName'>[]) {
-  if (friends.length === 0) return 'Arkadaşlarını davet et';
+/** "Mert", "Mert ve Ece", "Mert, Ece ve Can" davet edilecek (hepsi yazılır) */
+export function inviteSummary(friends: Pick<FriendToday, 'displayName'>[], t: Messages) {
+  if (friends.length === 0) return t.create.invite.none;
   const names = friends.map((f) => f.displayName);
-  const list = names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} ve ${names[names.length - 1]}`;
-  return `${list} davet edilecek`;
+  return t.create.invite.summary(joinNames(names, names.length, t));
 }
 
 /** Şablonun alanlarını forma kopyalar */
@@ -111,7 +123,7 @@ export function durationDays(form: CreateForm) {
 export function toCreateInput(form: CreateForm, template: Template | undefined): CreateChallengeInput | null {
   const title = form.title.trim();
   const days = durationDays(form);
-  if (titleError(title) || days < createMetrics.customMin || days > createMetrics.customMax) return null;
+  if (titleProblem(title) || days < createMetrics.customMin || days > createMetrics.customMax) return null;
 
   const common = {
     durationDays: days,

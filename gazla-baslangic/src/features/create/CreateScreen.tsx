@@ -17,23 +17,24 @@ import { AddIcon, CalendarIcon, ClockIcon, LockIcon, MinusIcon } from '@/compone
 import { Avatar, Button, Card, Chip, IconButton, ScreenHeader, TextField, Toggle } from '@/components/ui';
 import { useChallengeTemplates, useCreateChallenge, useFriendsToday } from '@/data';
 import {
-  DURATION_OPTIONS,
-  TASK_OPTIONS,
-  VISIBILITY_OPTIONS,
+  durationOptions,
   formFromTemplate,
   inviteSummary,
   startLabel,
   startOptions,
+  taskOptions,
   titleError,
   toCreateInput,
   visibilityLabel,
+  visibilityOptions,
   type CreateForm,
   type DurationChoice,
 } from '@/features/create/logic';
 import { ChoiceSheet, DurationCell, SettingRow, TaskOption } from '@/features/create/parts';
 import { REMINDER_STEP_MINUTES, REMINDER_TIMES, stepReminder } from '@/features/settings/logic';
+import { useT } from '@/i18n';
 import { componentTypography, layout, typography, useTheme } from '@/theme';
-import { createColors, createMetrics as m, createTypography as t } from '@/theme/create';
+import { createColors, createMetrics as m, createTypography as typo } from '@/theme/create';
 
 export type CreateScreenProps = {
   /** Oluşturulunca; verilmezse challenge detayına geçilir (`router.replace`) */
@@ -76,6 +77,7 @@ export default function CreateScreen({ onCreated, onClose, initialTemplateId, in
   const router = useRouter();
   const { colors, scheme } = useTheme();
   const c = createColors[scheme];
+  const t = useT();
 
   const templates = useChallengeTemplates();
   const friends = useFriendsToday();
@@ -108,7 +110,7 @@ export default function CreateScreen({ onCreated, onClose, initialTemplateId, in
   // Seçim sırasıyla ("Mert ve Ece davet edilecek")
   const invited = form.invitees.flatMap((id) => friendList.filter((f) => f.id === id));
   const input = toCreateInput(form, template);
-  const nameError = titleTouched ? titleError(form.title) : null;
+  const nameError = titleTouched ? titleError(form.title, t) : null;
 
   const submit = () => {
     if (!input) return;
@@ -129,10 +131,10 @@ export default function CreateScreen({ onCreated, onClose, initialTemplateId, in
     <SafeAreaView edges={['top']} style={styles.screen}>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <ScreenHeader title="Yeni challenge" leading="close" onLeadingPress={onClose} />
+          <ScreenHeader title={t.create.title} leading="close" onLeadingPress={onClose} />
 
           <TextField
-            label="Challenge adı"
+            label={t.create.name.label}
             value={form.title}
             onChangeText={(title) => {
               setTitleTouched(true);
@@ -140,18 +142,18 @@ export default function CreateScreen({ onCreated, onClose, initialTemplateId, in
             }}
             onBlur={() => form.title.length > 0 && setTitleTouched(true)}
             error={nameError}
-            placeholder="Akşam 20 dakika yürüyüş"
+            placeholder={t.create.name.placeholder}
             returnKeyType="done"
             style={styles.section}
           />
 
           <Text nativeID="create-duration" style={[componentTypography.inputLabel, styles.section, { color: colors.text }]}>
-            Süre
+            {t.create.duration.label}
           </Text>
           <View accessibilityRole="radiogroup" accessibilityLabelledBy="create-duration" style={styles.durations}>
-            {DURATION_OPTIONS.map((d) => (
+            {durationOptions(t).map((d) => (
               <DurationCell
-                key={d.label}
+                key={d.value}
                 label={d.label}
                 selected={form.duration === d.value}
                 onPress={() => update({ duration: d.value })}
@@ -164,27 +166,27 @@ export default function CreateScreen({ onCreated, onClose, initialTemplateId, in
                 icon={MinusIcon}
                 iconSize={m.stepIconSize}
                 iconStrokeWidth={m.stepIconStrokeWidth}
-                accessibilityLabel="Bir gün azalt"
+                accessibilityLabel={t.create.duration.decrease}
                 onPress={() => update({ customDays: Math.max(m.customMin, form.customDays - 1) })}
               />
-              <Text accessibilityLiveRegion="polite" style={[t.panelValue, styles.panelValueText, { color: colors.text }]}>
-                {`${form.customDays} gün`}
+              <Text accessibilityLiveRegion="polite" style={[typo.panelValue, styles.panelValueText, { color: colors.text }]}>
+                {t.common.days(form.customDays)}
               </Text>
               <IconButton
                 icon={AddIcon}
                 iconSize={m.stepIconSize}
                 iconStrokeWidth={m.stepIconStrokeWidth}
-                accessibilityLabel="Bir gün artır"
+                accessibilityLabel={t.create.duration.increase}
                 onPress={() => update({ customDays: Math.min(m.customMax, form.customDays + 1) })}
               />
             </View>
           )}
 
           <Text nativeID="create-type" style={[componentTypography.inputLabel, styles.section, { color: colors.text }]}>
-            Nasıl tamamlanır?
+            {t.create.taskLabel}
           </Text>
           <View accessibilityRole="radiogroup" accessibilityLabelledBy="create-type" style={styles.options}>
-            {TASK_OPTIONS.map((o) => (
+            {taskOptions(t).map((o) => (
               <TaskOption
                 key={o.value}
                 title={o.title}
@@ -194,16 +196,16 @@ export default function CreateScreen({ onCreated, onClose, initialTemplateId, in
                 {o.value === 'number' && form.taskType === 'number' && (
                   <View style={styles.numberFields}>
                     <TextField
-                      label="Birim"
+                      label={t.create.number.unit}
                       value={form.unit}
                       onChangeText={(unit) => edit({ unit })}
                       maxLength={m.unitMaxLength}
-                      placeholder="dk"
+                      placeholder={t.create.number.unitPlaceholder}
                       autoCapitalize="none"
                       style={styles.numberField}
                     />
                     <TextField
-                      label="Hedef"
+                      label={t.create.number.target}
                       value={form.target}
                       onChangeText={(target) => edit({ target })}
                       keyboardType="decimal-pad"
@@ -211,7 +213,7 @@ export default function CreateScreen({ onCreated, onClose, initialTemplateId, in
                       style={styles.numberField}
                     />
                     <TextField
-                      label="Her gün +"
+                      label={t.create.number.increment}
                       value={form.increment}
                       onChangeText={(increment) => edit({ increment })}
                       keyboardType="decimal-pad"
@@ -227,8 +229,8 @@ export default function CreateScreen({ onCreated, onClose, initialTemplateId, in
           <Card style={styles.card}>
             <SettingRow
               icon={<ClockIcon color={c.rowIcon} size={m.rowIconSize} strokeWidth={m.rowIconStrokeWidth} />}
-              label="Hatırlatma"
-              value={form.reminder ? `Her gün ${form.reminder}` : 'Kapalı'}
+              label={t.create.reminder.label}
+              value={form.reminder ? t.create.reminder.daily(form.reminder) : t.create.reminder.off}
               onPress={() => togglePanel('reminder')}
               expanded={panel === 'reminder'}
             />
@@ -241,29 +243,29 @@ export default function CreateScreen({ onCreated, onClose, initialTemplateId, in
                       icon={MinusIcon}
                       iconSize={m.stepIconSize}
                       iconStrokeWidth={m.stepIconStrokeWidth}
-                      accessibilityLabel={`${REMINDER_STEP_MINUTES} dakika erken`}
+                      accessibilityLabel={t.create.reminder.earlier(REMINDER_STEP_MINUTES)}
                       disabled={form.reminder <= REMINDER_TIMES[0]}
                       onPress={() => form.reminder && update({ reminder: stepReminder(form.reminder, -1) })}
                     />
-                    <Text accessibilityLiveRegion="polite" style={[t.panelValue, styles.panelValueText, { color: colors.text }]}>
+                    <Text accessibilityLiveRegion="polite" style={[typo.panelValue, styles.panelValueText, { color: colors.text }]}>
                       {form.reminder}
                     </Text>
                     <IconButton
                       icon={AddIcon}
                       iconSize={m.stepIconSize}
                       iconStrokeWidth={m.stepIconStrokeWidth}
-                      accessibilityLabel={`${REMINDER_STEP_MINUTES} dakika geç`}
+                      accessibilityLabel={t.create.reminder.later(REMINDER_STEP_MINUTES)}
                       disabled={form.reminder >= REMINDER_TIMES[REMINDER_TIMES.length - 1]}
                       onPress={() => form.reminder && update({ reminder: stepReminder(form.reminder, 1) })}
                     />
                   </View>
                 ) : (
-                  <Text style={[t.rowValue, { color: c.rowValue }]}>Hatırlatma kapalı</Text>
+                  <Text style={[typo.rowValue, { color: c.rowValue }]}>{t.create.reminder.offLong}</Text>
                 )}
                 <Toggle
                   value={!!form.reminder}
                   onChange={(on) => update({ reminder: on ? m.reminderDefault : null })}
-                  accessibilityLabel="Hatırlatma"
+                  accessibilityLabel={t.create.reminder.label}
                 />
               </View>
             )}
@@ -271,8 +273,8 @@ export default function CreateScreen({ onCreated, onClose, initialTemplateId, in
             <SettingRow
               divider
               icon={<LockIcon color={c.rowIcon} size={m.rowIconSize} strokeWidth={m.rowIconStrokeWidth} />}
-              label="Kimler görebilir"
-              value={visibilityLabel(form.visibility)}
+              label={t.create.visibility.label}
+              value={visibilityLabel(form.visibility, t)}
               onPress={() => setSheet('visibility')}
             />
 
@@ -280,8 +282,8 @@ export default function CreateScreen({ onCreated, onClose, initialTemplateId, in
             <SettingRow
               divider
               icon={<CalendarIcon color={c.rowIcon} size={m.rowIconSize} strokeWidth={m.rowIconStrokeWidth} />}
-              label="Başlangıç"
-              value={startLabel(form.startOffset)}
+              label={t.create.start.label}
+              value={startLabel(form.startOffset, t)}
               onPress={() => setSheet('start')}
             />
           </Card>
@@ -302,7 +304,7 @@ export default function CreateScreen({ onCreated, onClose, initialTemplateId, in
               <Pressable
                 onPress={() => togglePanel('friends')}
                 accessibilityRole="button"
-                accessibilityLabel="Arkadaş ekle"
+                accessibilityLabel={t.create.invite.add}
                 accessibilityState={{ expanded: panel === 'friends' }}
                 hitSlop={(layout.minTouchTarget - m.avatarSize) / 2}>
                 <AddAvatar size={m.avatarSize} />
@@ -310,8 +312,8 @@ export default function CreateScreen({ onCreated, onClose, initialTemplateId, in
             )}
             <Text style={[typography.caption, styles.inviteText, { color: colors.textBody }]}>
               {friendList.length > 0 || invited.length > 0
-                ? inviteSummary(invited)
-                : 'Davet linkini challenge açılınca paylaşabilirsin'}
+                ? inviteSummary(invited, t)
+                : t.create.invite.noFriends}
             </Text>
           </View>
           {panel === 'friends' && (
@@ -335,22 +337,22 @@ export default function CreateScreen({ onCreated, onClose, initialTemplateId, in
               {create.error.message}
             </Text>
           )}
-          <Button title="Challenge'ı başlat" onPress={submit} disabled={!input} loading={create.isPending} />
+          <Button title={t.create.submit} onPress={submit} disabled={!input} loading={create.isPending} />
         </View>
       </KeyboardAvoidingView>
 
       <ChoiceSheet
         visible={sheet === 'visibility'}
-        title="Kimler görebilir"
-        options={VISIBILITY_OPTIONS}
+        title={t.create.visibility.label}
+        options={visibilityOptions(t)}
         value={form.visibility}
         onSelect={(visibility) => update({ visibility })}
         onClose={() => setSheet(null)}
       />
       <ChoiceSheet
         visible={sheet === 'start'}
-        title="Başlangıç"
-        options={startOptions(now)}
+        title={t.create.start.label}
+        options={startOptions(now, t)}
         value={form.startOffset}
         onSelect={(startOffset) => update({ startOffset })}
         onClose={() => setSheet(null)}

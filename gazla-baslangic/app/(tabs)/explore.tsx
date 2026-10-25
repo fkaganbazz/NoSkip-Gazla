@@ -10,7 +10,7 @@ import AdBannerSlot from '@/features/explore/AdBannerSlot';
 import CategoryChips from '@/features/explore/CategoryChips';
 import FeaturedCard from '@/features/explore/FeaturedCard';
 import TemplateList from '@/features/explore/TemplateList';
-import { CATEGORY_NAMES } from '@/features/explore/labels';
+import { useT } from '@/i18n';
 import { layout, spacing, typography, useTheme } from '@/theme';
 import { exploreMetrics as m } from '@/theme/explore';
 
@@ -18,6 +18,7 @@ import { exploreMetrics as m } from '@/theme/explore';
 // (useChallengeTemplates); haftanın challenge'ı useFeaturedTemplate (ikisi aynı önbellekten).
 export default function ExploreScreen() {
   const { colors } = useTheme();
+  const t = useT();
   const router = useRouter();
 
   const [query, setQuery] = useState('');
@@ -31,7 +32,7 @@ export default function ExploreScreen() {
   const filtering = query.trim().length > 0 || category !== null;
   const results = useMemo(() => templates.data ?? [], [templates.data]);
   // Öne çıkan, Popüler listesinde tekrar edilmez
-  const popular = useMemo(() => results.filter((t) => t.id !== featured?.id), [results, featured]);
+  const popular = useMemo(() => results.filter((x) => x.id !== featured?.id), [results, featured]);
   const showAll = filtering || expanded;
   const list = filtering ? results : expanded ? popular : popular.slice(0, m.popularPreviewCount);
 
@@ -55,7 +56,8 @@ export default function ExploreScreen() {
     );
   }
 
-  const listTitle = category !== null ? CATEGORY_NAMES[category] : filtering ? 'Sonuçlar' : 'Popüler';
+  const listTitle =
+    category !== null ? t.explore.categoryNames[category] : filtering ? t.explore.screen.results : t.explore.screen.popular;
 
   return (
     <SafeAreaView edges={['top']} style={styles.screen}>
@@ -70,10 +72,10 @@ export default function ExploreScreen() {
           />
         }>
         <Text accessibilityRole="header" style={[typography.title1, { color: colors.text }]}>
-          Keşfet
+          {t.explore.screen.title}
         </Text>
 
-        <SearchField value={query} onChangeText={setQuery} placeholder="Challenge ara" style={styles.search} />
+        <SearchField value={query} onChangeText={setQuery} placeholder={t.explore.screen.searchPlaceholder} style={styles.search} />
         <CategoryChips value={category} onChange={setCategory} />
 
         {!filtering && featured && (
@@ -90,7 +92,7 @@ export default function ExploreScreen() {
           </Text>
           {!showAll && popular.length > list.length && (
             <Pressable onPress={() => setExpanded(true)} accessibilityRole="button" hitSlop={12}>
-              <Text style={[typography.captionStrong, { color: colors.actionText }]}>Tümü</Text>
+              <Text style={[typography.captionStrong, { color: colors.actionText }]}>{t.explore.screen.seeAll}</Text>
             </Pressable>
           )}
         </View>
@@ -100,9 +102,9 @@ export default function ExploreScreen() {
         ) : (
           <View style={styles.empty}>
             <Text style={[typography.body, styles.emptyText, { color: colors.textBody }]}>
-              Bu aramaya uyan challenge yok. Kendi challenge&apos;ını oluşturabilirsin.
+              {t.explore.screen.empty}
             </Text>
-            <Button title="Kendin oluştur" variant="secondary" onPress={openCreate} />
+            <Button title={t.explore.screen.createOwn} variant="secondary" onPress={openCreate} />
           </View>
         )}
 

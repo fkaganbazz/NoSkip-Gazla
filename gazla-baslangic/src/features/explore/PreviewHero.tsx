@@ -5,6 +5,7 @@ import Diken from '@/components/Diken';
 import { challengeIcons, ShareIcon } from '@/components/icons';
 import { IconButton } from '@/components/ui';
 import type { ChallengeCategory, ChallengeIconKey } from '@/data';
+import { useT } from '@/i18n';
 import { categoryTint, challengeTints, layout, useTheme } from '@/theme';
 import { previewMetrics as m } from '@/theme/explore';
 
@@ -21,18 +22,19 @@ type Props = {
 export default function PreviewHero({ icon, category, onBack, onShare }: Props) {
   const { scheme } = useTheme();
   const insets = useSafeAreaInsets();
-  const t = challengeTints[categoryTint(category)][scheme];
+  const t = useT();
+  const tint = challengeTints[categoryTint(category)][scheme];
   const top = insets.top + layout.screenTopGap;
   const Icon = challengeIcons[icon];
 
   return (
-    <View style={[styles.hero, { height: top + m.heroBelowTop, backgroundColor: t.bg }]}>
+    <View style={[styles.hero, { height: top + m.heroBelowTop, backgroundColor: tint.bg }]}>
       {/* Tasarımda yalnızca kahve illüstrasyonu var; diğer şablonlarda büyük çizgi ikon */}
       <View style={[styles.illustration, { top: top + m.illustrationTopFromButtons }]} pointerEvents="none">
         {icon === 'coffee' ? (
           <CoffeeIllustration />
         ) : (
-          <Icon color={t.ink} size={m.fallbackIconSize} strokeWidth={m.fallbackIconStrokeWidth} />
+          <Icon color={tint.ink} size={m.fallbackIconSize} strokeWidth={m.fallbackIconStrokeWidth} />
         )}
       </View>
       <View style={styles.diken} pointerEvents="none">
@@ -40,11 +42,11 @@ export default function PreviewHero({ icon, category, onBack, onShare }: Props) 
       </View>
 
       <View style={[styles.buttons, { top }]}>
-        <IconButton icon="back" tone="onColor" accessibilityLabel="Geri" onPress={onBack} />
+        <IconButton icon="back" tone="onColor" accessibilityLabel={t.common.back} onPress={onBack} />
         <IconButton
           icon={ShareIcon}
           tone="onColor"
-          accessibilityLabel="Paylaş"
+          accessibilityLabel={t.common.share}
           onPress={onShare}
           iconSize={m.shareIconSize}
           iconStrokeWidth={m.shareIconStrokeWidth}

@@ -8,8 +8,9 @@ import { Button, Chip, ErrorState, LoadingState, Segmented } from '@/components/
 import { useChallengeTemplates, useCreateChallenge, useTemplateStats } from '@/data';
 import PreviewFeatures from '@/features/explore/PreviewFeatures';
 import PreviewHero from '@/features/explore/PreviewHero';
-import { CATEGORY_NAMES, DIFFICULTY_NAMES, TASK_TYPE_NAMES, type DurationOption } from '@/features/explore/labels';
+import type { DurationOption } from '@/features/explore/labels';
 import { doingNowText } from '@/features/explore/logic';
+import { useT } from '@/i18n';
 import { categoryTint, layout, typography, useTheme } from '@/theme';
 import { previewMetrics as m, previewTypography } from '@/theme/explore';
 
@@ -21,12 +22,13 @@ export default function TemplatePreviewScreen() {
   const { templateId } = useLocalSearchParams<{ templateId: string }>();
   const router = useRouter();
   const { colors } = useTheme();
+  const t = useT();
   const insets = useSafeAreaInsets();
 
   const templates = useChallengeTemplates();
   const stats = useTemplateStats(templateId);
   const { create } = useCreateChallenge();
-  const template = templates.data?.find((t) => t.id === templateId);
+  const template = templates.data?.find((x) => x.id === templateId);
 
   // Seçilmediyse şablonun varsayılan süresi
   const [picked, setPicked] = useState<DurationOption | null>(null);
@@ -47,9 +49,9 @@ export default function TemplatePreviewScreen() {
     return (
       <View style={[styles.screen, { paddingTop: insets.top }]}>
         <ErrorState
-          message={templates.isError ? templates.error.message : 'Bu challenge bulunamadı.'}
+          message={templates.isError ? templates.error.message : t.explore.preview.notFound}
           onRetry={templates.isError ? () => templates.refetch() : goBack}
-          actionLabel={templates.isError ? undefined : 'Geri dön'}
+          actionLabel={templates.isError ? undefined : t.explore.preview.goBack}
         />
       </View>
     );
@@ -57,8 +59,8 @@ export default function TemplatePreviewScreen() {
 
   // Süre seçici yalnızca şablonun izin verdiği süreleri gösterir (EKRANLAR 4.2)
   const duration = picked ?? template.defaultDurationDays;
-  const durationSegments = template.allowedDurations.map((d) => ({ value: String(d), label: `${d} gün` }));
-  const doing = stats.data ? doingNowText(stats.data) : null;
+  const durationSegments = template.allowedDurations.map((d) => ({ value: String(d), label: t.common.days(d) }));
+  const doing = stats.data ? doingNowText(stats.data, t) : null;
   const faces = (stats.data?.friends ?? []).map((f) => ({ name: f.displayName, tint: f.avatarTint, url: f.avatarUrl }));
 
   const share = () => {
@@ -97,9 +99,9 @@ export default function TemplatePreviewScreen() {
           </Text>
 
           <View style={styles.chips}>
-            <Chip size="xs" tint={categoryTint(template.category)} label={CATEGORY_NAMES[template.category]} />
-            <Chip size="xs" tone="muted" label={`${DIFFICULTY_NAMES[template.difficulty]} zorluk`} />
-            <Chip size="xs" tone="muted" label={TASK_TYPE_NAMES[template.taskType]} />
+            <Chip size="xs" tint={categoryTint(template.category)} label={t.explore.categoryNames[template.category]} />
+            <Chip size="xs" tone="muted" label={t.explore.preview.difficulty(t.explore.difficulty[template.difficulty])} />
+            <Chip size="xs" tone="muted" label={t.create.taskTypes[template.taskType].title} />
           </View>
 
           {template.description ? (
@@ -111,14 +113,14 @@ export default function TemplatePreviewScreen() {
           <PreviewFeatures taskType={template.taskType} />
 
           <Text style={[typography.captionStrong, styles.durationLabel, { color: colors.text }]}>
-            Süre
+            {t.explore.preview.duration}
           </Text>
           <Segmented
             options={durationSegments}
             value={String(duration)}
             onChange={(v) => setPicked(Number(v) as DurationOption)}
             role="radio"
-            accessibilityLabel="Süre"
+            accessibilityLabel={t.explore.preview.duration}
             style={styles.segmented}
           />
 
@@ -145,14 +147,14 @@ export default function TemplatePreviewScreen() {
         )}
         <View style={styles.buttons}>
           <Button
-            title="Arkadaşlarla"
+            title={t.explore.preview.withFriends}
             variant="secondary"
             onPress={() => start('friends')}
             loading={create.isPending && mode === 'friends'}
             style={styles.button}
           />
           <Button
-            title="Tek başıma başla"
+            title={t.explore.preview.startSolo}
             onPress={() => start('solo')}
             loading={create.isPending && mode === 'solo'}
             style={styles.button}

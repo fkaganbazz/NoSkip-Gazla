@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 
 import OptionSheet from '@/components/OptionSheet';
 import { reminderTimes } from '@/features/settings/logic';
+import { useT } from '@/i18n';
 
 import { hhmm } from './logic';
 
@@ -25,22 +26,23 @@ type Props = {
  * arası 30 dakikalık adımlar. Seçince kapanır.
  */
 export default function ReminderSheet({ visible, groupTime, personalTime, onSelect, onClose }: Props) {
+  const t = useT();
   const options = useMemo(
     () => [
       {
         value: GROUP,
-        label: `Grubun saati (${groupTime ? hhmm(groupTime) : 'kapalı'})`,
-        detail: 'Kişisel saatin silinir, grupla aynı saatte hatırlatılırsın.',
+        label: t.challenge.reminderSheet.groupTime(groupTime ? hhmm(groupTime) : null),
+        detail: t.challenge.reminderSheet.groupTimeDetail,
       },
       ...reminderTimes(personalTime).map((time) => ({ value: time, label: time })),
     ],
-    [groupTime, personalTime],
+    [groupTime, personalTime, t],
   );
 
   return (
     <OptionSheet
       visible={visible}
-      title="Hatırlatma saati"
+      title={t.challenge.reminderSheet.title}
       options={options}
       value={personalTime ? hhmm(personalTime) : GROUP}
       onSelect={(value) => onSelect(value === GROUP ? null : value)}

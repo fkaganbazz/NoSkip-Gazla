@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 
 import { AdBanner, useAdsState } from '@/ads';
+import { useT } from '@/i18n';
 import { spacing, useTheme } from '@/theme';
 import { exploreColors, exploreMetrics as m, exploreTypography } from '@/theme/explore';
 
@@ -13,6 +14,7 @@ type Load = 'loading' | 'loaded' | 'failed';
 export default function AdBannerSlot() {
   const { scheme } = useTheme();
   const c = exploreColors[scheme];
+  const t = useT();
   const ads = useAdsState();
   const [load, setLoad] = useState<Load>('loading');
 
@@ -26,7 +28,7 @@ export default function AdBannerSlot() {
       importantForAccessibility={loaded ? 'auto' : 'no-hide-descendants'}>
       {loaded && (
         <View style={[styles.tag, { backgroundColor: c.adTagBg }]}>
-          <Text style={[exploreTypography.adTag, { color: c.adTagText }]}>REKLAM</Text>
+          <Text style={[exploreTypography.adTag, { color: c.adTagText }]}>{t.explore.adTag}</Text>
         </View>
       )}
       <AdBanner

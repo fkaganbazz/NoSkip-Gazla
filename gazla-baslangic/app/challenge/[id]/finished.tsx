@@ -17,7 +17,8 @@ import {
 } from '@/data';
 import Confetti from '@/features/moments/Confetti';
 import { ShareCardCapture, storyShareMessage, useStoryShare } from '@/features/moments/StoryShare';
-import { finishedColors, momentsMetrics as m, momentsTypography as t } from '@/theme/moments';
+import { useT } from '@/i18n';
+import { finishedColors, momentsMetrics as m, momentsTypography as typo } from '@/theme/moments';
 import { componentMetrics as cm, layout, radius, useTheme } from '@/theme';
 
 const DESIGN_WIDTH = 390;
@@ -37,6 +38,7 @@ export default function FinishedScreen() {
   const { width } = useWindowDimensions();
   const { colors, scheme } = useTheme();
   const c = finishedColors[scheme];
+  const t = useT();
   const { session, profile } = useAuth();
   const story = useStoryShare();
   const toast = useToast();
@@ -79,7 +81,7 @@ export default function FinishedScreen() {
     return (
       <View style={[styles.screen, { paddingTop: top, backgroundColor: c.bg }]}>
         <View style={styles.closeRow}>
-          <IconButton icon="close" accessibilityLabel="Kapat" onPress={close} />
+          <IconButton icon="close" accessibilityLabel={t.common.close} onPress={close} />
         </View>
         <LoadingState />
       </View>
@@ -90,7 +92,7 @@ export default function FinishedScreen() {
     return (
       <View style={[styles.screen, { paddingTop: top, backgroundColor: c.bg }]}>
         <View style={styles.closeRow}>
-          <IconButton icon="close" accessibilityLabel="Kapat" onPress={close} />
+          <IconButton icon="close" accessibilityLabel={t.common.close} onPress={close} />
         </View>
         <ErrorState message={challenge.error?.message} onRetry={() => challenge.refetch()} />
       </View>
@@ -119,8 +121,8 @@ export default function FinishedScreen() {
   };
   const shareStory = async () => {
     const result = await story.share({ fileBase: ch.title, fallbackMessage: storyShareMessage(card) });
-    if (result === 'downloaded') toast.show({ message: 'Paylaşım görseli indirildi.', kind: 'success' });
-    else if (result === 'error') toast.show({ message: 'Paylaşım açılamadı. Tekrar dene.' });
+    if (result === 'downloaded') toast.show({ message: t.challenge.finished.downloaded, kind: 'success' });
+    else if (result === 'error') toast.show({ message: t.challenge.finished.shareFailed });
   };
 
   return (
@@ -144,7 +146,7 @@ export default function FinishedScreen() {
         </View>
 
         <View style={styles.closeRow}>
-          <IconButton icon="close" accessibilityLabel="Kapat" onPress={close} />
+          <IconButton icon="close" accessibilityLabel={t.common.close} onPress={close} />
         </View>
 
         <View style={styles.diken}>
@@ -153,20 +155,20 @@ export default function FinishedScreen() {
 
         <View style={styles.texts}>
           <View style={[styles.badge, { backgroundColor: c.badgeBg }]}>
-            <Text style={[t.badge, { color: c.badgeText }]}>{`${daysDone}/${required} GÜN`}</Text>
+            <Text style={[typo.badge, { color: c.badgeText }]}>{t.challenge.finished.badge(daysDone, required)}</Text>
           </View>
-          <Text accessibilityRole="header" style={[t.finishedTitle, styles.center, { color: colors.text }]}>
-            Efsane!
+          <Text accessibilityRole="header" style={[typo.finishedTitle, styles.center, { color: colors.text }]}>
+            {t.challenge.finished.title}
           </Text>
-          <Text style={[t.finishedSub, styles.center, { color: c.body }]}>
-            {`"${ch.title}" challenge'ını bitirdin.${bloomed ? ' Diken çiçek açtı.' : ''}`}
+          <Text style={[typo.finishedSub, styles.center, { color: c.body }]}>
+            {`${t.challenge.finished.sub(ch.title)}${bloomed ? t.challenge.finished.bloomed : ''}`}
           </Text>
         </View>
 
         <View style={styles.stats}>
-          <Stat value={`${daysDone}/${required}`} label="gün" />
-          <Stat value={String(rescues)} label="kurtarma" />
-          <Stat value={rank != null ? `${rank}.` : '–'} label="grupta sıra" />
+          <Stat value={`${daysDone}/${required}`} label={t.challenge.finished.stats.days} />
+          <Stat value={String(rescues)} label={t.challenge.finished.stats.rescues(rescues)} />
+          <Stat value={rank != null ? t.challenge.finished.rank(rank) : '–'} label={t.challenge.finished.stats.rank} />
         </View>
 
         <Pressable
@@ -177,21 +179,21 @@ export default function FinishedScreen() {
             <Diken mood="mutlu" stage="genc" size={m.gardenDikenSmall} />
             <Diken mood="gurur" stage={stage} size={m.gardenDikenLarge} />
           </View>
-          <Text style={[t.garden, styles.gardenText, { color: c.gardenText }]}>
-            {bloomed ? 'Bahçene çiçekli bir kaktüs eklendi' : 'Bahçene yeni bir kaktüs eklendi'}
+          <Text style={[typo.garden, styles.gardenText, { color: c.gardenText }]}>
+            {bloomed ? t.challenge.finished.gardenBloomed : t.challenge.finished.gardenNew}
           </Text>
           <ChevronRightIcon color={c.gardenText} size={m.chevronSize} strokeWidth={m.chevronStroke} />
         </Pressable>
 
         <View style={styles.footer}>
           <Button
-            title="Story'de paylaş"
+            title={t.challenge.finished.shareStory}
             icon={(color) => <ShareIcon color={color} size={cm.buttonIconSize} strokeWidth={cm.buttonIconStroke} />}
             loading={story.busy}
-            accessibilityLabel={story.busy ? 'Paylaşım görseli hazırlanıyor' : undefined}
+            accessibilityLabel={story.busy ? t.challenge.finished.sharePreparing : undefined}
             onPress={shareStory}
           />
-          <Button title="Yeni challenge seç" variant="text" onPress={() => router.navigate('/explore')} />
+          <Button title={t.challenge.finished.pickNew} variant="text" onPress={() => router.navigate('/explore')} />
         </View>
       </ScrollView>
       <ToastHost toast={toast} />
@@ -205,8 +207,8 @@ function Stat({ value, label }: { value: string; label: string }) {
   return (
     <Card style={styles.stat}>
       <View accessible accessibilityLabel={`${value} ${label}`} style={styles.statInner}>
-        <Text style={[t.statValue, { color: colors.text }]}>{value}</Text>
-        <Text style={[t.statLabel, { color: c.statLabel }]}>{label}</Text>
+        <Text style={[typo.statValue, { color: colors.text }]}>{value}</Text>
+        <Text style={[typo.statLabel, { color: c.statLabel }]}>{label}</Text>
       </View>
     </Card>
   );

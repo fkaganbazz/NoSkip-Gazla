@@ -3,10 +3,9 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { CheckIcon, SolidDropIcon, StarIcon } from '@/components/icons';
 import type { TaskType } from '@/data';
+import { useT } from '@/i18n';
 import { challengeTints, useTheme } from '@/theme';
 import { previewColors, previewMetrics as m, previewTypography } from '@/theme/explore';
-
-import { TASK_TYPE_FEATURE } from './labels';
 
 // "Nasıl işler" satırları: işaretleme, kurtarma, bahçe (ChallengePreview.dc.html).
 export default function PreviewFeatures({ taskType }: { taskType: TaskType }) {
@@ -14,16 +13,18 @@ export default function PreviewFeatures({ taskType }: { taskType: TaskType }) {
   const green = challengeTints.green[scheme];
   const butter = challengeTints.butter[scheme];
   const rescue = previewColors[scheme];
+  const t = useT();
+  const f = t.explore.preview.features;
 
   return (
     <View style={styles.list}>
-      <Feature bg={green.bg} text={TASK_TYPE_FEATURE[taskType]}>
+      <Feature bg={green.bg} text={f.taskType[taskType]}>
         <CheckIcon color={green.ink} size={m.featureIconSize} strokeWidth={m.checkIconStrokeWidth} />
       </Feature>
-      <Feature bg={rescue.rescueTileBg} text="Kaçırırsan Diken solar, sulayıp kurtarabilirsin">
+      <Feature bg={rescue.rescueTileBg} text={f.rescue}>
         <SolidDropIcon color={rescue.rescueTileInk} size={m.featureIconSize} />
       </Feature>
-      <Feature bg={butter.bg} text="Son gün bahçene yeni bir kaktüs eklenir">
+      <Feature bg={butter.bg} text={f.garden}>
         <StarIcon color={butter.ink} size={m.featureIconSize} strokeWidth={m.starIconStrokeWidth} />
       </Feature>
     </View>

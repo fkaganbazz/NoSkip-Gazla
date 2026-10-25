@@ -2,10 +2,11 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { Avatar, Button, Card } from '@/components/ui';
 import type { BoardMember } from '@/data';
-import { challengeColors, challengeMetrics as m, challengeTypography as t } from '@/theme/challenge';
+import { useT } from '@/i18n';
+import { challengeColors, challengeMetrics as m, challengeTypography as typo } from '@/theme/challenge';
 import { borderWidth, useTheme } from '@/theme';
 
-import { accusative, boardRowInfo } from './logic';
+import { boardRowInfo } from './logic';
 
 type Props = {
   members: BoardMember[];
@@ -19,13 +20,14 @@ type Props = {
 // Grup listesi: seriye göre sıra, bugün bekleyene "Dürt" (Detail.dc.html).
 export default function BoardCard({ members, meId, running, onPoke }: Props) {
   const { colors } = useTheme();
+  const t = useT();
   return (
     <Card style={styles.card}>
       <View style={styles.header}>
-        <Text accessibilityRole="header" style={[t.boardTitle, { color: colors.text }]}>
-          Grup
+        <Text accessibilityRole="header" style={[typo.boardTitle, { color: colors.text }]}>
+          {t.challenge.board.title}
         </Text>
-        <Text style={[t.detail, { color: colors.textSecondary }]}>Seriye göre</Text>
+        <Text style={[typo.detail, { color: colors.textSecondary }]}>{t.challenge.board.byStreak}</Text>
       </View>
       {members.map((member, i) => (
         <Row
@@ -56,8 +58,9 @@ function Row({
 }) {
   const { colors, scheme } = useTheme();
   const c = challengeColors[scheme];
-  const info = boardRowInfo(member, running);
-  const name = isMe ? 'Sen' : member.displayName;
+  const t = useT();
+  const info = boardRowInfo(member, running, t);
+  const name = isMe ? t.challenge.board.you : member.displayName;
   const canPoke = !isMe && info.tone === 'waiting';
 
   return (
@@ -66,34 +69,34 @@ function Row({
         styles.row,
         !last && { borderBottomWidth: borderWidth.thin, borderBottomColor: c.rowDivider },
       ]}>
-      <Text style={[t.rowStrong, styles.rank, { color: member.rank === 1 ? c.rankFirst : colors.textSecondary }]}>
+      <Text style={[typo.rowStrong, styles.rank, { color: member.rank === 1 ? c.rankFirst : colors.textSecondary }]}>
         {member.rank}
       </Text>
       <Avatar name={member.displayName} tint={member.avatarTint} self={isMe} url={member.avatarUrl} size={m.avatar} decorative />
       <View style={styles.names}>
-        <Text numberOfLines={1} style={[t.name, { color: colors.text }]}>
+        <Text numberOfLines={1} style={[typo.name, { color: colors.text }]}>
           {name}
         </Text>
         {info.sub && (
           <Text
             numberOfLines={1}
-            style={[t.rowSub, { color: info.tone === 'waiting' ? c.waitingText : colors.textSecondary }]}>
+            style={[typo.rowSub, { color: info.tone === 'waiting' ? c.waitingText : colors.textSecondary }]}>
             {info.sub}
           </Text>
         )}
       </View>
       {canPoke ? (
         <Button
-          title="Dürt"
+          title={t.common.poke}
           variant="orange"
           size="sm"
-          accessibilityLabel={`${accusative(member.displayName)} dürt`}
+          accessibilityLabel={t.challenge.detail.pokeName(member.displayName)}
           onPress={() => onPoke(member.id)}
           style={styles.poke}
         />
       ) : (
-        <Text style={[t.rowStrong, { color: info.tone === 'broken' ? colors.textSecondary : c.streakText }]}>
-          {`${member.streak} gün`}
+        <Text style={[typo.rowStrong, { color: info.tone === 'broken' ? colors.textSecondary : c.streakText }]}>
+          {t.common.days(member.streak)}
         </Text>
       )}
     </View>

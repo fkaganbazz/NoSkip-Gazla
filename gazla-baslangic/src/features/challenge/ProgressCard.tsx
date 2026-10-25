@@ -2,15 +2,16 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { CheckIcon, SolidDropIcon } from '@/components/icons';
 import { Card, Chip } from '@/components/ui';
-import { challengeColors, challengeMetrics as m, challengeTypography as t } from '@/theme/challenge';
+import { useT } from '@/i18n';
+import { challengeColors, challengeMetrics as m, challengeTypography as typo } from '@/theme/challenge';
 import { useTheme } from '@/theme';
 
 import type { DayCell } from './logic';
 
 type Props = {
-  /** "Gün 12/30" */
+  /** "Gün 12/30" / "Day 12/30" */
   title: string;
-  /** "18 gün kaldı" */
+  /** "18 gün kaldı" / "18 days left" */
   detail: string | null;
   /** Bugünkü görev tamam: sağda yeşil çip */
   doneToday: boolean;
@@ -21,6 +22,7 @@ type Props = {
 export default function ProgressCard({ title, detail, doneToday, days }: Props) {
   const { colors, scheme } = useTheme();
   const c = challengeColors[scheme];
+  const t = useT();
 
   // 10'lu satırlar; son satır boş hücrelerle tamamlanır (7 günlük challenge da 10 sütunda)
   const rows: (DayCell | null)[][] = [];
@@ -34,10 +36,10 @@ export default function ProgressCard({ title, detail, doneToday, days }: Props) 
     <Card style={styles.card}>
       <View style={styles.top}>
         <View style={styles.dayRow}>
-          <Text style={[t.day, { color: colors.text }]}>{title}</Text>
-          {detail && <Text style={[t.detail, { color: colors.textSecondary }]}>{detail}</Text>}
+          <Text style={[typo.day, { color: colors.text }]}>{title}</Text>
+          {detail && <Text style={[typo.detail, { color: colors.textSecondary }]}>{detail}</Text>}
         </View>
-        {doneToday && <Chip size="xs" tone="success" icon={CheckIcon} label="Bugün tamam" />}
+        {doneToday && <Chip size="xs" tone="success" icon={CheckIcon} label={t.challenge.progress.doneToday} />}
       </View>
 
       <View style={styles.grid}>
@@ -49,26 +51,19 @@ export default function ProgressCard({ title, detail, doneToday, days }: Props) 
       </View>
 
       <View style={styles.legend}>
-        <LegendItem color={c.cellDone} label="Tamamlandı" />
-        <LegendItem color={c.cellSavedDrop} label="Reklamla kurtarıldı" />
-        <LegendItem color={c.cellToday} ring={c.cellTodayRing} label="Bugün" />
+        <LegendItem color={c.cellDone} label={t.challenge.progress.legend.done} />
+        <LegendItem color={c.cellSavedDrop} label={t.challenge.progress.legend.saved} />
+        <LegendItem color={c.cellToday} ring={c.cellTodayRing} label={t.challenge.progress.legend.today} />
       </View>
     </Card>
   );
 }
 
-const STATE_LABEL: Record<DayCell['state'], string> = {
-  done: 'tamamlandı',
-  saved: 'kurtarıldı',
-  today: 'bugün, tamamlandı',
-  todayOpen: 'bugün, bekliyor',
-  future: '',
-};
-
 function Cell({ day }: { day: DayCell }) {
   const { scheme } = useTheme();
   const c = challengeColors[scheme];
-  const label = `Gün ${day.n}${STATE_LABEL[day.state] ? `, ${STATE_LABEL[day.state]}` : ''}`;
+  const t = useT();
+  const label = t.challenge.progress.cell(day.n, day.state === 'future' ? null : t.challenge.progress.cellState[day.state]);
   const ring = day.state === 'today' || day.state === 'todayOpen' ? { boxShadow: `0 0 0 ${m.cellRing}px ${c.cellTodayRing}` } : null;
   const bg =
     day.state === 'done'
@@ -86,7 +81,7 @@ function Cell({ day }: { day: DayCell }) {
       ) : day.state === 'saved' ? (
         <SolidDropIcon color={c.cellSavedDrop} size={m.cellDropSize} />
       ) : (
-        <Text style={[t.cell, { color: c.cellFutureText }]}>{day.n}</Text>
+        <Text style={[typo.cell, { color: c.cellFutureText }]}>{day.n}</Text>
       )}
     </View>
   );
@@ -103,7 +98,7 @@ function LegendItem({ color, ring, label }: { color: string; ring?: string; labe
           ring ? { borderWidth: m.legendSwatchBorder, borderColor: ring } : null,
         ]}
       />
-      <Text style={[t.legend, { color: challengeColors[scheme].legendText }]}>{label}</Text>
+      <Text style={[typo.legend, { color: challengeColors[scheme].legendText }]}>{label}</Text>
     </View>
   );
 }
