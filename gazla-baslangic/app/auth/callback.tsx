@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ErrorState, LoadingState } from '@/components/ui';
 import { isCancelledError, isNetworkError, parseAuthRedirect, useAuth, useCompleteAuthRedirect } from '@/data';
 import { useOnboarding } from '@/features/onboarding/OnboardingProvider';
+import { useT } from '@/i18n';
 
 // Giriş dönüşü: e-posta bağlantısı ve tarayıcı akışı gazla://auth/callback?code=… adresine döner (PKCE; web'de
 // <site>/auth/callback). Kod oturuma çevrilir; oturum açılınca önceki ekrana döner (onboarding düzeni profil
@@ -15,6 +16,7 @@ import { useOnboarding } from '@/features/onboarding/OnboardingProvider';
 // açıldıysa (geri gidilecek ekran yok) uygulama açıksa Bugün'e, değilse onboarding'e (giriş ya da kaldığı adım) gider.
 export default function AuthCallbackScreen() {
   const router = useRouter();
+  const t = useT();
   const search = useLocalSearchParams();
   const url = Linking.useLinkingURL();
   const { status } = useAuth();
@@ -61,7 +63,11 @@ export default function AuthCallbackScreen() {
         retryable ? (
           <ErrorState message={error.message} onRetry={run} />
         ) : (
-          <ErrorState message={error.message} actionLabel="Girişe dön" onRetry={() => router.replace('/sign-in')} />
+          <ErrorState
+            message={error.message}
+            actionLabel={t.auth.callback.backToSignIn}
+            onRetry={() => router.replace('/sign-in')}
+          />
         )
       ) : (
         <LoadingState />

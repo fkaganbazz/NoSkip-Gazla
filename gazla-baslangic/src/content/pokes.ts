@@ -8,6 +8,7 @@
  * metni değiştirirken migration'ı da güncelle.
  */
 import type { PokeTone } from '../data/types';
+import { getLanguage, type Language } from '../i18n/language';
 
 export type PokeMessageContent = {
   /** poke_messages.key */
@@ -15,7 +16,7 @@ export type PokeMessageContent = {
   tone: PokeTone;
   /** Türkçe metin (poke_messages.text_tr) */
   text: string;
-  /** İngilizce metin henüz tasarlanmadı (poke_messages.text_en) */
+  /** İngilizce metin (poke_messages.text_en); yoksa Türkçesi gösterilir */
   textEn: string | null;
 };
 
@@ -47,7 +48,13 @@ export function pokeMessagesFor(tone: PokeTone): PokeMessageContent[] {
   return POKE_MESSAGES.filter((m) => m.tone === tone);
 }
 
+/** Mesajın uygulama dilindeki metni (İngilizcesi yoksa Türkçesi) */
+export function pokeMessageText(message: PokeMessageContent, lang: Language = getLanguage()): string {
+  return lang === 'en' ? (message.textEn ?? message.text) : message.text;
+}
+
 /** Dürtme metni (Aktivite alıntı balonu); bilinmeyen (kaldırılmış) id için null */
-export function pokeText(id: string, tone?: PokeTone): string | null {
-  return POKE_MESSAGES.find((m) => m.id === id && (!tone || m.tone === tone))?.text ?? null;
+export function pokeText(id: string, tone?: PokeTone, lang: Language = getLanguage()): string | null {
+  const message = POKE_MESSAGES.find((m) => m.id === id && (!tone || m.tone === tone));
+  return message ? pokeMessageText(message, lang) : null;
 }

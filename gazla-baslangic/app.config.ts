@@ -115,16 +115,42 @@ const SK_AD_NETWORK_ITEMS = [
   '3qcr597p9d.skadnetwork',
 ];
 
-// İzin metinleri (iOS Info.plist / Android) -----------------------------------------------------
+// Uygulama adı ve izin metinleri (dile göre) -------------------------------------------------------
+// Tek uygulama, iki ad: telefon Türkçeyse "Gazla", diğer dillerde "NoSkip" (src/i18n). Temel değerler İngilizce
+// (Info.plist, Android values/); Türkçe `locales.tr` ile (iOS tr.lproj/InfoPlist.strings, Android values-b+tr/).
+
+const APP_NAME = { en: 'NoSkip', tr: 'Gazla' };
 
 const permissions = {
-  camera: 'Gazla, günlük görevin için fotoğraf kanıtı çekebilmen için kameranı kullanır.',
-  photos: 'Gazla, fotoğraf kanıtı ya da profil fotoğrafı seçebilmen için fotoğraflarına erişir.',
-  contacts:
-    'Gazla, rehberindeki arkadaşlarını bulmak için kişilerinin e-posta adreslerini kullanır. Adreslerin kendisi gönderilmez, yalnızca özetleri gönderilir ve karşılaştırılır.',
-  tracking:
-    'İzin verirsen Gazla’daki reklamlar ilgi alanlarına göre seçilir. Bu izin uygulamayı kullanmanı etkilemez; seri kurtarma reklamı izin vermesen de çalışır.',
+  en: {
+    camera: 'NoSkip uses your camera so you can take photo proof for your daily task.',
+    photos: 'NoSkip accesses your photos so you can pick a photo proof or a profile picture.',
+    contacts:
+      'NoSkip uses the email addresses in your contacts to find your friends. The addresses themselves are never sent; only their hashes are sent and compared.',
+    tracking:
+      'If you allow it, ads in NoSkip are chosen based on your interests. This does not affect how you use the app; the streak rescue ad works even if you say no.',
+  },
+  tr: {
+    camera: 'Gazla, günlük görevin için fotoğraf kanıtı çekebilmen için kameranı kullanır.',
+    photos: 'Gazla, fotoğraf kanıtı ya da profil fotoğrafı seçebilmen için fotoğraflarına erişir.',
+    contacts:
+      'Gazla, rehberindeki arkadaşlarını bulmak için kişilerinin e-posta adreslerini kullanır. Adreslerin kendisi gönderilmez, yalnızca özetleri gönderilir ve karşılaştırılır.',
+    tracking:
+      'İzin verirsen Gazla’daki reklamlar ilgi alanlarına göre seçilir. Bu izin uygulamayı kullanmanı etkilemez; seri kurtarma reklamı izin vermesen de çalışır.',
+  },
 };
+
+/** iOS InfoPlist.strings / Android strings.xml: dile göre ad ve izin metinleri */
+const localeStrings = (lang: 'en' | 'tr') => ({
+  ios: {
+    CFBundleDisplayName: APP_NAME[lang],
+    NSCameraUsageDescription: permissions[lang].camera,
+    NSPhotoLibraryUsageDescription: permissions[lang].photos,
+    NSContactsUsageDescription: permissions[lang].contacts,
+    NSUserTrackingUsageDescription: permissions[lang].tracking,
+  },
+  android: { app_name: APP_NAME[lang] },
+});
 
 // Yapılandırma ----------------------------------------------------------------------------------
 
@@ -162,7 +188,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     [
       'expo-camera',
       {
-        cameraPermission: permissions.camera,
+        cameraPermission: permissions.en.camera,
         microphonePermission: false,
         recordAudioAndroid: false,
         barcodeScannerEnabled: false,
@@ -171,13 +197,15 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     [
       'expo-image-picker',
       {
-        photosPermission: permissions.photos,
-        cameraPermission: permissions.camera,
+        photosPermission: permissions.en.photos,
+        cameraPermission: permissions.en.camera,
         microphonePermission: false,
       },
     ],
-    ['expo-contacts', { contactsPermission: permissions.contacts }],
-    ['expo-tracking-transparency', { userTrackingPermission: permissions.tracking }],
+    ['expo-contacts', { contactsPermission: permissions.en.contacts }],
+    ['expo-tracking-transparency', { userTrackingPermission: permissions.en.tracking }],
+    // Sistem ayarlarında uygulamaya özel dil seçimi (iOS CFBundleLocalizations, Android 13+ localeConfig)
+    ['expo-localization', { supportedLocales: ['en', 'tr'] }],
     [
       'react-native-google-mobile-ads',
       {
@@ -186,7 +214,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         // UMP izin formu ve ATT sorusu bitmeden ölçüm başlamasın (src/ads/useAdsBootstrap)
         delayAppMeasurementInit: true,
         skAdNetworkItems: SK_AD_NETWORK_ITEMS,
-        userTrackingUsageDescription: permissions.tracking,
+        userTrackingUsageDescription: permissions.en.tracking,
       },
     ],
   ];
@@ -199,7 +227,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 
   return {
     ...config,
-    name: 'Gazla',
+    name: APP_NAME.en,
     slug: 'gazla',
     scheme: 'gazla',
     version: '1.0.0',
@@ -213,9 +241,11 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       associatedDomains: [`applinks:${inviteHost}`],
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
-        // Sistem metinleri (resmi Apple ile giriş butonu, izin pencereleri) Türkçe; İngilizce ikinci dil
-        CFBundleDevelopmentRegion: 'tr',
-        CFBundleLocalizations: ['tr', 'en'],
+        // Sistem metinleri (resmi Apple ile giriş butonu, izin pencereleri) cihaz dilinde: Türkçe telefonda Türkçe,
+        // eşleşmeyen dillerde İngilizce (geliştirme bölgesi)
+        CFBundleDevelopmentRegion: 'en',
+        CFBundleLocalizations: ['en', 'tr'],
+        CFBundleAllowMixedLocalizations: true,
       },
     },
     android: {
@@ -237,6 +267,10 @@ export default ({ config }: ConfigContext): ExpoConfig => {
           category: ['BROWSABLE', 'DEFAULT'],
         },
       ],
+    },
+    locales: {
+      en: localeStrings('en'),
+      tr: localeStrings('tr'),
     },
     web: {
       favicon: './assets/favicon.png',

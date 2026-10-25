@@ -12,6 +12,7 @@ import { useAdsBootstrap } from '@/ads';
 import { DataProvider, useAuth } from '@/data';
 import { OnboardingProvider, useOnboarding } from '@/features/onboarding/OnboardingProvider';
 import { restoreThemePreference } from '@/features/settings/themePreference';
+import { useLanguageBootstrap } from '@/i18n';
 import { useNotificationsBootstrap } from '@/notifications';
 import { fontAssets, useTheme } from '@/theme';
 
@@ -66,6 +67,8 @@ function RootNavigator() {
   // Reklam izni/SDK (AdMob + UMP + ATT) ve bildirim dinleyicileri (dokununca ilgili ekran)
   useAdsBootstrap();
   useNotificationsBootstrap({ canNavigate: fontsReady && authReady && appOpen });
+  // Dil: cihaz dili değişince uygula (tercih 'system' ise)
+  useLanguageBootstrap();
 
   // Ayarlar'da seçilen görünüm (Açık / Koyu / Sistem) cihazda saklanır
   useEffect(() => {
