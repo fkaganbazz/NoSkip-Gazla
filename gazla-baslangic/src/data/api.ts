@@ -6,6 +6,7 @@
  * Hatalar `ApiError` olarak fırlatılır; `message` kullanıcıya gösterilebilir Türkçe metindir
  * (Supabase'te RPC'lerin `raise exception` mesajı).
  */
+import type { AuthRedirectParams } from './authRedirect';
 import type {
   ActivityItem,
   ActivityPage,
@@ -113,8 +114,14 @@ export interface GazlaApi {
    * tarayıcı akışı. Kullanıcı pencereyi kapatırsa `ApiError` kodu 'CANCELLED' (`isCancelledError`).
    */
   signInWithProvider(provider: OAuthProvider): Promise<void>;
-  /** auth.signInWithOtp (e-posta bağlantısı) */
+  /** auth.signInWithOtp (e-posta bağlantısı; `gazla://auth/callback`'e döner) */
   signInWithEmail(email: string): Promise<void>;
+  /**
+   * Giriş dönüşü (`app/auth/callback.tsx`): adresteki PKCE kodunu `auth.exchangeCodeForSession` ile oturuma
+   * çevirir. Adreste hata varsa Türkçe `ApiError` (`access_denied`: 'CANCELLED'); kod yoksa ve oturum da
+   * açık değilse hata.
+   */
+  completeAuthRedirect(params: AuthRedirectParams): Promise<void>;
   signOut(): Promise<void>;
   /** Edge Function `delete-account` (Storage dosyaları + auth.admin.deleteUser) */
   deleteAccount(): Promise<void>;

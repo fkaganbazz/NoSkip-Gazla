@@ -93,7 +93,7 @@ export default function SignInScreen() {
                   textContentType="emailAddress"
                   returnKeyType="send"
                   onSubmitEditing={sendEmail}
-                  hint={emailSent ? 'Giriş bağlantısını e-postana gönderdik. Bağlantıya dokununca devam edersin.' : null}
+                  hint={emailSent ? 'Giriş bağlantısını e-postana gönderdik. Bağlantıyı bu cihazda açınca devam edersin.' : null}
                 />
                 <Button
                   title="Bağlantı gönder"

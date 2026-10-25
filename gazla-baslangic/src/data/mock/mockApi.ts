@@ -8,6 +8,7 @@
  * ile düşer; işaretlemeler çevrimdışı kuyruğa girer.
  */
 import { ApiError, NetworkError, type GazlaApi, type OAuthProvider } from '../api';
+import { AUTH_NOT_COMPLETED, redirectError } from '../authRedirect';
 import { clearAllFlags } from '../flags';
 import { isOnline, isSimulatedOffline, setSimulatedOffline } from '../network';
 import { clearCheckinQueue } from '../offlineQueue';
@@ -561,6 +562,17 @@ export const mockApi: GazlaApi = {
     // Gerçekte bağlantı e-postayla gelir; örnekte hemen oturum açılır.
     store.signedIn = true;
     notifySession();
+  },
+  async completeAuthRedirect(params) {
+    await wait();
+    const error = redirectError(params);
+    if (error) throw error;
+    // Örnekte kod doğrulanmaz: kod varsa oturum açılır
+    if (params.code && !store.signedIn) {
+      store.signedIn = true;
+      notifySession();
+    }
+    if (!store.signedIn) throw new ApiError(AUTH_NOT_COMPLETED);
   },
   async signOut() {
     await wait();

@@ -134,6 +134,8 @@ function RootNavigator() {
 
         {/* Davet linki oturumsuz da açılır (gazla://invite/KOD) */}
         <Stack.Screen name="invite/[code]" />
+        {/* Giriş dönüşü (e-posta bağlantısı, tarayıcı akışı): oturum açılmadan gelir */}
+        <Stack.Screen name="auth/callback" options={{ animation: 'none' }} />
       </Stack>
     </>
   );

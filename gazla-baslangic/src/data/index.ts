@@ -14,6 +14,7 @@ export {
   NetworkError,
   type OAuthProvider,
 } from './api';
+export { authError, parseAuthRedirect, type AuthRedirectParams } from './authRedirect';
 export { api } from './client';
 export { DataProvider, useAuth, type AuthStatus } from './DataProvider';
 export { adConsentShown, clearAllFlags, clearFlag, isFlagSet, onceFlag, setFlag, type FlagName } from './flags';

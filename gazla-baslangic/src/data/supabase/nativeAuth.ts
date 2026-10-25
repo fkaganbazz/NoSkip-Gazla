@@ -9,6 +9,7 @@
  *   istemci kimliği tanımsız) Supabase OAuth tarayıcı akışı.
  *
  * Kullanıcı pencereyi kapatırsa `ApiError` kodu 'CANCELLED' (ekran sessiz geçer; `isCancelledError`).
+ * Supabase Auth hataları `authError` ile Türkçe `ApiError`'a çevrilir.
  */
 import type { SupabaseClient } from '@supabase/supabase-js';
 import * as AppleAuthentication from 'expo-apple-authentication';
@@ -18,15 +19,12 @@ import * as WebBrowser from 'expo-web-browser';
 import { Platform } from 'react-native';
 
 import { googleSignInConfig } from '../../config/auth';
-import { ApiError, ApiErrorCode, type OAuthProvider } from '../api';
+import { ApiError, ApiErrorCode, isNetworkError, type OAuthProvider } from '../api';
+import { AUTH_NOT_COMPLETED, authError, parseAuthRedirect, redirectError } from '../authRedirect';
 
 type GoogleSignInModule = typeof import('@react-native-google-signin/google-signin');
 
-type Fail = (error: { message: string; code?: string } | null) => never;
-
 export const cancelledError = () => new ApiError('Giriş iptal edildi', ApiErrorCode.cancelled);
-
-const NOT_COMPLETED = 'Giriş tamamlanmadı. Tekrar dene.';
 
 let googleModule: GoogleSignInModule | null | undefined;
 
@@ -77,7 +75,7 @@ async function randomNonce(): Promise<string> {
   return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-async function signInWithApple(supabase: SupabaseClient, fail: Fail): Promise<void> {
+async function signInWithApple(supabase: SupabaseClient): Promise<void> {
   const rawNonce = await randomNonce();
   const hashedNonce = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, rawNonce);
 
@@ -94,14 +92,14 @@ async function signInWithApple(supabase: SupabaseClient, fail: Fail): Promise<vo
     if (codeOf(error) === 'ERR_REQUEST_CANCELED') throw cancelledError();
     throw new ApiError('Apple ile giriş tamamlanamadı. Tekrar dene.', codeOf(error));
   }
-  if (!credential.identityToken) throw new ApiError(NOT_COMPLETED);
+  if (!credential.identityToken) throw new ApiError(AUTH_NOT_COMPLETED);
 
   const { error } = await supabase.auth.signInWithIdToken({
     provider: 'apple',
     token: credential.identityToken,
     nonce: rawNonce,
   });
-  if (error) fail(error);
+  if (error) throw authError(error);
 
   // Apple adı yalnızca ilk girişte verir; sonra bir daha gelmez. Profil önerisi için sakla.
   const name = credential.fullName;
@@ -115,7 +113,7 @@ async function signInWithApple(supabase: SupabaseClient, fail: Fail): Promise<vo
 
 // Google ----------------------------------------------------------------------------------------
 
-async function signInWithGoogle(google: GoogleSignInModule, supabase: SupabaseClient, fail: Fail): Promise<void> {
+async function signInWithGoogle(google: GoogleSignInModule, supabase: SupabaseClient): Promise<void> {
   const { GoogleSignin, isCancelledResponse, isErrorWithCode, statusCodes } = google;
   let idToken: string | null;
   try {
@@ -134,10 +132,10 @@ async function signInWithGoogle(google: GoogleSignInModule, supabase: SupabaseCl
     }
     throw new ApiError('Google ile giriş tamamlanamadı. Tekrar dene.', codeOf(error));
   }
-  if (!idToken) throw new ApiError(NOT_COMPLETED);
+  if (!idToken) throw new ApiError(AUTH_NOT_COMPLETED);
 
   const { error } = await supabase.auth.signInWithIdToken({ provider: 'google', token: idToken });
-  if (error) fail(error);
+  if (error) throw authError(error);
 }
 
 /** Çıkışta Google hesabı seçimini sıfırla (bir sonraki girişte hesap seçici açılsın); hata yok sayılır */
@@ -151,13 +149,55 @@ export async function signOutNativeProviders(): Promise<void> {
   }
 }
 
+// Giriş dönüşü (PKCE) ---------------------------------------------------------------------------
+
+/** E-posta bağlantısı ve tarayıcı akışının döndüğü adres (`app/auth/callback.tsx`) */
+export const authRedirectUrl = () => Linking.createURL('auth/callback');
+
+const exchanges = new Map<string, Promise<void>>();
+
+/**
+ * Dönüş adresindeki kodu oturuma çevirir. Kod tek kullanımlıktır: Android'de tarayıcı akışının dönüşü hem
+ * `openAuthSessionAsync`'e hem expo-router'a (auth/callback ekranı) gelir; ikisi aynı isteği bekler.
+ */
+export function exchangeAuthCode(supabase: SupabaseClient, code: string): Promise<void> {
+  let exchange = exchanges.get(code);
+  if (!exchange) {
+    exchange = supabase.auth
+      .exchangeCodeForSession(code)
+      .then(({ error }) => {
+        if (error) throw authError(error);
+      })
+      .catch((error: unknown) => {
+        // İstek sunucuya ulaşmadıysa kod hâlâ geçerli: yeniden denenebilsin
+        if (isNetworkError(error)) exchanges.delete(code);
+        throw error;
+      });
+    exchanges.set(code, exchange);
+  }
+  return exchange;
+}
+
+/** Dönüş adresini işler: hata varsa fırlatır, kod varsa oturuma çevirir; ikisi de yoksa false */
+export async function completeAuthRedirect(
+  supabase: SupabaseClient,
+  params: ReturnType<typeof parseAuthRedirect>,
+): Promise<boolean> {
+  const error = redirectError(params);
+  if (error) throw error;
+  if (!params.code) return false;
+  await exchangeAuthCode(supabase, params.code);
+  return true;
+}
+
 // OAuth tarayıcı akışı (yedek) -----------------------------------------------------------------
 
-async function signInWithBrowser(supabase: SupabaseClient, provider: OAuthProvider, fail: Fail): Promise<void> {
-  const redirectTo = Linking.createURL('auth/callback');
+async function signInWithBrowser(supabase: SupabaseClient, provider: OAuthProvider): Promise<void> {
+  const redirectTo = authRedirectUrl();
   if (Platform.OS === 'web') {
+    // Sayfa sağlayıcıya gider, dönüşte auth/callback ekranı kodu oturuma çevirir
     const { error } = await supabase.auth.signInWithOAuth({ provider, options: { redirectTo } });
-    if (error) fail(error);
+    if (error) throw authError(error);
     return;
   }
   // Tarayıcıda oturum aç, dönüş adresindeki kodu oturuma çevir (PKCE)
@@ -165,28 +205,21 @@ async function signInWithBrowser(supabase: SupabaseClient, provider: OAuthProvid
     provider,
     options: { redirectTo, skipBrowserRedirect: true },
   });
-  if (error) fail(error);
+  if (error) throw authError(error);
   const result = await WebBrowser.openAuthSessionAsync(data.url!, redirectTo);
   if (result.type === 'cancel' || result.type === 'dismiss') throw cancelledError();
-  if (result.type !== 'success') throw new ApiError(NOT_COMPLETED);
-  const params = Linking.parse(result.url).queryParams ?? {};
-  const code = params.code;
-  if (typeof code !== 'string') {
-    // Sağlayıcı reddettiyse (ör. error=access_denied) kullanıcı vazgeçmiştir
-    if (params.error === 'access_denied') throw cancelledError();
-    throw new ApiError(NOT_COMPLETED);
-  }
-  const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-  if (exchangeError) fail(exchangeError);
+  if (result.type !== 'success') throw new ApiError(AUTH_NOT_COMPLETED);
+  // Sağlayıcı reddettiyse (error=access_denied) kullanıcı vazgeçmiştir
+  if (!(await completeAuthRedirect(supabase, parseAuthRedirect(result.url)))) throw new ApiError(AUTH_NOT_COMPLETED);
 }
 
-export async function signInWithProvider(supabase: SupabaseClient, provider: OAuthProvider, fail: Fail): Promise<void> {
+export async function signInWithProvider(supabase: SupabaseClient, provider: OAuthProvider): Promise<void> {
   if (provider === 'apple' && Platform.OS === 'ios' && (await AppleAuthentication.isAvailableAsync())) {
-    return signInWithApple(supabase, fail);
+    return signInWithApple(supabase);
   }
   if (provider === 'google') {
     const google = configuredGoogle();
-    if (google) return signInWithGoogle(google, supabase, fail);
+    if (google) return signInWithGoogle(google, supabase);
   }
-  return signInWithBrowser(supabase, provider, fail);
+  return signInWithBrowser(supabase, provider);
 }

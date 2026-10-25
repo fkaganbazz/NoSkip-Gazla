@@ -33,6 +33,7 @@ import { inviteLink } from '../config/links';
 import { POKE_MESSAGES } from '../content/pokes';
 import { AD_RESCUE_RETRY_DELAYS_MS } from './adRescue';
 import { isAdRewardPendingError, isCancelledError, isNetworkError, type OAuthProvider } from './api';
+import type { AuthRedirectParams } from './authRedirect';
 import { api } from './client';
 import { useAuth } from './DataProvider';
 import { forgetSession } from './lastSession';
@@ -235,6 +236,9 @@ export const useSignInWithProvider = () =>
   });
 
 export const useSignInWithEmail = () => useMutation({ mutationFn: (email: string) => api.signInWithEmail(email) });
+/** Giriş dönüşü (auth/callback): adresteki kodu oturuma çevirir (`parseAuthRedirect` ile okunan parametreler) */
+export const useCompleteAuthRedirect = () =>
+  useMutation({ mutationFn: (params: AuthRedirectParams) => api.completeAuthRedirect(params) });
 
 /** Çıkışta bu cihazın push token'ını sunucudan sil; ağ yoksa ya da yavaşsa çıkışı bekletme */
 const UNREGISTER_TIMEOUT_MS = 4000;

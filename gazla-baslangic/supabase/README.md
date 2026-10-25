@@ -392,7 +392,11 @@ denemek için: `curl -X POST http://127.0.0.1:54321/functions/v1/push -H "x-gazl
   gizli anahtar web istemcisinin. iOS SDK'sının kimlik belirteci nonce taşıdığı için "Skip nonce check"
   açık olmalı. Uygulama tarafı: `.env` `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`, `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`.
 - Dönüş adresleri (tarayıcı akışı, e-posta bağlantısı): `gazla://auth/callback` ve web adresi
-  Auth → URL Configuration → Redirect URLs'e eklenir.
+  (`<site>/auth/callback`) Auth → URL Configuration → Redirect URLs'e eklenir. Akış PKCE: bağlantı, istendiği
+  cihazda açılmalı.
+- **E-posta**: Auth → SMTP Settings'e kendi gönderim servisin (Resend, Postmark …). Yerleşik servis yalnızca
+  proje ekibinin adreslerine ve saatte birkaç e-posta gönderir. Şablonlar (Magic Link, Confirm signup) Auth →
+  Email Templates; bağlantı `{{ .ConfirmationURL }}`.
 
 ## Kararlar
 

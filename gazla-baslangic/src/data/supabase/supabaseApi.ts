@@ -19,13 +19,13 @@ import {
   type PostgrestError,
   type SupabaseClient,
 } from '@supabase/supabase-js';
-import * as Linking from 'expo-linking';
 import { AppState, Platform } from 'react-native';
 
 import { pokeText } from '../../content/pokes';
 import type { Database, Json, Tables, TablesUpdate } from '../../types/database';
 import { ApiError, ApiErrorCode, isNetworkError, NetworkError, type GazlaApi, type OAuthProvider } from '../api';
-import { signInWithProvider, signOutNativeProviders } from './nativeAuth';
+import { AUTH_NOT_COMPLETED, authError } from '../authRedirect';
+import { authRedirectUrl, completeAuthRedirect, signInWithProvider, signOutNativeProviders } from './nativeAuth';
 import type {
   ActivityItem,
   AvatarTintKey,
@@ -176,7 +176,10 @@ export function createSupabaseApi(url: string, anonKey: string): GazlaApi {
       storage: AsyncStorage,
       autoRefreshToken: true,
       persistSession: true,
-      detectSessionInUrl: Platform.OS === 'web',
+      // E-posta bağlantısı ve tarayıcı akışı kodla döner (PKCE); kodu her platformda auth/callback ekranı
+      // oturuma çevirir (web'de de: istemcinin adresten kendiliğinden okuması kapalı, kod iki kez çevrilmesin)
+      flowType: 'pkce',
+      detectSessionInUrl: false,
     },
   });
 
@@ -365,14 +368,20 @@ export function createSupabaseApi(url: string, anonKey: string): GazlaApi {
     },
     async signInWithProvider(provider: OAuthProvider) {
       // iOS'ta Apple ve Google native (signInWithIdToken); native yoksa OAuth tarayıcı akışı (nativeAuth.ts)
-      await signInWithProvider(supabase, provider, fail);
+      await signInWithProvider(supabase, provider);
     },
     async signInWithEmail(email) {
       const { error } = await supabase.auth.signInWithOtp({
         email: email.trim(),
-        options: { emailRedirectTo: Linking.createURL('auth/callback') },
+        options: { emailRedirectTo: authRedirectUrl() },
       });
-      if (error) fail(error);
+      if (error) throw authError(error, 'E-posta gönderilemedi. Biraz sonra tekrar dene.');
+    },
+    async completeAuthRedirect(params) {
+      if (await completeAuthRedirect(supabase, params)) return;
+      // Kod yok: iOS'ta tarayıcı dönüşü uygulamaya değil openAuthSessionAsync'e gider; oturum açıksa sorun yok
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) throw new ApiError(AUTH_NOT_COMPLETED);
     },
     async signOut() {
       await signOutNativeProviders();
