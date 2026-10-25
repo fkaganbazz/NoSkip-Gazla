@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { Linking, Platform } from 'react-native';
 
 import type { ToastController } from '@/components/ui';
+import { useT } from '@/i18n';
 import { useEnablePushNotifications } from '@/notifications';
 
 /**
@@ -10,14 +11,15 @@ import { useEnablePushNotifications } from '@/notifications';
  */
 export function usePushPrompt(toast: ToastController) {
   const { enable } = useEnablePushNotifications();
+  const t = useT();
 
   return useCallback(async () => {
     const result = await enable();
     if (result !== 'denied') return;
     toast.show({
-      message: 'Bildirim izni kapalı. Telefonunun ayarlarından açabilirsin.',
+      message: t.settings.pushDenied,
       kind: 'info',
-      ...(Platform.OS === 'web' ? {} : { action: { label: 'Ayarlar', onPress: () => Linking.openSettings() } }),
+      ...(Platform.OS === 'web' ? {} : { action: { label: t.common.settings, onPress: () => Linking.openSettings() } }),
     });
-  }, [enable, toast]);
+  }, [enable, toast, t]);
 }

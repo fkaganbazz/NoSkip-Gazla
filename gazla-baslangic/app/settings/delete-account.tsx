@@ -8,11 +8,12 @@ import { CameraIcon, FriendsIcon, StreakIcon, type IconProps } from '@/component
 import { Button, ScreenHeader, TextField } from '@/components/ui';
 import { useDeleteAccount, useStreak } from '@/data';
 import { errorText, isDeleteConfirmed } from '@/features/settings/logic';
+import { useT } from '@/i18n';
 import { borderWidth, layout, typography, useTheme } from '@/theme';
-import { settingsColors, settingsMetrics as m, settingsTypography as t } from '@/theme/settings';
+import { settingsColors, settingsMetrics as m, settingsTypography as st } from '@/theme/settings';
 
-// Hesabı sil — design/DeleteAccount.dc.html. "SİL" yazınca buton açılır; başarıda oturum kapanır,
-// kök düzendeki koruma onboarding'e geçirir.
+// Hesabı sil — design/DeleteAccount.dc.html. "SİL" (İngilizcede "DELETE") yazınca buton açılır; başarıda oturum
+// kapanır, kök düzendeki koruma onboarding'e geçirir.
 export default function DeleteAccountScreen() {
   const { colors, scheme } = useTheme();
   const router = useRouter();
@@ -20,14 +21,16 @@ export default function DeleteAccountScreen() {
   const streak = useStreak();
   const account = useDeleteAccount();
   const [confirm, setConfirm] = useState('');
+  const t = useT();
+  const d = t.settings.deleteAccount;
 
   const days = streak.data?.currentStreak ?? 0;
   const losses: { icon: ComponentType<IconProps>; label: string }[] = [
-    { icon: StreakIcon, label: days > 0 ? `${days} günlük serin ve bahçen` : 'Serin ve bahçen' },
-    { icon: FriendsIcon, label: 'Arkadaşların ve grupların' },
-    { icon: CameraIcon, label: 'Fotoğraf kanıtların ve mesajların' },
+    { icon: StreakIcon, label: days > 0 ? d.streakAndGarden(days) : d.streakAndGardenNone },
+    { icon: FriendsIcon, label: d.friends },
+    { icon: CameraIcon, label: d.photos },
   ];
-  const confirmed = isDeleteConfirmed(confirm);
+  const confirmed = isDeleteConfirmed(confirm, d.confirmWord);
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.screen}>
@@ -37,17 +40,15 @@ export default function DeleteAccountScreen() {
           styles.content,
           { paddingTop: insets.top + layout.screenTopGap, paddingBottom: insets.bottom + m.deletePaddingBottom },
         ]}>
-        <ScreenHeader title="Hesabı sil" size="compact" />
+        <ScreenHeader title={d.title} size="compact" />
 
         <View style={styles.diken}>
           <Diken mood="solgun" size={m.deleteDikenSize} />
         </View>
 
         <View style={styles.titleBlock}>
-          <Text style={[t.deleteTitle, styles.center, { color: colors.text }]}>Gitmek mi istiyorsun?</Text>
-          <Text style={[typography.body, styles.center, { color: colors.textBody }]}>
-            Hesabını silersen bunlar kalıcı olarak silinir. Bu işlem geri alınamaz.
-          </Text>
+          <Text style={[st.deleteTitle, styles.center, { color: colors.text }]}>{d.heading}</Text>
+          <Text style={[typography.body, styles.center, { color: colors.textBody }]}>{d.body}</Text>
         </View>
 
         <View style={[styles.list, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -64,36 +65,36 @@ export default function DeleteAccountScreen() {
                 },
               ]}>
               <Icon color={colors.dangerText} size={m.deleteIconSize} strokeWidth={m.deleteIconStrokeWidth} />
-              <Text style={[t.deleteRow, styles.flex, { color: colors.text }]}>{label}</Text>
+              <Text style={[st.deleteRow, styles.flex, { color: colors.text }]}>{label}</Text>
             </View>
           ))}
         </View>
 
         <TextField
-          label="Onaylamak için SİL yaz"
-          placeholder="SİL"
+          label={d.confirmLabel}
+          placeholder={d.confirmWord}
           value={confirm}
           onChangeText={setConfirm}
           autoCapitalize="characters"
           autoCorrect={false}
-          inputStyle={t.deleteConfirmInput}
+          inputStyle={st.deleteConfirmInput}
           style={styles.confirm}
         />
 
         <View style={styles.actions}>
           {account.isError && (
             <Text accessibilityLiveRegion="polite" style={[typography.meta, styles.center, { color: colors.dangerText }]}>
-              {errorText(account.error)}
+              {errorText(account.error, t)}
             </Text>
           )}
           <Button
-            title="Hesabımı kalıcı olarak sil"
+            title={d.submit}
             variant="danger"
             disabled={!confirmed}
             loading={account.isLoading}
             onPress={() => account.deleteAccount()}
           />
-          <Button title="Vazgeç, kalıyorum" variant="text" onPress={() => router.back()} />
+          <Button title={d.stay} variant="text" onPress={() => router.back()} />
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

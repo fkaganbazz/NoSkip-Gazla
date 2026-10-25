@@ -51,6 +51,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, { Extrapolation, interpolate, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useT } from '@/i18n';
 import { componentColors, componentMetrics as cm, SchemeProvider, spacing, typography, useTheme, type ColorScheme } from '@/theme';
 import { actionSheetMetrics as am, sheetMetrics as m } from '@/theme/sheet';
 
@@ -276,6 +277,7 @@ function SheetHandleBar() {
 /** Karartma (dokununca kapatır) ve sayfayla birlikte kayan üst alan */
 function SheetBackdrop({ animatedIndex, animatedPosition, style }: BottomSheetBackdropProps) {
   const { scheme } = useTheme();
+  const t = useT();
   const insets = useSafeAreaInsets();
   const { close } = useBottomSheet();
   const { animatedLayoutState } = useBottomSheetInternal();
@@ -301,7 +303,7 @@ function SheetBackdrop({ animatedIndex, animatedPosition, style }: BottomSheetBa
       <Animated.View style={[style, { backgroundColor: componentColors[scheme].scrim }, scrimStyle]}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Kapat"
+          accessibilityLabel={t.common.close}
           onPress={() => close()}
           style={StyleSheet.absoluteFill}
         />

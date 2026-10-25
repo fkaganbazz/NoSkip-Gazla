@@ -7,6 +7,7 @@ import { createElement, isValidElement, type ComponentType, type ReactElement, t
 import { Platform, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { BackIcon, CheckIcon, CloseIcon, DotsIcon, type IconProps } from '@/components/icons';
+import { useLanguage, useT, type Language } from '@/i18n';
 import {
   borderWidth,
   challengeTints,
@@ -147,11 +148,16 @@ export function ScreenHeader({
   style,
 }: ScreenHeaderProps) {
   const { colors } = useTheme();
+  const t = useT();
   const centered = align === 'center';
   return (
     <View style={[styles.header, style]}>
       {leading !== 'none' && (
-        <IconButton icon={leading} accessibilityLabel={leading === 'back' ? 'Geri' : 'Kapat'} onPress={onLeadingPress} />
+        <IconButton
+          icon={leading}
+          accessibilityLabel={leading === 'back' ? t.common.back : t.common.close}
+          onPress={onLeadingPress}
+        />
       )}
       <Text
         accessibilityRole="header"
@@ -436,8 +442,9 @@ export function Checkbox({ checked }: { checked: boolean }) {
 
 // Bölüm etiketi, kart (ilerleme çubuğu: src/components/ProgressBar.tsx) -------------------------------
 
-/** Türkçe büyük harf (i → İ, ı → I) */
-const upperTrText = (text: string) => text.replace(/i/g, 'İ').replace(/ı/g, 'I').toUpperCase();
+/** Büyük harf: Türkçede i → İ, ı → I; İngilizcede düz büyük harf ("Notifications" → "NOTIFICATIONS") */
+const upperText = (text: string, lang: Language) =>
+  lang === 'tr' ? text.replace(/i/g, 'İ').replace(/ı/g, 'I').toUpperCase() : text.toUpperCase();
 
 /** default: ikincil mor; orange: bugün bekleyenler; green: bugünü tamamlayanlar (Friends.dc.html) */
 export type SectionLabelTone = 'default' | 'green' | 'orange';
@@ -454,12 +461,13 @@ type SectionLabelProps = {
 /** Büyük harf bölüm etiketi: 13 / 800, aralık 0.6 — "BUGÜN BEKLEYENLER · 2" */
 export function SectionLabel({ children, tone = 'default', count, style }: SectionLabelProps) {
   const { colors, scheme } = useTheme();
+  const lang = useLanguage();
   const c = componentColors[scheme];
   const color = tone === 'green' ? c.sectionLabelGreen : tone === 'orange' ? c.sectionLabelOrange : colors.textSecondary;
   return (
     <View style={style}>
       <Text accessibilityRole="header" style={[ct.sectionLabel, { color }]}>
-        {upperTrText(count === undefined ? children : `${children} · ${count}`)}
+        {upperText(count === undefined ? children : `${children} · ${count}`, lang)}
       </Text>
     </View>
   );

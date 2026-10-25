@@ -10,8 +10,9 @@ import { CameraIcon } from '@/components/icons';
 import Sheet from '@/components/Sheet';
 import { Avatar, Button, IconButton, TextField } from '@/components/ui';
 import { ApiError, useProfile, useUsernameCheck, type Profile, type ProfileUpdate } from '@/data';
+import { useT } from '@/i18n';
 import { componentColors, componentMetrics as cm, typography, useTheme } from '@/theme';
-import { settingsMetrics as m, settingsTypography as t } from '@/theme/settings';
+import { settingsMetrics as m, settingsTypography as st } from '@/theme/settings';
 
 import { displayNameProblem, errorText, normalizeUsername, usernameProblem } from './logic';
 
@@ -26,6 +27,8 @@ type Props = {
 
 export default function ProfileEditSheet({ visible, profile, onClose, onSaved }: Props) {
   const { colors, scheme } = useTheme();
+  const t = useT();
+  const p = t.settings.profileEdit;
   const camera = cm.cameraBadge;
   const { update } = useProfile();
 
@@ -53,19 +56,19 @@ export default function ProfileEditSheet({ visible, profile, onClose, onSaved }:
 
   const normalized = normalizeUsername(username);
   const usernameChanged = normalized !== profile.username;
-  const formatProblem = usernameChanged ? usernameProblem(username) : null;
+  const formatProblem = usernameChanged ? usernameProblem(username, t) : null;
   const availability = useUsernameCheck(usernameChanged && !formatProblem ? debounced : '');
   const checking = usernameChanged && !formatProblem && (debounced !== normalized || availability.isFetching);
   const taken = usernameChanged && !formatProblem && !checking && availability.data === false;
 
-  const nameProblem = displayNameProblem(name);
-  const usernameError = formatProblem ?? (taken ? 'Bu kullanıcı adı alınmış' : null);
+  const nameProblem = displayNameProblem(name, t);
+  const usernameError = formatProblem ?? (taken ? p.usernameTaken : null);
   const usernameHint = !usernameChanged
     ? null
     : checking
-      ? 'Kontrol ediliyor…'
+      ? p.checking
       : availability.data
-        ? 'Bu kullanıcı adı boşta'
+        ? p.usernameFree
         : null;
 
   const changes: ProfileUpdate = {};
@@ -91,14 +94,14 @@ export default function ProfileEditSheet({ visible, profile, onClose, onSaved }:
     setSaveError(null);
     update(changes, {
       onSuccess: onSaved,
-      onError: (e) => setSaveError(e instanceof ApiError && e.code === '23505' ? null : errorText(e)),
+      onError: (e) => setSaveError(e instanceof ApiError && e.code === '23505' ? null : errorText(e, t)),
     });
   };
 
   const serverTaken = update.error instanceof ApiError && update.error.code === '23505';
 
   return (
-    <Sheet visible={visible} onClose={onClose} title="Profili düzenle" surface scrollable>
+    <Sheet visible={visible} onClose={onClose} title={p.title} surface scrollable>
       <View style={styles.photoRow}>
         <View style={styles.avatarWrap}>
           <Avatar
@@ -107,7 +110,7 @@ export default function ProfileEditSheet({ visible, profile, onClose, onSaved }:
             self
             url={photoUrl}
             size={m.editAvatar}
-            accessibilityLabel="Profil fotoğrafın"
+            accessibilityLabel={p.photoA11y}
           />
           {/* Kamera rozeti (Profile.dc.html): kenar sayfa zemininde */}
           <IconButton
@@ -118,28 +121,26 @@ export default function ProfileEditSheet({ visible, profile, onClose, onSaved }:
             iconSize={camera.iconSize}
             iconStrokeWidth={camera.iconStroke}
             iconColor={componentColors[scheme].cameraBadgeIcon}
-            accessibilityLabel="Profil fotoğrafı seç"
+            accessibilityLabel={p.pickPhoto}
             onPress={pickPhoto}
             style={styles.camera}
           />
         </View>
         <View style={styles.photoTexts}>
-          <Text style={[t.rowTitle, { color: colors.text }]}>Profil fotoğrafı</Text>
+          <Text style={[st.rowTitle, { color: colors.text }]}>{p.photo}</Text>
           {photoUrl ? (
             <Pressable onPress={() => setAvatar(null)} accessibilityRole="button" hitSlop={10}>
-              <Text style={[typography.caption, { color: colors.dangerText }]}>Fotoğrafı kaldır</Text>
+              <Text style={[typography.caption, { color: colors.dangerText }]}>{p.removePhoto}</Text>
             </Pressable>
           ) : (
-            <Text style={[t.photoHint, { color: colors.textSecondary }]}>
-              Arkadaşların seni daha kolay tanır.
-            </Text>
+            <Text style={[st.photoHint, { color: colors.textSecondary }]}>{p.photoHint}</Text>
           )}
         </View>
       </View>
 
       <View style={styles.fields}>
         <TextField
-          label="Adın"
+          label={p.name}
           value={name}
           onChangeText={setName}
           maxLength={40}
@@ -147,13 +148,13 @@ export default function ProfileEditSheet({ visible, profile, onClose, onSaved }:
           error={name !== profile.displayName ? nameProblem : null}
         />
         <TextField
-          label="Kullanıcı adın"
+          label={p.username}
           value={username}
           onChangeText={setUsername}
           autoCapitalize="none"
           autoCorrect={false}
           maxLength={21}
-          error={usernameError ?? (serverTaken ? 'Bu kullanıcı adı alınmış' : null)}
+          error={usernameError ?? (serverTaken ? p.usernameTaken : null)}
           hint={usernameHint}
         />
       </View>
@@ -164,7 +165,7 @@ export default function ProfileEditSheet({ visible, profile, onClose, onSaved }:
         </Text>
       ) : null}
 
-      <Button title="Kaydet" onPress={save} disabled={!canSave} loading={update.isPending} style={styles.save} />
+      <Button title={t.common.save} onPress={save} disabled={!canSave} loading={update.isPending} style={styles.save} />
     </Sheet>
   );
 }

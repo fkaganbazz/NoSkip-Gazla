@@ -8,14 +8,17 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
 import { Appearance } from 'react-native';
 
+import type { Messages } from '@/i18n';
+
 export type ThemePreference = 'light' | 'dark' | 'system';
 
 const KEY = 'gazla.themePreference';
 
-export const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
-  { value: 'light', label: 'Açık' },
-  { value: 'dark', label: 'Koyu' },
-  { value: 'system', label: 'Sistem' },
+/** Görünüm seçicisinin seçenekleri (etiketler o anki dilde) */
+export const themeOptions = (t: Messages): { value: ThemePreference; label: string }[] => [
+  { value: 'light', label: t.settings.theme.light },
+  { value: 'dark', label: t.settings.theme.dark },
+  { value: 'system', label: t.settings.theme.system },
 ];
 
 const isPreference = (v: unknown): v is ThemePreference => v === 'light' || v === 'dark' || v === 'system';

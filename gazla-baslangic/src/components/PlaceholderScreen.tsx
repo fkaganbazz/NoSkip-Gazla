@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useT } from '@/i18n';
 import { borderWidth, layout, radius, spacing, typography, useTheme } from '@/theme';
 
 type Props = {
@@ -13,15 +14,14 @@ type Props = {
 // Henüz uygulanmamış ekranlar için geçici içerik. Geliştirme sürümünde dev ekranlarına bağlantı da var.
 export default function PlaceholderScreen({ title, design }: Props) {
   const { colors } = useTheme();
+  const t = useT();
   const router = useRouter();
 
   return (
     <SafeAreaView edges={['top']} style={styles.screen}>
       <View style={styles.content}>
         <Text style={[typography.title1, { color: colors.text }]}>{title}</Text>
-        <Text style={[typography.body, { color: colors.textBody }]}>
-          Bu ekran sıradaki adımlarda {design} dosyasına göre uygulanacak.
-        </Text>
+        <Text style={[typography.body, { color: colors.textBody }]}>{t.components.placeholder(design)}</Text>
         {__DEV__ && (
           <Pressable
             onPress={() => router.push('/dev')}

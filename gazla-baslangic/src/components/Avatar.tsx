@@ -8,10 +8,14 @@ import { Image, StyleSheet, Text, View, type StyleProp, type TextStyle, type Vie
 
 import { AddIcon, CheckIcon } from '@/components/icons';
 import type { AvatarTintKey } from '@/data/types';
+import { useLanguage } from '@/i18n';
 import { avatarInitialStyle, avatarTints, cardColors, cardMetrics as m, selfAvatarTints, useTheme } from '@/theme';
 
 /** Türkçe büyük harf (i → İ, ı → I); Intl'e bağlı kalmadan */
 export const upperTr = (ch: string) => (ch === 'i' ? 'İ' : ch === 'ı' ? 'I' : ch.toUpperCase());
+
+/** Baş harf: Türkçede `upperTr`, İngilizcede düz büyük harf */
+const initialOf = (name: string, lang: 'tr' | 'en') => (lang === 'tr' ? upperTr(name.charAt(0)) : name.charAt(0).toUpperCase());
 
 /** done: düz yeşil (bugünü yaptı) · pending: kesikli turuncu (bekliyor) · invite: kesikli gri (davetli) */
 export type AvatarRing = 'done' | 'pending' | 'invite';
@@ -68,6 +72,7 @@ export function Avatar({
   style,
 }: AvatarProps) {
   const { colors, scheme } = useTheme();
+  const lang = useLanguage();
   const c = cardColors[scheme];
   const t = (self ? selfAvatarTints : avatarTints)[tint][scheme];
 
@@ -106,7 +111,7 @@ export function Avatar({
         {url ? (
           <Image source={{ uri: url }} style={styles.photo} />
         ) : (
-          <Text style={[avatarInitialStyle(face), initialStyle, { color: t.ink }]}>{upperTr(name.charAt(0))}</Text>
+          <Text style={[avatarInitialStyle(face), initialStyle, { color: t.ink }]}>{initialOf(name, lang)}</Text>
         )}
       </View>
       {badge && <DoneBadge size={size} borderColor={badgeBorderColor ?? colors.surface} />}

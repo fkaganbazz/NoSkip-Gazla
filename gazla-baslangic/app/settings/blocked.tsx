@@ -5,6 +5,7 @@ import { FriendList, FriendRow, FriendRowButton } from '@/components/FriendRow';
 import { ErrorState, LoadingState, ScreenHeader, ToastHost, useToast } from '@/components/ui';
 import { useBlock } from '@/data';
 import { errorText } from '@/features/settings/logic';
+import { useT } from '@/i18n';
 import { layout, typography, useTheme } from '@/theme';
 import { settingsMetrics as m } from '@/theme/settings';
 
@@ -14,13 +15,15 @@ export default function BlockedScreen() {
   const insets = useSafeAreaInsets();
   const { blocked, unblock } = useBlock({ list: true });
   const toast = useToast();
+  const t = useT();
+  const b = t.settings.blocked;
 
   const top = { paddingTop: insets.top + layout.screenTopGap };
 
   if (blocked.isPending || blocked.isError) {
     return (
       <View style={[styles.screen, styles.padded, top]}>
-        <ScreenHeader title="Engellenenler" />
+        <ScreenHeader title={b.title} />
         {blocked.isPending ? <LoadingState /> : <ErrorState onRetry={() => blocked.refetch()} />}
       </View>
     );
@@ -31,20 +34,16 @@ export default function BlockedScreen() {
   return (
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={[styles.padded, top, { paddingBottom: insets.bottom + m.screenPaddingBottom }]}>
-        <ScreenHeader title="Engellenenler" />
+        <ScreenHeader title={b.title} />
 
         {users.length === 0 ? (
           <View style={styles.empty}>
-            <Text style={[typography.cardTitle, styles.center, { color: colors.text }]}>Engellediğin kimse yok.</Text>
-            <Text style={[typography.body, styles.center, { color: colors.textSecondary }]}>
-              Birini engellediğinde burada görünür; engeli buradan kaldırabilirsin.
-            </Text>
+            <Text style={[typography.cardTitle, styles.center, { color: colors.text }]}>{b.emptyTitle}</Text>
+            <Text style={[typography.body, styles.center, { color: colors.textSecondary }]}>{b.emptyBody}</Text>
           </View>
         ) : (
           <>
-            <Text style={[typography.body, styles.lead, { color: colors.textBody }]}>
-              Engellediğin kişiler profilini göremez ve seni dürtemez.
-            </Text>
+            <Text style={[typography.body, styles.lead, { color: colors.textBody }]}>{b.lead}</Text>
             <FriendList style={styles.list}>
               {users.map((u, i) => {
                 const busy = unblock.isPending && unblock.variables === u.id;
@@ -56,15 +55,15 @@ export default function BlockedScreen() {
                     divider={i < users.length - 1}
                     trailing={
                       <FriendRowButton
-                        title="Engeli kaldır"
+                        title={b.unblock}
                         variant="muted"
                         loading={busy}
                         disabled={unblock.isPending && !busy}
-                        accessibilityLabel={`${u.displayName} engelini kaldır`}
+                        accessibilityLabel={b.unblockA11y(u.displayName)}
                         onPress={() =>
                           unblock(u.id, {
-                            onSuccess: () => toast.show({ message: `Engel kaldırıldı: ${u.displayName}` }),
-                            onError: (e) => toast.show({ message: errorText(e) }),
+                            onSuccess: () => toast.show({ message: b.unblocked(u.displayName) }),
+                            onError: (e) => toast.show({ message: errorText(e, t) }),
                           })
                         }
                       />

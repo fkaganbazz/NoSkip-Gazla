@@ -3,8 +3,9 @@ import { StyleSheet, Text, View } from 'react-native';
 import { ChevronRightIcon } from '@/components/icons';
 import { Avatar, Card } from '@/components/ui';
 import type { Profile } from '@/data';
+import { useT } from '@/i18n';
 import { typography, useTheme } from '@/theme';
-import { settingsMetrics as m, settingsTypography as t } from '@/theme/settings';
+import { settingsMetrics as m, settingsTypography as st } from '@/theme/settings';
 
 /**
  * Ayarlar üstündeki profil kartı (ortak basılabilir Card): avatar, ad, "@kullanıcı · Profili düzenle".
@@ -12,8 +13,9 @@ import { settingsMetrics as m, settingsTypography as t } from '@/theme/settings'
  */
 export default function ProfileCard({ profile, onPress }: { profile: Profile; onPress: () => void }) {
   const { colors } = useTheme();
+  const t = useT();
   return (
-    <Card onPress={onPress} accessibilityLabel={`${profile.displayName}, profili düzenle`} style={styles.card}>
+    <Card onPress={onPress} accessibilityLabel={t.settings.profileCard.a11y(profile.displayName)} style={styles.card}>
       <Avatar
         name={profile.displayName}
         tint={profile.avatarTint}
@@ -23,11 +25,11 @@ export default function ProfileCard({ profile, onPress }: { profile: Profile; on
         decorative
       />
       <View style={styles.texts}>
-        <Text numberOfLines={1} style={[t.profileName, { color: colors.text }]}>
+        <Text numberOfLines={1} style={[st.profileName, { color: colors.text }]}>
           {profile.displayName}
         </Text>
         <Text numberOfLines={1} style={[typography.caption, { color: colors.textSecondary }]}>
-          @{profile.username} · Profili düzenle
+          @{profile.username} · {t.settings.profileCard.edit}
         </Text>
       </View>
       <ChevronRightIcon color={colors.textSecondary} size={m.profileChevronSize} strokeWidth={m.chevronStrokeWidth} />

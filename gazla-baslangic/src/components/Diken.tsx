@@ -9,6 +9,7 @@ import { memo, type ReactElement } from 'react';
 import { Platform } from 'react-native';
 import Svg, { Circle, Ellipse, G, Path, Rect } from 'react-native-svg';
 
+import { useT } from '@/i18n';
 import { dikenColors as c } from '@/theme';
 
 export const DIKEN_MOODS = [
@@ -58,18 +59,6 @@ const POSE_BY_MOOD: Record<DikenMood, DikenPose> = {
   saskin: 'up',
   uykulu: 'droop',
   solgun: 'relaxed',
-};
-
-const LABELS: Record<DikenMood, string> = {
-  mutlu: 'mutlu',
-  selam: 'el sallıyor',
-  laf: 'laf sokuyor',
-  cosku: 'coşkulu',
-  gurur: 'gururlu',
-  endise: 'endişeli',
-  saskin: 'şaşkın',
-  uykulu: 'uykulu',
-  solgun: 'solmuş',
 };
 
 // Yüz ve efekt katmanlarının aşamaya göre yeri (tasarımdaki CSS transform'ların SVG karşılığı).
@@ -497,6 +486,8 @@ function Diken({
   size = DEFAULT_SIZE,
   pose,
 }: DikenProps) {
+  // Ekran okuyucu: "Diken, mutlu" (ruh hali adları sözlükte: components.dikenMoods)
+  const moods = useT().components.dikenMoods;
   // react-native-svg genişliği parseInt ile keser; yükseklikle aynı tam sayı tabanını kullan.
   const width = Math.round(size || DEFAULT_SIZE);
   const height = Math.round(width * ASPECT);
@@ -525,7 +516,7 @@ function Diken({
       // Web'de react-native-svg `accessible`ı DOM'a geçiriyor (React uyarısı); rol ve etiket yeterli.
       accessible={Platform.OS === 'web' ? undefined : true}
       accessibilityRole="image"
-      accessibilityLabel={`Diken, ${LABELS[mood] ?? LABELS.mutlu}`}>
+      accessibilityLabel={`Diken, ${moods[mood] ?? moods.mutlu}`}>
       {SHADOW}
 
       {full && armPose !== 'cross' && ARMS[armPose]}

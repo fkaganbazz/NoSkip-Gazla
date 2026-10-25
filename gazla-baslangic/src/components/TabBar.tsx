@@ -14,6 +14,7 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { FlatShadowUnderlay, flatShadowStyle } from '@/components/FlatShadow';
 import { PlusIcon } from '@/components/icons';
+import { useT } from '@/i18n';
 import { borderWidth, tabBarColors, tabBarMetrics as m, typography, useTheme } from '@/theme';
 
 /** Sekme satırının yüksekliği: 88 − üst kenar − üst boşluk − alt boşluk = 57 */
@@ -30,6 +31,7 @@ function isHidden(options: BottomTabNavigationOptions) {
 
 export default function TabBar({ state, descriptors, navigation, insets }: BottomTabBarProps) {
   const { scheme } = useTheme();
+  const t = useT();
   const router = useRouter();
   const onHeightChange = useContext(BottomTabBarHeightCallbackContext);
   const colors = tabBarColors[scheme];
@@ -96,7 +98,7 @@ export default function TabBar({ state, descriptors, navigation, insets }: Botto
         styles.bar,
         { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom },
       ]}>
-      <View role="tablist" accessibilityLabel="Ana menü" style={styles.row}>
+      <View role="tablist" accessibilityLabel={t.tabs.menu} style={styles.row}>
         {tabs.slice(0, FAB_COLUMN)}
         <View style={styles.fabColumn} />
         {tabs.slice(FAB_COLUMN)}
@@ -114,7 +116,7 @@ export default function TabBar({ state, descriptors, navigation, insets }: Botto
           <Pressable
             onPress={() => router.navigate('/create')}
             accessibilityRole="button"
-            accessibilityLabel="Yeni challenge oluştur"
+            accessibilityLabel={t.tabs.create}
             style={[
               styles.fab,
               { backgroundColor: colors.fab, borderColor: colors.background },

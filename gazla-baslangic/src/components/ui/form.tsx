@@ -30,6 +30,7 @@ import {
 } from '@/theme';
 
 import { CheckIcon, WifiOffIcon } from '@/components/icons';
+import { useT } from '@/i18n';
 
 import Button from './Button';
 
@@ -218,22 +219,23 @@ type ErrorStateProps = {
   message?: string;
   /** Verilirse altta ikincil buton */
   onRetry?: () => void;
-  /** Buton metni · varsayılan "Tekrar dene" (ör. "Kapat") */
+  /** Buton metni · varsayılan "Tekrar dene" (`common.retry`; ör. "Kapat") */
   actionLabel?: string;
   /** Temadan bağımsız sabit ekran (PhotoProof: `"dark"`) */
   scheme?: ColorScheme;
 };
 
 /** Yükleme hatası: mesaj ve "Tekrar dene" */
-export function ErrorState({ message, onRetry, actionLabel = 'Tekrar dene', scheme }: ErrorStateProps) {
+export function ErrorState({ message, onRetry, actionLabel, scheme }: ErrorStateProps) {
   const theme = useTheme();
+  const t = useT();
   const colors = scheme ? colorsFor(scheme) : theme.colors;
   return (
     <View style={[styles.center, styles.errorBox]}>
       <Text style={[typography.body, styles.centerText, { color: colors.textBody }]}>
-        {message ?? 'Şu an yüklenemedi. Bağlantını kontrol edip tekrar dene.'}
+        {message ?? t.common.loadFailed}
       </Text>
-      {onRetry && <Button title={actionLabel} variant="secondary" scheme={scheme} onPress={onRetry} />}
+      {onRetry && <Button title={actionLabel ?? t.common.retry} variant="secondary" scheme={scheme} onPress={onRetry} />}
     </View>
   );
 }

@@ -6,6 +6,7 @@ import { FlatShadowUnderlay, flatShadowStyle } from '@/components/FlatShadow';
 import { AddIcon, CameraIcon, CheckIcon } from '@/components/icons';
 import { ProgressBar } from '@/components/ProgressBar';
 import type { ChallengeCategory, ChallengeIconKey, ChallengeTintKey, TaskType } from '@/data/types';
+import { useT, type Messages } from '@/i18n';
 import { borderWidth, cardColors, cardMetrics as m, cardTypography, useTheme } from '@/theme';
 
 /** Görev kartının gösterdiği veri (Bugün: `toTaskRow`) */
@@ -74,15 +75,17 @@ function TaskCardBase({ task, onPressBody, onPressAction, style }: Props) {
 }
 
 /** Sağ butonun ekran okuyucu metni: işaretle tipi geri alır; sayı ve fotoğraf tipi ekranını açar */
-function actionLabel(task: TaskCardTask) {
-  if (task.taskType === 'number') return task.done ? 'tamamlandı, değeri değiştir' : 'değeri gir';
-  if (task.taskType === 'photo') return task.done ? 'tamamlandı, fotoğraf kanıtını aç' : 'fotoğrafla tamamla';
-  return task.done ? 'tamamlandı, geri al' : 'bugünü tamamla';
+function actionLabel(task: TaskCardTask, t: Messages) {
+  const l = t.components.taskCard;
+  if (task.taskType === 'number') return task.done ? l.numberDone : l.numberTodo;
+  if (task.taskType === 'photo') return task.done ? l.photoDone : l.photoTodo;
+  return task.done ? l.checkDone : l.checkTodo;
 }
 
 /** Sağdaki 52 px buton: yapıldı (dolu yeşil + tik), işaretle (yeşil kenar + soluk tik), fotoğraf, sayı */
 function ActionButton({ task, onPress }: { task: TaskCardTask; onPress?: () => void }) {
   const { colors, scheme } = useTheme();
+  const t = useT();
   const c = cardColors[scheme];
   const shadow = task.done ? colors.actionShadow : c.todoShadow;
 
@@ -93,7 +96,7 @@ function ActionButton({ task, onPress }: { task: TaskCardTask; onPress?: () => v
         onPress={onPress}
         disabled={!onPress}
         accessibilityRole="button"
-        accessibilityLabel={`${task.title}: ${actionLabel(task)}`}
+        accessibilityLabel={`${task.title}: ${actionLabel(task, t)}`}
         accessibilityState={{ checked: task.done, disabled: !onPress }}
         style={({ pressed }) => [
           styles.action,

@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { StreakIcon } from '@/components/icons';
+import { useT } from '@/i18n';
 import { cardColors, cardMetrics as m, cardTypography, radius, useTheme } from '@/theme';
 
 type Props = {
@@ -15,14 +16,15 @@ type Props = {
 // koyu yeşil zemin). Tasarımlarda yalnızca Bugün kahraman kartında ve Components'ta geçiyor.
 export function StreakChip({ days, label, style }: Props) {
   const { scheme } = useTheme();
+  const t = useT();
   const c = cardColors[scheme];
   return (
     <View
       accessible
-      accessibilityLabel={`${days} günlük seri`}
+      accessibilityLabel={t.components.streakChip.a11y(days)}
       style={[styles.chip, { backgroundColor: c.streakChipBg }, style]}>
       <StreakIcon color={c.streakChipIcon} size={m.streakIconSize} strokeWidth={m.streakIconStrokeWidth} />
-      <Text style={[cardTypography.streakChip, { color: c.streakChipText }]}>{label ?? `${days} GÜNLÜK SERİ`}</Text>
+      <Text style={[cardTypography.streakChip, { color: c.streakChipText }]}>{label ?? t.components.streakChip.label(days)}</Text>
     </View>
   );
 }

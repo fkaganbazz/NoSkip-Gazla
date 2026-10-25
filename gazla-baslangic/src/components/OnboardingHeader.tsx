@@ -5,6 +5,7 @@
 import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { IconButton } from '@/components/ui';
+import { useT } from '@/i18n';
 import { componentColors, componentMetrics as cm, componentTypography as ct, useTheme } from '@/theme';
 
 type Props = {
@@ -21,6 +22,7 @@ type Props = {
 
 export default function OnboardingHeader({ step, half = false, onBack, tone = 'default', style }: Props) {
   const { scheme } = useTheme();
+  const t = useT();
   const c = componentColors[scheme];
   const permission = tone === 'permission';
 
@@ -29,7 +31,7 @@ export default function OnboardingHeader({ step, half = false, onBack, tone = 'd
       {onBack ? (
         <IconButton
           icon="back"
-          accessibilityLabel="Geri"
+          accessibilityLabel={t.common.back}
           onPress={onBack}
           style={permission && { borderColor: c.permissionBackBorder }}
         />
@@ -40,7 +42,7 @@ export default function OnboardingHeader({ step, half = false, onBack, tone = 'd
       <View
         accessible
         accessibilityRole="progressbar"
-        accessibilityLabel={`Adım ${step} / ${cm.stepCount}`}
+        accessibilityLabel={t.components.onboardingStep(step, cm.stepCount)}
         accessibilityValue={{ min: 1, max: cm.stepCount, now: step }}
         style={styles.steps}>
         {Array.from({ length: cm.stepCount }, (_, i) => {

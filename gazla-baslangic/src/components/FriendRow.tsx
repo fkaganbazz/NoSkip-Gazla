@@ -9,6 +9,7 @@ import { AddAvatar, Avatar } from '@/components/Avatar';
 import { flatShadowStyle } from '@/components/FlatShadow';
 import { CloseIcon, type IconProps } from '@/components/icons';
 import type { AvatarTintKey } from '@/data/types';
+import { useT } from '@/i18n';
 import { borderWidth, cardColors, cardMetrics as m, cardTypography, componentColors, componentMetrics, layout, useTheme } from '@/theme';
 
 /** Satırda gösterilen kişi (PersonLite, FriendToday, FriendRequest.person … hepsi uyar) */
@@ -194,31 +195,33 @@ export function FriendRow({ person, status, sub, onPress, accessibilityLabel, ac
 }
 
 function RowAction({ action, name }: { action: FriendRowAction; name: string }) {
+  const t = useT();
+  const f = t.components.friendRow;
   switch (action.type) {
     case 'poke':
       return (
         <FriendRowButton
-          title="Dürt"
+          title={t.common.poke}
           variant="poke"
           onPress={action.onPress}
           disabled={action.disabled}
-          accessibilityLabel={`${name} kişisini dürt`}
+          accessibilityLabel={f.pokeA11y(name)}
         />
       );
     case 'hype':
       return (
-        <FriendRowButton title="Gaz ver" variant="hype" onPress={action.onPress} accessibilityLabel={`${name} kişisine gaz ver`} />
+        <FriendRowButton title={t.common.hype} variant="hype" onPress={action.onPress} accessibilityLabel={f.hypeA11y(name)} />
       );
     case 'request':
       return (
         <>
           {action.onAccept && (
             <FriendRowButton
-              title="Kabul et"
+              title={t.common.accept}
               variant="action"
               onPress={action.onAccept}
               loading={action.accepting}
-              accessibilityLabel={`${name} isteğini kabul et`}
+              accessibilityLabel={f.acceptA11y(name)}
             />
           )}
           <FriendRowButton
@@ -227,22 +230,22 @@ function RowAction({ action, name }: { action: FriendRowAction; name: string }) 
             icon={CloseIcon}
             onPress={action.onDismiss}
             loading={action.dismissing}
-            accessibilityLabel={action.onAccept ? 'İsteği sil' : 'İsteği geri çek'}
+            accessibilityLabel={action.onAccept ? f.dismissRequest : f.withdrawRequest}
           />
         </>
       );
     case 'add':
       return (
         <FriendRowButton
-          title="Ekle"
+          title={f.add}
           variant="action"
           onPress={action.onPress}
           loading={action.loading}
-          accessibilityLabel={`${name} kişisine arkadaşlık isteği gönder`}
+          accessibilityLabel={f.addA11y(name)}
         />
       );
     case 'sent':
-      return <FriendRowButton title="Gönderildi" variant="muted" disabled />;
+      return <FriendRowButton title={f.sent} variant="muted" disabled />;
   }
 }
 
@@ -267,13 +270,16 @@ type FriendBubbleProps = {
 /** Yatay arkadaş şeridindeki öğe: 54 px halkalı avatar, altında ad ya da "Dürt" */
 export function FriendBubble({ person, done, onPoke, onPress }: FriendBubbleProps) {
   const { colors } = useTheme();
+  const t = useT();
   const handler = done ? onPress : onPoke;
   return (
     <Pressable
       onPress={handler}
       disabled={!handler}
       accessibilityRole={handler ? 'button' : undefined}
-      accessibilityLabel={done ? `${person.displayName}, bugün tamam` : `${person.displayName}, bekliyor, dürt`}
+      accessibilityLabel={
+        done ? t.components.friendRow.bubbleDone(person.displayName) : t.components.friendRow.bubblePending(person.displayName)
+      }
       style={({ pressed }) => [styles.bubble, pressed && styles.pressed]}>
       <Avatar
         name={person.displayName}
@@ -291,7 +297,7 @@ export function FriendBubble({ person, done, onPoke, onPress }: FriendBubbleProp
         </Text>
       ) : (
         <View style={[styles.poke, { backgroundColor: colors.accent }]}>
-          <Text style={[cardTypography.bubblePoke, { color: colors.onAccent }]}>Dürt</Text>
+          <Text style={[cardTypography.bubblePoke, { color: colors.onAccent }]}>{t.common.poke}</Text>
         </View>
       )}
     </Pressable>
@@ -299,8 +305,10 @@ export function FriendBubble({ person, done, onPoke, onPress }: FriendBubbleProp
 }
 
 /** Şeridin sonundaki "Davet et": kesikli gri halka ve artı */
-export function InviteBubble({ onPress, label = 'Davet et' }: { onPress?: () => void; label?: string }) {
+export function InviteBubble({ onPress, label: labelProp }: { onPress?: () => void; label?: string }) {
   const { colors } = useTheme();
+  const t = useT();
+  const label = labelProp ?? t.components.friendRow.invite;
   return (
     <Pressable
       onPress={onPress}

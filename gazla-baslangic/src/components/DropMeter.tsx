@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { DropIcon } from '@/components/icons';
+import { useT } from '@/i18n';
 import { cardColors, cardMetrics as m, cardTypography, useTheme } from '@/theme';
 
 type Props = {
@@ -22,9 +23,10 @@ type Props = {
 // Su damlaları: dolu yeşil, boş beyaz zemin + yeşil kenar (koyuda boş zemin saydam) — Today.dc.html.
 export function DropMeter({ filled, total, size = 'regular', showLabel = false, label, labelColor, style }: Props) {
   const { scheme } = useTheme();
+  const t = useT();
   const c = cardColors[scheme];
   const d = m.drop[size];
-  const text = label ?? `${filled}/${total} su`;
+  const text = label ?? t.components.dropMeter(filled, total);
 
   return (
     <View accessible accessibilityLabel={text} style={[styles.row, { gap: d.gap }, style]}>

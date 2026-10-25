@@ -13,8 +13,9 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { IconProps } from '@/components/icons';
 import Sheet, { type SheetHandle } from '@/components/Sheet';
 import { Button } from '@/components/ui';
+import { useT } from '@/i18n';
 import { borderWidth, componentTypography, typography, useTheme } from '@/theme';
-import { actionSheetMetrics as m, actionSheetTypography as t, sheetColors } from '@/theme/sheet';
+import { actionSheetMetrics as m, actionSheetTypography as at, sheetColors } from '@/theme/sheet';
 
 export type ActionSheetConfirm = {
   /** Onay sorusu ("Ece engellensin mi?") */
@@ -49,6 +50,7 @@ type Props = {
   items: ActionSheetItem[];
   /** Ekran okuyucu için menünün adı ("Ece için işlemler") */
   accessibilityLabel?: string;
+  /** Alttaki kart · varsayılan "Vazgeç" (`common.cancel`) */
   cancelLabel?: string;
 };
 
@@ -58,9 +60,10 @@ export default function ActionSheet({
   title,
   items,
   accessibilityLabel,
-  cancelLabel = 'Vazgeç',
+  cancelLabel,
 }: Props) {
   const { colors, scheme } = useTheme();
+  const t = useT();
   const divider = sheetColors[scheme].actionDivider;
   const sheet = useRef<SheetHandle>(null);
   // Onaysız satırın işi: sayfa kapandıktan sonra çalışır
@@ -131,7 +134,7 @@ export default function ActionSheet({
             {!!title && (
               <Text
                 style={[
-                  t.header,
+                  at.header,
                   styles.header,
                   { color: colors.textSecondary, borderBottomColor: divider },
                 ]}>
@@ -154,7 +157,7 @@ export default function ActionSheet({
                     pressed && { backgroundColor: colors.surfaceMuted },
                   ]}>
                   {Icon && <Icon color={color} size={m.iconSize} strokeWidth={m.iconStrokeWidth} />}
-                  <Text style={[t.item, { color }]}>{item.label}</Text>
+                  <Text style={[at.item, { color }]}>{item.label}</Text>
                 </Pressable>
               );
             })}
@@ -166,7 +169,7 @@ export default function ActionSheet({
         onPress={() => sheet.current?.close()}
         accessibilityRole="button"
         style={({ pressed }) => [styles.cancel, { backgroundColor: pressed ? colors.surfaceMuted : colors.surface }]}>
-        <Text style={[t.cancel, { color: colors.text }]}>{cancelLabel}</Text>
+        <Text style={[at.cancel, { color: colors.text }]}>{cancelLabel ?? t.common.cancel}</Text>
       </Pressable>
     </Sheet>
   );

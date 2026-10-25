@@ -6,11 +6,12 @@ import OptionSheet from '@/components/OptionSheet';
 import { Chip, ErrorState, LoadingState, ScreenHeader, SectionLabel, ToastHost, useToast, type ChipTone } from '@/components/ui';
 import { useMySettings, useUpdateSettings, type SettingsUpdate } from '@/data';
 import { DEFAULT_REMINDER, errorText, formatTime, reminderTimes } from '@/features/settings/logic';
-import { NOTIFICATION_COPY, NOTIFICATION_RULES, type RuleTone } from '@/features/settings/notificationCopy';
+import { notificationCopy, notificationRules, type RuleTone } from '@/features/settings/notificationCopy';
 import { LinkRow, SettingsGroup, ToggleRow } from '@/features/settings/rows';
 import { usePushPrompt } from '@/features/settings/usePushPrompt';
+import { useT } from '@/i18n';
 import { borderWidth, layout, useTheme, type ChallengeTint } from '@/theme';
-import { settingsColors, settingsMetrics as m, settingsTypography as t } from '@/theme/settings';
+import { settingsColors, settingsMetrics as m, settingsTypography as st } from '@/theme/settings';
 
 /** Kural çipinin rengi: gece moru (ink), lila (challenge rengi), şeftali (warning) */
 const RULE_CHIP: Record<RuleTone, { tone?: ChipTone; tint?: ChallengeTint }> = {
@@ -28,18 +29,19 @@ export default function NotificationsScreen() {
   const settings = useMySettings();
   const { update } = useUpdateSettings();
   const toast = useToast();
+  const t = useT();
+  const n = t.settings.notifications;
   const [timeOpen, setTimeOpen] = useState(false);
 
-  const save = (u: SettingsUpdate) => update(u, { onError: (e) => toast.show({ message: errorText(e) }) });
+  const save = (u: SettingsUpdate) => update(u, { onError: (e) => toast.show({ message: errorText(e, t) }) });
   // Bildirim açan anahtarlar izni de ister (onboarding'i atlayan hesaplar)
   const promptPush = usePushPrompt(toast);
   const top = { paddingTop: insets.top + layout.screenTopGap };
 
-
   if (settings.isPending || settings.isError) {
     return (
       <View style={[styles.screen, styles.padded, top]}>
-        <ScreenHeader title="Bildirimler" />
+        <ScreenHeader title={n.title} />
         {settings.isPending ? <LoadingState /> : <ErrorState onRetry={() => settings.refetch()} />}
       </View>
     );
@@ -47,24 +49,26 @@ export default function NotificationsScreen() {
 
   const s = settings.data;
   const reminderOn = s.dailyReminderTime !== null;
+  const rules = notificationRules(t);
+  const copy = notificationCopy(t);
 
   return (
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={[styles.padded, top, { paddingBottom: insets.bottom + m.screenPaddingBottom }]}>
-        <ScreenHeader title="Bildirimler" />
+        <ScreenHeader title={n.title} />
 
         <View style={styles.chips}>
           {/* Kural çipleri (Notifications.dc.html): gece moru, lila, şeftali */}
-          {NOTIFICATION_RULES.map((r) => (
+          {rules.map((r) => (
             <Chip key={r.label} label={r.label} {...RULE_CHIP[r.tone]} />
           ))}
         </View>
 
-        <SectionLabel style={styles.section}>TERCİHLER</SectionLabel>
+        <SectionLabel style={styles.section}>{n.preferences}</SectionLabel>
         <SettingsGroup>
           <ToggleRow
-            title="Dürtme bildirimleri"
-            detail="Arkadaşların gaz verince ya da laf sokunca haber verir."
+            title={t.settings.index.pokePush}
+            detail={n.pokeDetail}
             value={s.pokePushEnabled}
             disabled={update.isPending}
             onChange={(pokePushEnabled) => {
@@ -73,8 +77,8 @@ export default function NotificationsScreen() {
             }}
           />
           <ToggleRow
-            title="Günlük hatırlatma"
-            detail="Diken seçtiğin saatte bugünkü görevlerini hatırlatır."
+            title={t.settings.index.dailyReminder}
+            detail={n.reminderDetail}
             value={reminderOn}
             disabled={update.isPending}
             onChange={(on) => {
@@ -85,8 +89,8 @@ export default function NotificationsScreen() {
           />
           {reminderOn && (
             <LinkRow
-              title="Hatırlatma saati"
-              value={formatTime(s.dailyReminderTime)}
+              title={n.reminderTime}
+              value={formatTime(s.dailyReminderTime, t)}
               disabled={update.isPending}
               onPress={() => setTimeOpen(true)}
               last
@@ -94,18 +98,18 @@ export default function NotificationsScreen() {
           )}
         </SettingsGroup>
 
-        <SectionLabel style={styles.section}>NE ZAMAN NE GELİR</SectionLabel>
+        <SectionLabel style={styles.section}>{n.whatWhen}</SectionLabel>
         <SettingsGroup>
-          {NOTIFICATION_COPY.map((row, i) => (
+          {copy.map((row, i) => (
             <View
               key={row.when}
               style={[
                 styles.copyRow,
-                i < NOTIFICATION_COPY.length - 1 && { borderBottomWidth: borderWidth.thin, borderBottomColor: c.rowDivider },
+                i < copy.length - 1 && { borderBottomWidth: borderWidth.thin, borderBottomColor: c.rowDivider },
               ]}>
-              <Text style={[t.copyWhen, { color: colors.textSecondary }]}>{row.when}</Text>
-              <Text style={[t.copyTitle, { color: row.from === 'diken' ? c.dikenTitle : c.friendTitle }]}>{row.title}</Text>
-              <Text style={[t.copyBody, { color: colors.textBody }]}>{row.body}</Text>
+              <Text style={[st.copyWhen, { color: colors.textSecondary }]}>{row.when}</Text>
+              <Text style={[st.copyTitle, { color: row.from === 'diken' ? c.dikenTitle : c.friendTitle }]}>{row.title}</Text>
+              <Text style={[st.copyBody, { color: colors.textBody }]}>{row.body}</Text>
             </View>
           ))}
         </SettingsGroup>
@@ -113,9 +117,9 @@ export default function NotificationsScreen() {
 
       <OptionSheet
         visible={timeOpen}
-        title="Hatırlatma saati"
+        title={n.reminderTime}
         options={reminderTimes(s.dailyReminderTime).map((time) => ({ value: time, label: time }))}
-        value={formatTime(s.dailyReminderTime)}
+        value={formatTime(s.dailyReminderTime, t)}
         onSelect={(dailyReminderTime) => save({ dailyReminderTime })}
         onClose={() => setTimeOpen(false)}
       />

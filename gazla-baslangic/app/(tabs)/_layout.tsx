@@ -3,6 +3,7 @@ import type { ComponentType } from 'react';
 
 import TabBar from '@/components/TabBar';
 import { CompassIcon, FriendsIcon, HomeIcon, SproutIcon, type IconProps } from '@/components/icons';
+import { useT } from '@/i18n';
 import { tabBarMetrics, useTheme } from '@/theme';
 
 const tabIcon =
@@ -12,6 +13,7 @@ const tabIcon =
 // Sekmeler: Bugün, Keşfet, (ortada + → /create), Arkadaşlar, Bahçem. Görünüm: design/TabBar.dc.html.
 export default function TabsLayout() {
   const { colors } = useTheme();
+  const t = useT();
 
   return (
     <Tabs
@@ -22,19 +24,19 @@ export default function TabsLayout() {
       }}>
       <Tabs.Screen
         name="index"
-        options={{ title: 'Bugün', tabBarIcon: tabIcon(HomeIcon) }}
+        options={{ title: t.tabs.today, tabBarIcon: tabIcon(HomeIcon) }}
       />
       <Tabs.Screen
         name="explore"
-        options={{ title: 'Keşfet', tabBarIcon: tabIcon(CompassIcon) }}
+        options={{ title: t.tabs.explore, tabBarIcon: tabIcon(CompassIcon) }}
       />
       <Tabs.Screen
         name="friends"
-        options={{ title: 'Arkadaşlar', tabBarIcon: tabIcon(FriendsIcon) }}
+        options={{ title: t.tabs.friends, tabBarIcon: tabIcon(FriendsIcon) }}
       />
       <Tabs.Screen
         name="garden"
-        options={{ title: 'Bahçem', tabBarIcon: tabIcon(SproutIcon) }}
+        options={{ title: t.tabs.garden, tabBarIcon: tabIcon(SproutIcon) }}
       />
     </Tabs>
   );
