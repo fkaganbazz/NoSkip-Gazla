@@ -60,6 +60,9 @@ adımlarla aynı anda yürüyebilir.
 **Bana söyle:** EAS proje ID'sini (expo.dev → proje sayfası → ID).
 
 ## Adım 5: Supabase
+> ✅ Yapıldı (2026-11-11): proje NoSkip, Frankfurt; veritabanı, sunucu fonksiyonları, zamanlanmış işler ve sırlar kurulu.
+> Kalan: Resend SMTP (Adım 3'ten sonra), Apple/Google giriş ayarları (Adım 6).
+
 1. Yeni proje oluştur. Bölge: **Frankfurt (eu-central-1)**; Türkiye'ye yakın ve AB içinde. Veritabanı şifresini sakla.
 2. Ortam ayarlarına ekle:
    - `SUPABASE_ACCESS_TOKEN` (supabase.com → Account → Access Tokens)

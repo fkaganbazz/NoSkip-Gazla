@@ -112,7 +112,8 @@ Spesifikasyon `docs/EKRANLAR.md` "0. Ortak bileşenler"; ilerleme `docs/ILERLEME
 - Karartma `componentColors[scheme].scrim`, alt sayfa köşesi/tutamaç `componentMetrics.sheet*`.
 
 ## Supabase
-- Şema `supabase/migrations/` (14 dosya), testler `supabase/tests/` (pgTAP, 7 dosya). Ayrıntı, kararlar, kurulum ve açık sorular: `supabase/README.md`.
+- Canlı proje: Supabase `NoSkip` (ref `flapgmbyxregzyupariy`, Frankfurt). Migration'lar uygulandı, yayımlanmış sayılır: değişiklik yeni migration'la.
+- Şema `supabase/migrations/` (15 dosya), testler `supabase/tests/` (pgTAP, 7 dosya). Ayrıntı, kararlar, kurulum ve açık sorular: `supabase/README.md`.
 - Edge Function'lar `supabase/functions/` (Deno, tek dosya + `deno.json` içe aktarma haritası; kökteki `tsc` de denetler): `admob-ssv` (AdMob SSV imzası → `grant_ad_rescue`; `--no-verify-jwt`), `delete-account` (JWT → Storage `proofs/{uid}`, `avatars/{uid}` → `auth.admin.deleteUser`), `push` (Expo push: arkadaş bildirimleri notifications tetikleyicisinden, Diken bildirimleri 15 dakikada bir pg_cron'dan; `x-gazla-secret`, `--no-verify-jwt`). Dağıtım, sırlar (Vault `gazla_project_url`, `gazla_push_secret`; `PUSH_WEBHOOK_SECRET`), pg_cron/pg_net ve AdMob SSV adresi: README "Sunucu tarafı işler → Kurulum".
 - Zamanlanmış işler pg_cron'da (`app.install_cron_jobs()`; uzantı yoksa sessizce atlanır): `finish_due_challenges` saatlik, Diken push 15 dakikada bir. Diken kuralları (saatler, günde 2, sessiz saatler) SQL'de (`app.queue_diken_notifications`), metinleri `app.diken_text`.
 - Migration'lar yayımlanmadan önce yerinde düzenlenebilir; yayımlandıktan sonra her değişiklik yeni migration.

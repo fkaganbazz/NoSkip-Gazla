@@ -374,6 +374,10 @@ Uygulama Türkçe (Gazla) ve İngilizce (NoSkip). Sunucunun ürettiği metinler 
 
 ### Kurulum (bir kez, Supabase projesinde)
 
+> Canlı proje (NoSkip, `flapgmbyxregzyupariy`, eu-central-1) 2026-11-11'de kuruldu: pg_cron + pg_net, 15 migration
+> (`supabase_migrations.schema_migrations`'a kayıtlı), Vault sırları, `PUSH_WEBHOOK_SECRET`, üç Edge Function, dönüş
+> adresleri (`gazla://auth/callback`). Kalan: Apple/Google sağlayıcıları, SMTP, AdMob SSV adresi, `site_url` (alan adı).
+
 1. **Migration'lar**: `supabase link --project-ref <ref>` sonra `supabase db push`.
 2. **Uzantılar** (Dashboard → Database → Extensions): `pg_cron` ve `pg_net`'i aç (Vault Supabase'te hazır).
    Migration'dan sonra açtıysan SQL Editor'de `select app.install_cron_jobs();` çalıştır (aynı adla
