@@ -156,7 +156,8 @@ const localeStrings = (lang: 'en' | 'tr') => ({
 
 export default ({ config }: ConfigContext): ExpoConfig => {
   const iosUrlScheme = googleIosUrlScheme();
-  const easProjectId = env('EAS_PROJECT_ID') ?? env('EXPO_PUBLIC_EAS_PROJECT_ID');
+  // EAS projesi: expo.dev/accounts/fkaganns-team/projects/noskip (kimlik gizli değil; .env ile değiştirilebilir)
+  const easProjectId = env('EAS_PROJECT_ID') ?? env('EXPO_PUBLIC_EAS_PROJECT_ID') ?? '9c5f90f9-a6b0-40e9-954d-8826b96b6083';
 
   const plugins: ExpoConfig['plugins'] = [
     'expo-router',
@@ -236,7 +237,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   return {
     ...config,
     name: APP_NAME.en,
-    slug: 'gazla',
+    // EAS projesinin sahibi ve adı (expo.dev'deki projeyle aynı olmalı)
+    owner: 'fkaganns-team',
+    slug: 'noskip',
     scheme: 'gazla',
     version: '1.0.0',
     orientation: 'portrait',

@@ -58,7 +58,7 @@ profiles, friendships, blocks, reports, challenge_templates, challenges, challen
 - Bulut derleme: `npx eas-cli build --profile development` (iOS simülatör için `development-simulator`).
 - Paket eklerken `npx expo install <paket>` kullan. Bitirmeden önce `npm run typecheck`.
 - Yapılandırma `app.config.ts` (app.json yok): config plugin'leri (Apple girişi, Google Sign-In, bildirim, kamera, galeri, rehber, ATT, AdMob + SKAdNetwork), Türkçe izin metinleri, bundle id / paket `app.gazla` (`APP_ID`), evrensel link (`applinks:<alan>`, Android App Links `https://<alan>/d/*`; alan `EXPO_PUBLIC_INVITE_BASE_URL`/`EXPO_PUBLIC_WEB_BASE_URL`'den). Değerler `.env`'den (tümü açıklamalı `.env.example`'da); boşsa AdMob test uygulama kimlikleri, Google iOS URL şeması yoksa Google plugin'i eklenmez (tarayıcı akışı). Kontrol: `EXPO_OFFLINE=1 node node_modules/expo/bin/cli config --type prebuild`. EAS'te `.env` gitmez: aynı adlarla `eas env:create`.
-- Push için EAS proje kimliği: `npx eas-cli init`, çıkan kimliği `.env` `EAS_PROJECT_ID`'ye yaz (`extra.eas.projectId`; yoksa uygulama push kaydını uyarıyla atlar).
+- EAS projesi: `fkaganns-team/noskip` (app.config `owner`, `slug: 'noskip'`, `extra.eas.projectId` varsayılanı; `.env` `EAS_PROJECT_ID` ile değiştirilebilir). URL şeması `gazla` kalır (giriş dönüşü ve davet linkleri buna bağlı).
 - Evrensel link için web alanında `/.well-known/apple-app-site-association` (appID `<TeamID>.app.gazla`, yol `/d/*`) ve `/.well-known/assetlinks.json` (paket `app.gazla`, imza SHA-256'sı) yayımlanmalı.
 
 ## Dil (`src/i18n`)
