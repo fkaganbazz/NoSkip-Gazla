@@ -15,7 +15,7 @@ adımlarla aynı anda yürüyebilir.
 ## Adım 1: Kararlar (bugün, hesap açmadan önce)
 1. **Tek uygulama mı, iki uygulama mı?** Öneri: tek uygulama. Telefon Türkçeyse "Gazla", diğer dillerde "NoSkip" adıyla
    görünür; mağazada da dil başına ayrı ad ve açıklama olur. İki ayrı uygulama her işi iki katına çıkarır.
-2. **Uygulama kimliği (bundle id / paket adı):** Şu an `app.gazla`. Mağazaya çıktıktan sonra **değiştirilemez**. Marka
+2. **Uygulama kimliği (bundle id / paket adı):** ✅ `com.kratsonline.noskip`. Mağazaya çıktıktan sonra **değiştirilemez**. Marka
    global olarak NoSkip olacaksa daha nötr bir kimlik (örn. `com.krats.noskip`) düşün.
 3. **Yayıncı bireysel mi, şirket (KRATS) mi?**
    - Şirket olarak yayınlamak için Apple ve Google D-U-N-S numarası ister. Ücretsizdir ama birkaç gün ile birkaç hafta

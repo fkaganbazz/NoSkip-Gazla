@@ -30,7 +30,7 @@ const env = (name: string): string | undefined => {
 // Kimlikler ------------------------------------------------------------------------------------
 
 /** iOS bundle id ve Android paket adı (mağaza kaydında aynısı) */
-const APP_ID = env('APP_ID') ?? 'app.gazla';
+const APP_ID = env('APP_ID') ?? 'com.kratsonline.noskip';
 
 /** Google'ın resmi test uygulama kimlikleri (developers.google.com/admob → "test ads") */
 const ADMOB_TEST_APP_ID = {

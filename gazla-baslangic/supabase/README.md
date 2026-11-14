@@ -414,7 +414,7 @@ Yerel geliştirmede (pg_cron/pg_net yokken) tetikleyici ve iş kurulumu sessizce
 denemek için: `curl -X POST http://127.0.0.1:54321/functions/v1/push -H "x-gazla-secret: …" -d '{"mode":"schedule"}'`.
 
 ### Kimlik sağlayıcıları (Supabase Auth)
-- **Apple**: Auth → Providers → Apple: "Client IDs" alanına bundle id (`app.gazla`; tarayıcı akışı
+- **Apple**: Auth → Providers → Apple: "Client IDs" alanına bundle id (`com.kratsonline.noskip`; tarayıcı akışı
   için Services ID de). iOS'ta native giriş (expo-apple-authentication + `signInWithIdToken`, nonce)
   ek anahtar istemez; Android/web tarayıcı akışı Apple Services ID + gizli anahtar ister.
 - **Google**: Auth → Providers → Google: "Client IDs" alanına web ve iOS istemci kimlikleri (virgülle),
