@@ -55,7 +55,7 @@ function googleIosUrlScheme(): string | undefined {
   return clientId?.endsWith(suffix) ? `com.googleusercontent.apps.${clientId.slice(0, -suffix.length)}` : undefined;
 }
 
-// Evrensel link (davet: https://<alan>/d/<kod>) -------------------------------------------------
+// Evrensel link (davet: https://<alan>/d/<kod>, şablon: https://<web alanı>/t/<slug>) -------------------------------------------------
 
 const stripSlash = (url: string) => url.replace(/\/+$/, '');
 const webBaseUrl = stripSlash(env('EXPO_PUBLIC_WEB_BASE_URL') ?? 'https://gazla.app');
@@ -63,6 +63,9 @@ const inviteBaseUrl = new URL(stripSlash(env('EXPO_PUBLIC_INVITE_BASE_URL') ?? `
 const inviteHost = inviteBaseUrl.host;
 /** Davet yolu öneki: `/d/` (kök farklı yoldaysa o) */
 const invitePathPrefix = `${stripSlash(inviteBaseUrl.pathname)}/`;
+/** Şablon linki: https://<web alanı>/t/<slug> (src/config/links.ts templateLink) */
+const webHost = new URL(webBaseUrl).host;
+const templatePathPrefix = `${stripSlash(new URL(webBaseUrl).pathname)}/t/`;
 
 // iOS SKAdNetwork: react-native-google-mobile-ads belgelerindeki Google + üçüncü taraf alıcı listesi
 const SK_AD_NETWORK_ITEMS = [
@@ -249,7 +252,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       supportsTablet: true,
       bundleIdentifier: APP_ID,
       usesAppleSignIn: true,
-      associatedDomains: [`applinks:${inviteHost}`],
+      associatedDomains: [...new Set([`applinks:${inviteHost}`, `applinks:${webHost}`])],
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
         // Sistem metinleri (resmi Apple ile giriş butonu, izin pencereleri) cihaz dilinde: Türkçe telefonda Türkçe,
@@ -274,7 +277,10 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         {
           action: 'VIEW',
           autoVerify: true,
-          data: [{ scheme: 'https', host: inviteHost, pathPrefix: invitePathPrefix }],
+          data: [
+            { scheme: 'https', host: inviteHost, pathPrefix: invitePathPrefix },
+            { scheme: 'https', host: webHost, pathPrefix: templatePathPrefix },
+          ],
           category: ['BROWSABLE', 'DEFAULT'],
         },
       ],

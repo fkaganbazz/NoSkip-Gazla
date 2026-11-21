@@ -25,6 +25,7 @@ export { mockDev } from './mock/mockApi';
 export { isOnline, useIsOnline } from './network';
 export { getCheckinQueue, usePendingCheckins, type QueuedCheckinOp } from './offlineQueue';
 export { clearPendingInvite, peekPendingInvite, savePendingInvite, takePendingInvite } from './pendingInvite';
+export { savePendingTemplate, takePendingTemplate, TEMPLATE_SLUG } from './pendingTemplate';
 export { hashContactEmails, hashEmail, MAX_CONTACT_HASHES, normalizeEmail } from './contactHash';
 export { savedPushToken } from './pushToken';
 export * from './types';

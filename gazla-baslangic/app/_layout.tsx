@@ -14,6 +14,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useAdsBootstrap } from '@/ads';
 import { DataProvider, useAuth } from '@/data';
 import { OnboardingProvider, useOnboarding } from '@/features/onboarding/OnboardingProvider';
+import ServerPreferenceSync from '@/features/settings/ServerPreferenceSync';
 import { restoreThemePreference } from '@/features/settings/themePreference';
 import { useLanguageBootstrap } from '@/i18n';
 import { useNotificationsBootstrap } from '@/notifications';
@@ -106,6 +107,8 @@ function RootNavigator() {
       <StatusBar style="auto" />
       {/* Android: gezinme çubuğu tuşları açık/koyu temayla birlikte değişsin (menü çubuğun altına uzanıyor). */}
       <NavigationBar style="auto" />
+      {/* Görünüm ve reklam izni sunucuyla eşitlenir (user_settings) */}
+      {appOpen && <ServerPreferenceSync />}
       <Stack
         screenOptions={{
           headerShown: false,

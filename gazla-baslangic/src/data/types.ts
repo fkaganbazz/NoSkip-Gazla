@@ -107,7 +107,20 @@ export type UserSettings = {
   discoverability: Discoverability;
   /** Gün, ertesi gece yarısından bu kadar saat sonra kapanır (varsayılan 2) */
   dayEndGraceHours: DayEndGraceHours;
+  /** "Arkadaşın bitirdi" push'u (Aktivite satırı her durumda yazılır) */
+  friendFinishedPushEnabled: boolean;
+  /** "Seri koptu" Diken bildirimi (ertesi sabah 09:00) */
+  streakLostPushEnabled: boolean;
+  /** Haftalık özet ("Haftan", Pazar 19:00) */
+  weeklySummaryEnabled: boolean;
+  /** Görünüm tercihi; cihazda da saklanır (src/features/settings/themePreference.ts) */
+  theme: ThemePreferenceKey;
+  /** Son reklam izni sonucu: kişiselleştirilmiş mi; null = izin akışı henüz tamamlanmadı */
+  adsPersonalized: boolean | null;
 };
+
+/** Görünüm tercihi (user_settings.theme) */
+export type ThemePreferenceKey = 'system' | 'light' | 'dark';
 
 export type ProfileUpdate = Partial<Pick<Profile, 'username' | 'displayName' | 'avatarTint' | 'harshMode'>> & {
   /** Yeni avatar: yerel dosya adresi (yüklenir) ya da null (kaldırılır) */
@@ -117,7 +130,18 @@ export type ProfileUpdate = Partial<Pick<Profile, 'username' | 'displayName' | '
 export type SettingsUpdate = Partial<
   Pick<
     UserSettings,
-    'timezone' | 'locale' | 'pokePushEnabled' | 'dailyReminderTime' | 'discoverability' | 'dayEndGraceHours'
+    | 'birthYear'
+    | 'timezone'
+    | 'locale'
+    | 'pokePushEnabled'
+    | 'dailyReminderTime'
+    | 'discoverability'
+    | 'dayEndGraceHours'
+    | 'friendFinishedPushEnabled'
+    | 'streakLostPushEnabled'
+    | 'weeklySummaryEnabled'
+    | 'theme'
+    | 'adsPersonalized'
   >
 >;
 
@@ -292,6 +316,9 @@ export type CreateChallengeInput = {
   inviteeIds?: string[];
   /** Varsayılan 'invited' (yalnızca davetliler) */
   visibility?: ChallengeVisibility;
+  /** Özel challenge'ın ikonu ve rengi (şablonluda şablonunki kullanılır) */
+  icon?: ChallengeIconKey;
+  tint?: ChallengeTintKey;
 };
 
 export type ChallengeMembership = {

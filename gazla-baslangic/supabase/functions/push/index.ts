@@ -12,7 +12,11 @@
  *    seri koptu) sessiz saat ve günde 2 kuralıyla ayırır; metni alıcının dilinde SQL yazar (`app.diken_text`),
  *    burada yalnızca gönderilir.
  *
- * Expo yanıtında `DeviceNotRegistered` dönen token'lar `push_tokens`'tan silinir.
+ * Haftalık özet ("Haftan", Pazar 19:00) de Diken turunda gelir; satırın başlığı `title`'da (null = "Diken").
+ *
+ * Expo yanıtında `DeviceNotRegistered` dönen token'lar `push_tokens`'tan silinir. Başarılı biletler
+ * (`record_push_tickets`) saklanır; her 15 dakikalık turda en az 15 dakikalık biletlerin makbuzu okunur
+ * (`claim_push_receipts` → Expo getReceipts) ve makbuzda `DeviceNotRegistered` olan token'lar da silinir.
  * Android kanalları (src/notifications/channels.ts): Diken `diken`; dürt, gaz, istek, davet, arkadaşın
  * bitirdi `friends`; diğerleri `default`. `data.url` uygulama içi yoldur: Diken satırlarında SQL'in yazdığı
  * (`/`, `/challenge/<id>`, `/streak-lost/<challengeId>`), arkadaş bildirimlerinde `/poke/<id>`, `/friends`, `/activity`.
@@ -29,7 +33,10 @@ declare const Deno: {
 };
 
 export const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
+export const EXPO_RECEIPTS_URL = 'https://exp.host/--/api/v2/push/getReceipts';
 const EXPO_BATCH = 100;
+/** getReceipts tek istekte en çok 1000 kimlik alır */
+const EXPO_RECEIPT_BATCH = 1000;
 
 export type ChannelId = 'default' | 'diken' | 'friends';
 
@@ -149,6 +156,8 @@ export type DikenPush = {
   recipient_id: string;
   kind: string;
   challenge_id: string | null;
+  /** Bildirim başlığı (haftalık özette "Haftan" / "Your week"); null = "Diken" */
+  title?: string | null;
   body: string;
   url: string;
   tokens: string[];
@@ -158,7 +167,7 @@ export function dikenMessages(rows: DikenPush[]): PushMessage[] {
   return rows.flatMap((row) =>
     row.tokens.map((to) => ({
       to,
-      title: DIKEN_TITLE,
+      title: row.title || DIKEN_TITLE,
       body: row.body,
       data: { url: row.url, notificationId: row.notification_id, kind: row.kind },
       channelId: 'diken' as const,
@@ -171,23 +180,27 @@ export function dikenMessages(rows: DikenPush[]): PushMessage[] {
 
 type ExpoTicket = { status: 'ok'; id: string } | { status: 'error'; message?: string; details?: { error?: string } };
 
-export type SendResult = { sent: number; failed: number; invalidTokens: string[] };
+export type PushTicket = { id: string; token: string };
+
+export type SendResult = { sent: number; failed: number; invalidTokens: string[]; tickets: PushTicket[] };
+
+const expoHeaders = (accessToken?: string) => ({
+  Accept: 'application/json',
+  'Accept-Encoding': 'gzip, deflate',
+  'Content-Type': 'application/json',
+  ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : null),
+});
 
 /** Mesajları 100'lük gruplar halinde gönderir; geçersiz (DeviceNotRegistered) token'ları ayırır */
 export async function sendExpoPush(messages: PushMessage[], fetcher: typeof fetch = fetch, accessToken?: string): Promise<SendResult> {
-  const result: SendResult = { sent: 0, failed: 0, invalidTokens: [] };
+  const result: SendResult = { sent: 0, failed: 0, invalidTokens: [], tickets: [] };
   for (let i = 0; i < messages.length; i += EXPO_BATCH) {
     const batch = messages.slice(i, i + EXPO_BATCH);
     let tickets: ExpoTicket[] = [];
     try {
       const response = await fetcher(EXPO_PUSH_URL, {
         method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          'Accept-Encoding': 'gzip, deflate',
-          'Content-Type': 'application/json',
-          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : null),
-        },
+        headers: expoHeaders(accessToken),
         body: JSON.stringify(batch),
       });
       const body = (await response.json().catch(() => ({}))) as { data?: ExpoTicket[]; errors?: unknown };
@@ -206,6 +219,7 @@ export async function sendExpoPush(messages: PushMessage[], fetcher: typeof fetc
       const ticket = tickets[index];
       if (ticket?.status === 'ok') {
         result.sent += 1;
+        result.tickets.push({ id: ticket.id, token: message.to });
         return;
       }
       result.failed += 1;
@@ -215,6 +229,45 @@ export async function sendExpoPush(messages: PushMessage[], fetcher: typeof fetc
     });
   }
   return result;
+}
+
+type ExpoReceipt = { status: 'ok' } | { status: 'error'; message?: string; details?: { error?: string } };
+
+/**
+ * Biletlerin makbuzlarını okur; makbuzda `DeviceNotRegistered` olan token'ları döner. İstek başarısızsa o grup
+ * atlanır (biletler zaten alındı; bir sonraki gönderimin bileti yeniden yakalar).
+ */
+export async function readExpoReceipts(
+  tickets: PushTicket[],
+  fetcher: typeof fetch = fetch,
+  accessToken?: string,
+): Promise<string[]> {
+  const invalid = new Set<string>();
+  for (let i = 0; i < tickets.length; i += EXPO_RECEIPT_BATCH) {
+    const batch = tickets.slice(i, i + EXPO_RECEIPT_BATCH);
+    try {
+      const response = await fetcher(EXPO_RECEIPTS_URL, {
+        method: 'POST',
+        headers: expoHeaders(accessToken),
+        body: JSON.stringify({ ids: batch.map((t) => t.id) }),
+      });
+      const body = (await response.json().catch(() => ({}))) as { data?: Record<string, ExpoReceipt> };
+      if (!response.ok || !body.data) {
+        console.error('push: makbuz isteği başarısız', response.status);
+        continue;
+      }
+      for (const ticket of batch) {
+        const receipt = body.data[ticket.id];
+        if (receipt?.status === 'error') {
+          if (receipt.details?.error === 'DeviceNotRegistered') invalid.add(ticket.token);
+          else console.error('push: makbuz hatası', receipt.details?.error ?? receipt.message);
+        }
+      }
+    } catch (error) {
+      console.error('push: makbuzlar okunamadı', error);
+    }
+  }
+  return [...invalid];
 }
 
 // HTTP ----------------------------------------------------------------------------------------------
@@ -293,8 +346,22 @@ export async function handlePush(request: Request, deps: Deps = {}): Promise<Res
   }
 
   const result = await sendExpoPush(messages, fetcher, accessToken);
-  await removeTokens(admin, result.invalidTokens);
-  return json(200, { sent: result.sent, failed: result.failed, removedTokens: result.invalidTokens.length });
+  const invalid = new Set(result.invalidTokens);
+  if (result.tickets.length) {
+    const { error } = await admin.rpc('record_push_tickets', { p_tickets: result.tickets });
+    if (error) console.error('push: biletler kaydedilemedi', error.message);
+  }
+  // Makbuzlar zamanlı turda (15 dakikada bir) okunur
+  let receipts = 0;
+  if (body.mode === 'schedule') {
+    const { data, error } = await admin.rpc('claim_push_receipts', { p_limit: EXPO_RECEIPT_BATCH });
+    if (error) console.error('push: claim_push_receipts', error.message);
+    const due = (data ?? []) as PushTicket[];
+    receipts = due.length;
+    for (const token of await readExpoReceipts(due, fetcher, accessToken)) invalid.add(token);
+  }
+  await removeTokens(admin, [...invalid]);
+  return json(200, { sent: result.sent, failed: result.failed, receipts, removedTokens: invalid.size });
 }
 
 if (typeof Deno !== 'undefined') Deno.serve((request) => handlePush(request));

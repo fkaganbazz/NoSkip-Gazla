@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AddAvatar } from '@/components/Avatar';
 import { AddIcon, CalendarIcon, ClockIcon, LockIcon, MinusIcon } from '@/components/icons';
 import { Avatar, Button, Card, Chip, IconButton, ScreenHeader, TextField, Toggle } from '@/components/ui';
-import { useChallengeTemplates, useCreateChallenge, useFriendsToday } from '@/data';
+import { useChallengeTemplates, useCreateChallenge, useFriendsToday, useTodayTasks } from '@/data';
 import {
   durationOptions,
   formFromTemplate,
@@ -109,7 +109,9 @@ export default function CreateScreen({ onCreated, onClose, initialTemplateId, in
   const friendList = friends.data ?? [];
   // Seçim sırasıyla ("Mert ve Ece davet edilecek")
   const invited = form.invitees.flatMap((id) => friendList.filter((f) => f.id === id));
-  const input = toCreateInput(form, template);
+  // Özel challenge'ın rengi Bugün'deki kartlarınkinden ayrı seçilir
+  const today = useTodayTasks();
+  const input = toCreateInput(form, template, today.data?.map((task) => task.tint));
   const nameError = titleTouched ? titleError(form.title, t) : null;
 
   const submit = () => {

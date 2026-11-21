@@ -21,7 +21,8 @@ const RULE_CHIP: Record<RuleTone, { tone?: ChipTone; tint?: ChallengeTint }> = {
 };
 
 // Bildirimler — design/Notifications.dc.html (kurallar ve metinler) + Settings.dc.html satır dili.
-// Tercihler user_settings: dürtme bildirimi ve günlük hatırlatma saati. Sessiz saat kuralı sunucuda.
+// Tercihler user_settings: dürtme, günlük hatırlatma saati, arkadaşın bitirdi, seri koptu, haftalık özet.
+// Sessiz saat ve günde 2 kuralı sunucuda.
 export default function NotificationsScreen() {
   const { colors, scheme } = useTheme();
   const c = settingsColors[scheme];
@@ -85,7 +86,6 @@ export default function NotificationsScreen() {
               save({ dailyReminderTime: on ? DEFAULT_REMINDER : null });
               if (on) promptPush();
             }}
-            last={!reminderOn}
           />
           {reminderOn && (
             <LinkRow
@@ -93,9 +93,39 @@ export default function NotificationsScreen() {
               value={formatTime(s.dailyReminderTime, t)}
               disabled={update.isPending}
               onPress={() => setTimeOpen(true)}
-              last
             />
           )}
+          <ToggleRow
+            title={n.friendFinished}
+            detail={n.friendFinishedDetail}
+            value={s.friendFinishedPushEnabled}
+            disabled={update.isPending}
+            onChange={(friendFinishedPushEnabled) => {
+              save({ friendFinishedPushEnabled });
+              if (friendFinishedPushEnabled) promptPush();
+            }}
+          />
+          <ToggleRow
+            title={n.streakLost}
+            detail={n.streakLostDetail}
+            value={s.streakLostPushEnabled}
+            disabled={update.isPending}
+            onChange={(streakLostPushEnabled) => {
+              save({ streakLostPushEnabled });
+              if (streakLostPushEnabled) promptPush();
+            }}
+          />
+          <ToggleRow
+            title={n.weekly}
+            detail={n.weeklyDetail}
+            value={s.weeklySummaryEnabled}
+            disabled={update.isPending}
+            onChange={(weeklySummaryEnabled) => {
+              save({ weeklySummaryEnabled });
+              if (weeklySummaryEnabled) promptPush();
+            }}
+            last
+          />
         </SettingsGroup>
 
         <SectionLabel style={styles.section}>{n.whatWhen}</SectionLabel>

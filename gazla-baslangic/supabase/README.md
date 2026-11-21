@@ -23,6 +23,8 @@ tablolara yalnızca politikası olan yerlerde doğrudan dokunur, geri kalan her 
 | `20261021100000_find_contacts.sql` | rehberden bul: `app.email_hashes` (auth.users tetikleyicisi), `find_contacts`, günlük arama sınırı |
 | `20261021100100_ad_rescue_ssv.sql` | reklamla kurtarma sonucu: `record_ad_rescue_failure` (service role), `ad_rescue_result` (istemci) |
 | `20261021100200_push_jobs.sql` | push: `claim_social_push`, `queue_diken_notifications` (Diken kuralları), notifications → `push` tetikleyicisi (pg_net + Vault), pg_cron işleri (`app.install_cron_jobs`) |
+| `20261111100000_function_search_path.sql` | sabit `app.*` fonksiyonlarına boş `search_path` (güvenlik denetimi) |
+| `20261121100000_settings_weekly_receipts.sql` | `user_settings`: bildirim anahtarları (arkadaşın bitirdi, seri koptu, haftalık özet), `theme`, reklam izni (`ads_personalized`, zamanı tetikleyiciden), doğum yılı düzeltme; haftalık özet ("Haftan", Pazar 19:00; `queue_diken_notifications` artık `title` döner); Expo push makbuzları (`record_push_tickets`, `claim_push_receipts`); `create_challenge` `p_icon`, `p_tint` |
 
 Edge Function'lar (`functions/`, Deno; her birinin `deno.json` içe aktarma haritası var):
 
@@ -508,10 +510,11 @@ Tasarımda ya da CLAUDE.md'de açık olmayan noktalarda verilen kararlar:
 
 ## Ekranların beklediği, henüz olmayanlar
 Ekranlar mevcut veriyle çalışıyor; aşağıdakiler eklendiğinde tasarımın tamamı gösterilebilir.
-- **Reklam izni:** UMP/ATT sonucunu saklayacak alan (`user_settings`). (Ön ekranın bir kez gösterilmesi istemcide: `src/data/flags.ts` `adConsentShown`.)
-- **Challenge oluşturma:** `create_challenge`'a özel challenge için `icon`, `tint`, sayı `step` parametreleri.
-- **Bahçe:** bitki ifadesi (aksesuar: bant süreden, gözlük `is_longest`ten).
-- **Keşfet:** şablon derin bağlantısı.
-- **Bildirim tercihleri:** "arkadaşın bitirdi", haftalık özet, seri koptu için ayrı anahtarlar; tema tercihi; doğum yılını güncelleme.
-- **Bildirimler:** haftalık özet ("Haftan", Pazar 19:00) zamanlayıcısı; Expo push makbuzlarının okunması.
-- **İçerik:** Kullanım Koşulları, Gizlilik, KVKK, destek adresleri.
+- **İçerik:** Kullanım Koşulları, Gizlilik, KVKK, destek adresleri (taslaklar `docs/yasal/`; web sitesi alan adından sonra).
+
+Tamamlananlar (2026-11-21, `20261121100000_settings_weekly_receipts.sql`):
+- Reklam izni sonucu `user_settings.ads_personalized` (istemci izin akışından sonra yazar: `ServerPreferenceSync`).
+- Özel challenge ikonu ve rengi (`p_icon`, `p_tint`; istemci addan ve Bugün'de kullanılmayan renkten seçer). Sayı adımı zaten vardı.
+- Bahçe: aksesuar ve aşama istemcide `stage` + `is_longest`'ten (en uzun seri çiçek + gözlük).
+- Keşfet şablon linki `https://<web alanı>/t/<slug>` (sunucu değişikliği gerekmedi; önizleme kısa adla da açılır).
+- Bildirim anahtarları, tema, doğum yılı; haftalık özet; Expo push makbuzları.

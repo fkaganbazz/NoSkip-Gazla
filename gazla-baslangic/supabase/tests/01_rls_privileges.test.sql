@@ -20,7 +20,7 @@
 --   zafer  invited to the full group c3; finished ece's ended challenge c4 with her
 --   kid    signed up (auth user) but has no profile yet
 begin;
-select plan(297);
+select plan(299);
 
 -- =========================================================================================
 -- Fixture (as postgres: table owner, BYPASSRLS)
@@ -244,8 +244,10 @@ select is(
   array(select a.attname::text from pg_attribute a
         where a.attrelid = 'public.user_settings'::regclass and a.attnum > 0 and not a.attisdropped
           and has_column_privilege('authenticated', a.attrelid, a.attnum, 'UPDATE') order by 1),
-  array['daily_reminder_time', 'day_end_grace_hours', 'discoverability', 'locale', 'poke_push_enabled', 'timezone'],
-  'user_settings: birth_year, terms_accepted_at, user_id, checkin_floor are not updatable');
+  array['ads_personalized', 'birth_year', 'daily_reminder_time', 'day_end_grace_hours', 'discoverability',
+        'friend_finished_push_enabled', 'locale', 'poke_push_enabled', 'streak_lost_push_enabled', 'theme',
+        'timezone', 'weekly_summary_enabled'],
+  'user_settings: terms_accepted_at, user_id, checkin_floor, ads_consent_at are not updatable');
 
 select is(
   array(select a.attname::text from pg_attribute a
@@ -297,13 +299,14 @@ select is(
         where n.nspname = 'public'
           and p.proname in ('grant_ad_rescue', 'can_send_diken_push', 'claim_diken_push',
                             'finish_due_challenges', 'record_ad_rescue_failure',
-                            'queue_diken_notifications', 'claim_social_push')
+                            'queue_diken_notifications', 'claim_social_push',
+                            'record_push_tickets', 'claim_push_receipts')
           and (has_function_privilege('anon', p.oid, 'EXECUTE')
                or has_function_privilege('authenticated', p.oid, 'EXECUTE')
                or not has_function_privilege('service_role', p.oid, 'EXECUTE'))
         order by 1),
   '{}'::text[],
-  'grant_ad_rescue, can_send_diken_push, claim_diken_push, finish_due_challenges, record_ad_rescue_failure, queue_diken_notifications, claim_social_push: service_role only');
+  'grant_ad_rescue, can_send_diken_push, claim_diken_push, finish_due_challenges, record_ad_rescue_failure, queue_diken_notifications, claim_social_push, record_push_tickets, claim_push_receipts: service_role only');
 
 select is(
   array(select p.proname::text from pg_proc p join pg_namespace n on n.oid = p.pronamespace
@@ -529,7 +532,11 @@ select results_eq($$update public.user_settings set poke_push_enabled = false re
 select throws_ok($$update public.user_settings set timezone = 'Mars/Olympus'$$,
   '22023', 'Geçersiz saat dilimi: Mars/Olympus', 'user_settings: the timezone must be a valid IANA name');
 select throws_ok($$update public.user_settings set birth_year = 2015$$,
-  '42501', null, 'user_settings.birth_year is not updatable');
+  '23514', 'Şu an hesabını oluşturamıyoruz.', 'user_settings.birth_year cannot go below the minimum age');
+select results_eq($$update public.user_settings set birth_year = 1995 returning birth_year::int$$,
+  array[1995], 'user_settings.birth_year can be corrected');
+select results_eq($$update public.user_settings set ads_personalized = true returning ads_consent_at is not null$$,
+  array[true], 'user_settings: the ad consent time is set by the server');
 select throws_ok($$update public.user_settings set terms_accepted_at = now() - interval '1 year'$$,
   '42501', null, 'user_settings.terms_accepted_at is not updatable');
 select throws_ok(format($$insert into public.user_settings (user_id, birth_year) values (%L, 1990)$$, :'kid'),

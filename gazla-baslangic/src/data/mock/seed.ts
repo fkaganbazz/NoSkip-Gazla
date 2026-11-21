@@ -92,6 +92,11 @@ export const seedSettings: UserSettings = {
   dailyReminderTime: '21:00',
   discoverability: 'everyone',
   dayEndGraceHours: 2,
+  friendFinishedPushEnabled: true,
+  streakLostPushEnabled: true,
+  weeklySummaryEnabled: true,
+  theme: 'system',
+  adsPersonalized: null,
 };
 
 /** Kabul edilmiş arkadaşlar */

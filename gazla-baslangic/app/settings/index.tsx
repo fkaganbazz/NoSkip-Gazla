@@ -40,12 +40,19 @@ import ProfileCard from '@/features/settings/ProfileCard';
 import ProfileEditSheet from '@/features/settings/ProfileEditSheet';
 import { LinkRow, SettingsGroup, ToggleRow } from '@/features/settings/rows';
 import { usePushPrompt } from '@/features/settings/usePushPrompt';
-import { themeOptions, useThemePreference } from '@/features/settings/themePreference';
+import {
+  markThemePreferenceSynced,
+  setThemePreference,
+  themeOptions,
+  useThemePreference,
+  type ThemePreference,
+} from '@/features/settings/themePreference';
+import BirthYearSheet from '@/features/onboarding/BirthYearSheet';
 import { useLanguage, useLanguagePreference, useT, type LanguagePreference, type Messages } from '@/i18n';
 import { layout, useTheme } from '@/theme';
 import { settingsMetrics as m, settingsTypography as st } from '@/theme/settings';
 
-type OpenSheet = 'profile' | 'discoverability' | 'dayEnd' | 'language' | null;
+type OpenSheet = 'profile' | 'discoverability' | 'dayEnd' | 'language' | 'birthYear' | null;
 
 /** DESTEK VE YASAL (Settings.dc.html sırası): web sayfaları uygulama içi tarayıcıda, "Bize yaz" e-postada */
 const supportRows = (t: Messages): { key: string; title: string; page?: LegalLink }[] => [
@@ -77,7 +84,7 @@ export default function SettingsScreen() {
   const { update: updateProfile } = useProfile();
   const { update: updateSettings } = useUpdateSettings();
   const signOut = useSignOut();
-  const [themePref, setThemePref] = useThemePreference();
+  const themePref = useThemePreference();
   const [languagePref, setLanguagePref] = useLanguagePreference();
   const language = useLanguage();
   const t = useT();
@@ -88,6 +95,13 @@ export default function SettingsScreen() {
 
   // İyimser: anahtar ve seçim anında değişir; sunucu reddederse eski değere döner ve tost çıkar
   const onSaveError = (e: unknown) => flash(errorText(e, t));
+  // Görünüm cihazda hemen uygulanır; sunucuya yazılamazsa sonraki eşitlemede gider (ServerPreferenceSync)
+  const changeTheme = (theme: ThemePreference) => {
+    setThemePreference(theme);
+    updateSettings({ theme })
+      .then(() => markThemePreferenceSynced(theme))
+      .catch(() => {});
+  };
   const settingsPatch = useOptimisticPatch<SettingsUpdate>((u) => updateSettings(u), onSaveError);
   const profilePatch = useOptimisticPatch<ProfileUpdate>((u) => updateProfile(u), onSaveError);
 
@@ -181,7 +195,7 @@ export default function SettingsScreen() {
         <Segmented
           options={themeOptions(t)}
           value={themePref}
-          onChange={setThemePref}
+          onChange={changeTheme}
           size="lg"
           role="radio"
           accessibilityLabel={ix.theme}
@@ -208,7 +222,13 @@ export default function SettingsScreen() {
             value={blocked.data ? String(blocked.data.length) : undefined}
             onPress={() => router.push('/settings/blocked')}
           />
-          <LinkRow title={ix.adPreferences} onPress={openAdPreferences} disabled={adPrefsBusy} last />
+          <LinkRow title={ix.adPreferences} onPress={openAdPreferences} disabled={adPrefsBusy} />
+          <LinkRow
+            title={ix.birthYear}
+            value={String(s.birthYear)}
+            onPress={() => setSheet('birthYear')}
+            last
+          />
         </SettingsGroup>
 
         <SectionLabel style={styles.section}>{ix.sections.support}</SectionLabel>
@@ -280,6 +300,14 @@ export default function SettingsScreen() {
         options={languages}
         value={languagePref}
         onSelect={setLanguagePref}
+        onClose={() => setSheet(null)}
+      />
+
+      <BirthYearSheet
+        visible={sheet === 'birthYear'}
+        title={ix.birthYear}
+        value={s.birthYear}
+        onSelect={(birthYear) => settingsPatch.apply({ birthYear })}
         onClose={() => setSheet(null)}
       />
 

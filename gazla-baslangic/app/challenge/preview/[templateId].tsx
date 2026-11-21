@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AvatarStack } from '@/components/Avatar';
 import { Button, Chip, ErrorState, LoadingState, Segmented } from '@/components/ui';
+import { templateLink } from '@/config/links';
 import { useChallengeTemplates, useCreateChallenge, useTemplateStats } from '@/data';
 import PreviewFeatures from '@/features/explore/PreviewFeatures';
 import PreviewHero from '@/features/explore/PreviewHero';
@@ -14,7 +15,8 @@ import { useT } from '@/i18n';
 import { categoryTint, layout, typography, useTheme } from '@/theme';
 import { previewMetrics as m, previewTypography } from '@/theme/explore';
 
-// Challenge önizleme — design/ChallengePreview.dc.html (/challenge/preview/<şablon id>).
+// Challenge önizleme — design/ChallengePreview.dc.html (/challenge/preview/<şablon id ya da kısa adı>; şablon
+// linki /t/<slug> buraya gelir).
 // Veri: challenge_templates + template_stats.
 // İki buton da seçilen süreyle create_challenge çağırır. "Arkadaşlarla": oluşunca challenge detayı açılır,
 // üstünde davet modalı (/invite-friends); kapatınca detayda kalınır. "Tek başıma başla": → Bugün.
@@ -26,9 +28,9 @@ export default function TemplatePreviewScreen() {
   const insets = useSafeAreaInsets();
 
   const templates = useChallengeTemplates();
-  const stats = useTemplateStats(templateId);
+  const template = templates.data?.find((x) => x.id === templateId || x.slug === templateId);
+  const stats = useTemplateStats(template?.id);
   const { create } = useCreateChallenge();
-  const template = templates.data?.find((x) => x.id === templateId);
 
   // Seçilmediyse şablonun varsayılan süresi
   const [picked, setPicked] = useState<DurationOption | null>(null);
@@ -64,7 +66,8 @@ export default function TemplatePreviewScreen() {
   const faces = (stats.data?.friends ?? []).map((f) => ({ name: f.displayName, tint: f.avatarTint, url: f.avatarUrl }));
 
   const share = () => {
-    Share.share({ message: [template.title, template.description].filter(Boolean).join('\n\n') }).catch(() => {});
+    const link = templateLink(template.slug);
+    Share.share({ message: [template.title, template.description, link].filter(Boolean).join('\n\n') }).catch(() => {});
   };
 
   const start = (next: 'friends' | 'solo') => {

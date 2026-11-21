@@ -734,6 +734,10 @@ export const mockApi: GazlaApi = {
     if (update.dayEndGraceHours !== undefined && ![0, 1, 2].includes(update.dayEndGraceHours)) {
       throw new ApiError(getT().errors.validation.graceHours, '23514');
     }
+    // Yaş sınırı (app.user_settings_guard, app.min_age); metin nötr
+    if (update.birthYear !== undefined && update.birthYear > new Date().getFullYear() - 13) {
+      throw serverError('account_unavailable', '23514');
+    }
     Object.assign(store.settings, update);
     return clone(store.settings);
   },
@@ -1049,8 +1053,9 @@ export const mockApi: GazlaApi = {
       reminderTime: input.reminderTime ?? null,
       inviteMessage: input.inviteMessage?.trim() || null,
       category: t?.category ?? null,
-      icon: t?.icon ?? 'check',
-      tint: t?.tint ?? 'green',
+      // Şablonlu: şablonunki; özel: istemcinin seçtiği (sunucu bilinmeyen anahtarı varsayılana çevirir)
+      icon: t?.icon ?? input.icon ?? 'check',
+      tint: t?.tint ?? input.tint ?? 'green',
       number: t?.number ?? input.number ?? null,
       visibility: input.visibility ?? 'invited',
     };

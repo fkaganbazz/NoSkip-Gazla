@@ -21,20 +21,21 @@ const STAGE_MOODS: Record<DikenStage, DikenMood[]> = {
   cicek: ['gurur'],
 };
 
-export type PlantLook = { mood: DikenMood; gear: DikenGear };
+export type PlantLook = { mood: DikenMood; gear: DikenGear; stage: DikenStage };
 
 /**
- * Bitkilerin ifadesi ve aksesuarı. Aşama sunucudan (`stage`: süreye göre 7→genç, 10→tam, 30→çiçek);
- * 10 günlük (tam) bandanalı, en uzun seri olan (my_garden `is_longest`) gözlüklü (EKRANLAR 5.1).
+ * Bitkilerin aşaması, ifadesi ve aksesuarı. Aşama sunucudan (`stage`: süreye göre 7→genç, 10→tam, 30→çiçek);
+ * 10 günlük (tam) bandanalı, en uzun seri olan (my_garden `is_longest`) çiçekli ve gözlüklü (EKRANLAR 5.1).
  */
 export function plantLooks(items: GardenItem[]): PlantLook[] {
   const seen: Partial<Record<DikenStage, number>> = {};
   return items.map((item) => {
     const n = seen[item.stage] ?? 0;
     seen[item.stage] = n + 1;
-    const moods = STAGE_MOODS[item.stage];
-    const gear: DikenGear = item.isLongest ? 'gozluk' : item.stage === 'tam' ? 'bant' : 'yok';
-    return { mood: moods[n % moods.length], gear };
+    const stage: DikenStage = item.isLongest ? 'cicek' : item.stage;
+    const moods = STAGE_MOODS[stage];
+    const gear: DikenGear = item.isLongest ? 'gozluk' : stage === 'tam' ? 'bant' : 'yok';
+    return { mood: moods[n % moods.length], gear, stage };
   });
 }
 

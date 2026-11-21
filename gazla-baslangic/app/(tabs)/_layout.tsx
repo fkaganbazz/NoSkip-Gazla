@@ -1,7 +1,9 @@
+import { useRouter } from 'expo-router';
 import { Tabs, type BottomTabNavigationOptions } from 'expo-router/js-tabs';
-import type { ComponentType } from 'react';
+import { useEffect, type ComponentType } from 'react';
 
 import TabBar from '@/components/TabBar';
+import { takePendingTemplate } from '@/data';
 import { CompassIcon, FriendsIcon, HomeIcon, SproutIcon, type IconProps } from '@/components/icons';
 import { useT } from '@/i18n';
 import { tabBarMetrics, useTheme } from '@/theme';
@@ -14,6 +16,18 @@ const tabIcon =
 export default function TabsLayout() {
   const { colors } = useTheme();
   const t = useT();
+  const router = useRouter();
+
+  // Oturumsuz açılmış şablon linki (/t/<slug>): onboarding bitince önizlemesi bir kez açılır
+  useEffect(() => {
+    let alive = true;
+    void takePendingTemplate().then((slug) => {
+      if (alive && slug) router.push({ pathname: '/challenge/preview/[templateId]', params: { templateId: slug } });
+    });
+    return () => {
+      alive = false;
+    };
+  }, [router]);
 
   return (
     <Tabs

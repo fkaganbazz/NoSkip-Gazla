@@ -56,6 +56,7 @@ import type {
   ChallengeTintKey,
   Checkin,
   DayEndGraceHours,
+  ThemePreferenceKey,
   FinishedChallenge,
   FriendRequest,
   FriendToday,
@@ -480,6 +481,14 @@ export function createSupabaseApi(url: string, anonKey: string): GazlaApi {
       if (update.dailyReminderTime !== undefined) patch.daily_reminder_time = update.dailyReminderTime;
       if (update.discoverability !== undefined) patch.discoverability = update.discoverability;
       if (update.dayEndGraceHours !== undefined) patch.day_end_grace_hours = update.dayEndGraceHours;
+      if (update.birthYear !== undefined) patch.birth_year = update.birthYear;
+      if (update.friendFinishedPushEnabled !== undefined) {
+        patch.friend_finished_push_enabled = update.friendFinishedPushEnabled;
+      }
+      if (update.streakLostPushEnabled !== undefined) patch.streak_lost_push_enabled = update.streakLostPushEnabled;
+      if (update.weeklySummaryEnabled !== undefined) patch.weekly_summary_enabled = update.weeklySummaryEnabled;
+      if (update.theme !== undefined) patch.theme = update.theme;
+      if (update.adsPersonalized !== undefined) patch.ads_personalized = update.adsPersonalized;
       const { data, error } = await supabase.from('user_settings').update(patch).eq('user_id', id).select('*').single();
       if (error) fail(error);
       return toSettings(data!);
@@ -714,6 +723,8 @@ export function createSupabaseApi(url: string, anonKey: string): GazlaApi {
         p_number_step: input.number?.step ?? null,
         p_number_max: input.number?.max ?? null,
         p_invitees: input.inviteeIds ?? [],
+        p_icon: input.icon ?? null,
+        p_tint: input.tint ?? null,
       });
       // Durum, gün numarası ve üye sayısı sunucudan (challenge_detail)
       return api.getChallenge(r.id);
@@ -1017,6 +1028,12 @@ const toSettings = (r: Tables<'user_settings'>): UserSettings => ({
   discoverability: r.discoverability,
   // 0/1/2 (user_settings CHECK)
   dayEndGraceHours: (r.day_end_grace_hours ?? 2) as DayEndGraceHours,
+  friendFinishedPushEnabled: r.friend_finished_push_enabled,
+  streakLostPushEnabled: r.streak_lost_push_enabled,
+  weeklySummaryEnabled: r.weekly_summary_enabled,
+  // system | light | dark (user_settings CHECK)
+  theme: r.theme as ThemePreferenceKey,
+  adsPersonalized: r.ads_personalized,
 });
 
 /** checkins satırı (tablo ya da checkin RPC'si) */

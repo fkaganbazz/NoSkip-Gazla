@@ -3,7 +3,15 @@
  * formdan CreateChallengeInput üretimi. Sınırlar (ad 3–60, süre 3–60, başlangıç bugün/yarın) sunucuda da denetlenir.
  * Metinler sözlükten (`t.create`, `t.common`).
  */
-import type { ChallengeVisibility, CreateChallengeInput, FriendToday, TaskType, Template } from '@/data';
+import type {
+  ChallengeIconKey,
+  ChallengeTintKey,
+  ChallengeVisibility,
+  CreateChallengeInput,
+  FriendToday,
+  TaskType,
+  Template,
+} from '@/data';
 import { addLocalDays, deviceToday } from '@/features/checkin/logic';
 import { joinNames } from '@/features/challenge/logic';
 import type { Messages } from '@/i18n';
@@ -119,8 +127,45 @@ export function durationDays(form: CreateForm) {
   return form.duration === 'custom' ? form.customDays : form.duration;
 }
 
-/** Form geçerliyse gönderilecek girdi, değilse null */
-export function toCreateInput(form: CreateForm, template: Template | undefined): CreateChallengeInput | null {
+/** Ad içindeki kelimeye göre ikon (Türkçe ve İngilizce); eşleşme yoksa tik */
+const ICON_WORDS: [ChallengeIconKey, string[]][] = [
+  ['coffee', ['kahve', 'kafein', 'coffee', 'caffeine']],
+  ['candy', ['şeker', 'seker', 'tatlı', 'tatli', 'çikolata', 'cikolata', 'sugar', 'sweet', 'candy', 'chocolate']],
+  ['phoneOff', ['telefon', 'ekran', 'sosyal medya', 'instagram', 'tiktok', 'phone', 'screen', 'social']],
+  ['book', ['kitap', 'oku', 'sayfa', 'book', 'read', 'page']],
+  ['wallet', ['para', 'harca', 'alışveriş', 'alisveris', 'birikim', 'tasarruf', 'money', 'spend', 'saving', 'shopping']],
+  ['toothbrush', ['diş', 'teeth', 'tooth', 'floss']],
+  ['chatHeart', ['ara', 'mesaj', 'teşekkür', 'tesekkur', 'iltifat', 'aile', 'call', 'text', 'thank', 'compliment', 'family']],
+  ['timer', ['dakika', 'meditasyon', 'egzersiz', 'spor', 'yürü', 'yuru', 'koş', 'kos', 'plank', 'minute', 'meditat', 'workout', 'walk', 'run']],
+];
+
+/** Renk sırası: Bugün'de yan yana kartlar ayrışsın diye kullanılmayan ilk renk */
+const TINT_ORDER: ChallengeTintKey[] = ['green', 'lilac', 'peach', 'sky', 'butter', 'rose', 'teal'];
+
+export function iconForTitle(title: string): ChallengeIconKey {
+  const text = ` ${title.toLocaleLowerCase('tr')} `;
+  const words = text.split(/[^\p{L}]+/u).filter(Boolean);
+  for (const [icon, keys] of ICON_WORDS) {
+    // Kısa kökler (ara, oku, kos) kelime başında aranır: "kahvaltı"da "ara" yok sayılsın
+    if (keys.some((k) => (k.length <= 4 ? words.some((w) => w.startsWith(k.trim())) : text.includes(k)))) return icon;
+  }
+  return 'check';
+}
+
+export function pickTint(used: ChallengeTintKey[]): ChallengeTintKey {
+  return TINT_ORDER.find((tint) => !used.includes(tint)) ?? TINT_ORDER[used.length % TINT_ORDER.length];
+}
+
+/**
+ * Form geçerliyse gönderilecek girdi, değilse null. Özel challenge'ın ikonu addan (`iconForTitle`), rengi
+ * kullanıcının süren challenge'larında olmayan ilk renkten (`usedTints`; şablondan gelen özel süreli
+ * challenge şablonun ikon ve rengini korur).
+ */
+export function toCreateInput(
+  form: CreateForm,
+  template: Template | undefined,
+  usedTints: ChallengeTintKey[] = [],
+): CreateChallengeInput | null {
   const title = form.title.trim();
   const days = durationDays(form);
   if (titleProblem(title) || days < createMetrics.customMin || days > createMetrics.customMax) return null;
@@ -138,8 +183,12 @@ export function toCreateInput(form: CreateForm, template: Template | undefined):
     return { templateId: template.id, ...common };
   }
 
+  const look = {
+    icon: template?.icon ?? iconForTitle(title),
+    tint: template?.tint ?? pickTint(usedTints),
+  };
   if (form.taskType !== 'number') {
-    return { title, taskType: form.taskType, ...common };
+    return { title, taskType: form.taskType, ...look, ...common };
   }
   const unit = form.unit.trim();
   const target = parseAmount(form.target);
@@ -156,6 +205,7 @@ export function toCreateInput(form: CreateForm, template: Template | undefined):
       step: template?.number?.step ?? (increment > 0 ? increment : 1),
       max: template?.number?.max ?? null,
     },
+    ...look,
     ...common,
   };
 }

@@ -39,6 +39,12 @@ const legalLinksEn: Record<LegalLink, string> = {
 export const legalLinkFor = (key: LegalLink, lang: Language = getLanguage()) =>
   lang === 'en' ? legalLinksEn[key] : legalLinks[key];
 
+/** Şablon linki kökü: `${TEMPLATE_BASE_URL}/<slug>` (Keşfet önizlemesi "Paylaş"; web sitesi de bağlar) */
+export const TEMPLATE_BASE_URL = `${WEB_BASE_URL}/t`;
+
+/** Paylaşılan şablon linki (universal link). Uygulama içinde `/t/<slug>` route'u önizlemeyi açar. */
+export const templateLink = (slug: string) => `${TEMPLATE_BASE_URL}/${encodeURIComponent(slug)}`;
+
 /** Paylaşılan davet linki (universal link). Uygulama içinde `/d/<kod>` route'u açar. */
 export const inviteLink = (code: string) => `${INVITE_BASE_URL}/${encodeURIComponent(code)}`;
 

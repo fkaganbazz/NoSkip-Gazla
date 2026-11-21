@@ -54,7 +54,7 @@ export default function GardenShelves({ items, onOpen, onNext }: Props) {
                   accessibilityRole="button"
                   accessibilityLabel={t.garden.shelves.plantA11y(slot.title)}
                   style={({ pressed }) => [styles.cell, pressed && { opacity: 0.8 }]}>
-                  <Diken mood={look.mood} gear={look.gear} stage={slot.stage} size={m.plantSize} />
+                  <Diken mood={look.mood} gear={look.gear} stage={look.stage} size={m.plantSize} />
                 </Pressable>
               );
             })}

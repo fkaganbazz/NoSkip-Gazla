@@ -902,44 +902,62 @@ export type Database = {
       }
       user_settings: {
         Row: {
+          ads_consent_at: string | null
+          ads_personalized: boolean | null
           birth_year: number
           checkin_floor: string | null
           daily_reminder_time: string | null
           day_end_grace_hours: number
           discoverability: Database["public"]["Enums"]["discoverability"]
+          friend_finished_push_enabled: boolean
           locale: string
           poke_push_enabled: boolean
+          streak_lost_push_enabled: boolean
           terms_accepted_at: string
+          theme: string
           timezone: string
           updated_at: string
           user_id: string
+          weekly_summary_enabled: boolean
         }
         ComputedFields: never
         Insert: {
+          ads_consent_at?: string | null
+          ads_personalized?: boolean | null
           birth_year: number
           checkin_floor?: string | null
           daily_reminder_time?: string | null
           day_end_grace_hours?: number
           discoverability?: Database["public"]["Enums"]["discoverability"]
+          friend_finished_push_enabled?: boolean
           locale?: string
           poke_push_enabled?: boolean
+          streak_lost_push_enabled?: boolean
           terms_accepted_at?: string
+          theme?: string
           timezone?: string
           updated_at?: string
           user_id: string
+          weekly_summary_enabled?: boolean
         }
         Update: {
+          ads_consent_at?: string | null
+          ads_personalized?: boolean | null
           birth_year?: number
           checkin_floor?: string | null
           daily_reminder_time?: string | null
           day_end_grace_hours?: number
           discoverability?: Database["public"]["Enums"]["discoverability"]
+          friend_finished_push_enabled?: boolean
           locale?: string
           poke_push_enabled?: boolean
+          streak_lost_push_enabled?: boolean
           terms_accepted_at?: string
+          theme?: string
           timezone?: string
           updated_at?: string
           user_id?: string
+          weekly_summary_enabled?: boolean
         }
         Relationships: [
           {
@@ -1021,6 +1039,13 @@ export type Database = {
         }
       }
       claim_diken_push: { Args: { p_notification: string }; Returns: boolean }
+      claim_push_receipts: {
+        Args: { p_limit?: number }
+        Returns: {
+          id: string
+          token: string
+        }[]
+      }
       claim_social_push: { Args: { p_notification: string }; Returns: Json }
       complete_profile: {
         Args: {
@@ -1050,6 +1075,7 @@ export type Database = {
       create_challenge: {
         Args: {
           p_duration_days?: number
+          p_icon?: string
           p_invite_message?: string
           p_invitees?: string[]
           p_number_base_target?: number
@@ -1061,6 +1087,7 @@ export type Database = {
           p_start_date?: string
           p_task_type?: Database["public"]["Enums"]["task_type"]
           p_template?: string
+          p_tint?: string
           p_title?: string
           p_visibility?: Database["public"]["Enums"]["challenge_visibility"]
         }
@@ -1389,6 +1416,7 @@ export type Database = {
           kind: Database["public"]["Enums"]["notification_kind"]
           notification_id: string
           recipient_id: string
+          title: string
           tokens: string[]
           url: string
         }[]
@@ -1405,6 +1433,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      record_push_tickets: { Args: { p_tickets: Json }; Returns: number }
       register_push_token: {
         Args: { p_platform: string; p_token: string }
         Returns: undefined

@@ -22,6 +22,8 @@ export const settings = {
     discoverability: 'Beni kimler bulabilir',
     blocked: 'Engellenen kullanıcılar',
     adPreferences: 'Reklam tercihleri',
+    /** Doğum yılı (yalnızca yaş kontrolü; profilde görünmez) */
+    birthYear: 'Doğum yılı',
     /** Gizlilik seçenekleri formu açılamadı (ad-consent ekranındaki metinle aynı) */
     adPreferencesFailed: 'Reklam tercihleri şu an açılamadı. Biraz sonra tekrar dene.',
     help: 'Yardım ve SSS',
@@ -120,6 +122,12 @@ export const settings = {
     pokeDetail: 'Arkadaşların gaz verince ya da laf sokunca haber verir.',
     reminderDetail: 'Diken seçtiğin saatte bugünkü görevlerini hatırlatır.',
     reminderTime: 'Hatırlatma saati',
+    friendFinished: 'Arkadaşın bitirdi',
+    friendFinishedDetail: 'Bir arkadaşın challenge bitirince haber verir.',
+    streakLost: 'Seri koptu',
+    streakLostDetail: 'Dünü kaçırdıysan sabah 09:00\'da kurtarma süresini hatırlatır.',
+    weekly: 'Haftalık özet',
+    weeklyDetail: 'Pazar 19:00\'da haftanı ve gruptaki sıranı söyler.',
     whatWhen: 'NE ZAMAN NE GELİR',
     /** Örnek bildirimler (kişi adları tasarımdaki örnekler) */
     copy: {

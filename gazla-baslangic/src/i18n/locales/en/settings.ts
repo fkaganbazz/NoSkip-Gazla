@@ -18,6 +18,7 @@ export const settings: typeof tr = {
     discoverability: 'Who can find me',
     blocked: 'Blocked users',
     adPreferences: 'Ad preferences',
+    birthYear: 'Birth year',
     adPreferencesFailed: "Couldn't open ad preferences right now. Try again in a bit.",
     help: 'Help and FAQ',
     writeToUs: 'Contact us',
@@ -105,6 +106,12 @@ export const settings: typeof tr = {
     pokeDetail: 'Lets you know when friends hype you up or roast you.',
     reminderDetail: "Diken reminds you of today's tasks at the time you pick.",
     reminderTime: 'Reminder time',
+    friendFinished: 'Friend finished',
+    friendFinishedDetail: 'Lets you know when a friend finishes a challenge.',
+    streakLost: 'Streak lost',
+    streakLostDetail: 'If you missed yesterday, reminds you at 09:00 that you can still rescue it.',
+    weekly: 'Weekly recap',
+    weeklyDetail: 'On Sunday at 19:00, tells you how your week went and where you rank in your group.',
     whatWhen: 'WHAT YOU GET AND WHEN',
     copy: {
       reminder: {
