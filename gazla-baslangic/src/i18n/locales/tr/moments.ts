@@ -23,6 +23,16 @@ export const moments = {
   completion: {
     title: 'Bugün tamam!',
     sub: 'Diken kana kana su içti. Yarın yine bekliyor.',
+    /** İlk gün (seri başladı) ve kilometre taşı alt yazısı */
+    startSub: 'İlk kıvılcım çaktı. Yarın da gel, alev büyüsün.',
+    milestoneSub: (n: number) =>
+      n === 7
+        ? 'Bir hafta! Alev artık sönmez.'
+        : n === 30
+          ? 'Bir ay! Bu alev kolay kolay sönmez.'
+          : n === 365
+            ? 'Bir yıl! Diken sana hayran.'
+            : `${n} gün! Alev harlanıyor.`,
     great: 'Süper',
     /** "Mert ve Can da bugünü tamamladı." */
     friendsDone: (names: string[]) => {
@@ -39,6 +49,10 @@ export const moments = {
   /** Seri kartı (Completion) */
   streakCard: {
     label: 'günlük seri',
+    /** Kutlama etiketleri: ilk gün ve kilometre taşları (7, 30, 100, 365) */
+    started: 'SERİ BAŞLADI!',
+    milestone: (n: number) => (n === 7 ? '1 HAFTA!' : n === 30 ? '1 AY!' : n === 365 ? '1 YIL!' : `${n} GÜN!`),
+    plusOne: '+1',
     a11y: (n: number) => `${n} günlük seri`,
     dayState: {
       empty: 'boş',

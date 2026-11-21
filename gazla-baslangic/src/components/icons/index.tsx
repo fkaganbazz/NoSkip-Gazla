@@ -136,11 +136,17 @@ export function BellIcon(props: IconProps) {
   );
 }
 
-/**
- * Seri çipi ve logo filizi — alt menüdeki filizden biraz farklı (Today.dc.html, Components.dc.html,
- * Main.dc.html logo: 26, çizgi 2.4). onboarding/icons LogoSproutIcon ile aynı çizim.
- */
+/** Seri — alev (kutlama kartındaki renkli alevin çizgi hali: src/components/Flame) */
 export function StreakIcon(props: IconProps) {
+  return (
+    <LineIcon {...props}>
+      <Path d="M12 2.4 C13.8 6.6 18.6 9 18.6 15 C18.6 19.2 15.6 22.2 12 22.2 C8.4 22.2 5.4 19.2 5.4 15 C5.4 11.4 7.8 9.6 9 6.6 C9.6 9 10.8 10.2 12 10.2 C12 7.2 11.4 4.8 12 2.4 Z" />
+    </LineIcon>
+  );
+}
+
+/** Fide — karşılama ekranındaki logo (eski seri simgesi; SproutIcon'dan biraz yüksek yapraklı) */
+export function SeedlingIcon(props: IconProps) {
   return (
     <LineIcon {...props}>
       <Path d="M12 21 V10" />

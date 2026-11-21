@@ -55,6 +55,7 @@ const SCREENS: Row[] = [
 export default function DevIndex() {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
+  const router = useRouter();
   const signOut = useSignOut();
   const online = useIsOnline();
   const pending = usePendingCheckins();
@@ -72,6 +73,19 @@ export default function DevIndex() {
     },
     ...(api.kind === 'mock'
       ? [
+          ...([
+            ['Seri kutlaması: arttı (12 → 13)', 12],
+            ['Seri kutlaması: başladı (1. gün)', 0],
+            ['Seri kutlaması: kilometre taşı (7. gün)', 6],
+          ] as const).map(([title, before]) => ({
+            title,
+            detail: 'Mock: bugünün görevleri işaretlenir, tamamlama ekranı açılır (alevli seri kartı)',
+            onPress: () => {
+              mockDev.simulateDayComplete(before);
+              queryClient.invalidateQueries();
+              router.push('/completion');
+            },
+          })),
           {
             title: 'Seri koptu senaryosu',
             detail: 'Mock: dün plank ve okuma kaçırılmış, iki kurtarma bekliyor (Bugün plank\'la açar, sonra okuma)',

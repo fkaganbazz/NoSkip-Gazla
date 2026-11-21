@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
-import Animated from 'react-native-reanimated';
+import Animated, { useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AvatarStack } from '@/components/Avatar';
@@ -9,8 +9,9 @@ import Diken from '@/components/Diken';
 import { Button, IconButton } from '@/components/ui';
 import { adConsentShown, useFriendsToday, useRecentDays, useStreak } from '@/data';
 import Confetti from '@/features/moments/Confetti';
-import { weekCells } from '@/features/moments/logic';
+import { streakFlareKind, weekCells } from '@/features/moments/logic';
 import StreakCard from '@/features/moments/StreakCard';
+import StreakSpark from '@/features/moments/StreakSpark';
 import { useCelebrationMotion } from '@/features/moments/useCelebrationMotion';
 import { useT } from '@/i18n';
 import { successHaptic } from '@/media/haptics';
@@ -25,8 +26,10 @@ const DESIGN_TOP = 56;
 // Veri: my_streak (seri), my_recent_days (son 7 gün), friends_today (bitiren / bekleyen arkadaşlar).
 // Koyu tasarımı yok; yeşil kutlama zemini iki modda aynı. İlk tamamlanan günden sonra kapatınca bir kez
 // reklam izni ön ekranı açılır (EKRANLAR 6.2; cihazdaki adConsentShown bayrağı).
-// Açılışta hafif "başarılı" titreşimi (expo-haptics; web'de yok) ve Diken'in giriş zıplaması + konfeti
-// (reanimated; "hareketi azalt" açıksa durağan). Hareket bitince görünüm tasarımla birebir.
+// Diken'in giriş zıplaması + konfeti (reanimated; "hareketi azalt" açıksa durağan). Bugün tamamlandıysa seri kartı
+// kutlanır: Diken'den bugünün dairesine kıvılcım uçar, gün dolar, alev harlanır ve sayı artar (ilk gün alev tutuşur,
+// 7/30/100/365. günde kart alev alır); titreşimleri kart çalar. Kutlama yoksa ya da hareket azaltılmışsa açılışta tek
+// "başarılı" titreşimi (expo-haptics; web'de yok). Hareket bitince görünüm tasarımla birebir.
 export default function CompletionScreen() {
   const router = useRouter();
   const t = useT();
@@ -36,16 +39,27 @@ export default function CompletionScreen() {
   const recent = useRecentDays(7);
   const friends = useFriendsToday();
   const { dikenStyle, confettiStyle } = useCelebrationMotion();
-
-  // Açılışta bir kez titreşim
-  const buzzed = useRef(false);
-  useEffect(() => {
-    if (buzzed.current) return;
-    buzzed.current = true;
-    successHaptic();
-  }, []);
+  const reduced = useReducedMotion();
 
   const week = useMemo(() => weekCells(recent.data ?? [], t), [recent.data, t]);
+  // İşaretlemeden hemen sonra açılır: önbellekteki seri eski olabilir, yenilenmesi bitince karar verilir
+  const ready = !streak.isPending && !recent.isPending && !streak.isFetching && !recent.isFetching;
+  const currentStreak = streak.data?.currentStreak ?? 0;
+  // Kutlama türü veriler gelince bir kez belirlenir (sonradan yenilenen veri kartı yeniden oynatmasın)
+  const [flare, setFlare] = useState<ReturnType<typeof streakFlareKind> | undefined>(undefined);
+  useEffect(() => {
+    if (!ready || flare !== undefined) return;
+    const kind = streak.data ? streakFlareKind(streak.data.currentStreak, week) : null;
+    setFlare(kind);
+    // Kutlamanın titreşimlerini kart çalar; kutlama yoksa açılışta bir kez
+    if (!kind || reduced) successHaptic();
+  }, [ready, flare, streak.data, week, reduced]);
+
+  // Kıvılcımın başlangıcı (Diken'in tepesi) ve hedefi (bugünün dairesi), içerik koordinatlarında
+  const [dikenTop, setDikenTop] = useState<{ x: number; y: number } | null>(null);
+  const [cardOrigin, setCardOrigin] = useState<{ x: number; y: number } | null>(null);
+  const [todayInCard, setTodayInCard] = useState<{ x: number; y: number } | null>(null);
+  const sparkTarget = cardOrigin && todayInCard ? { x: cardOrigin.x + todayInCard.x, y: cardOrigin.y + todayInCard.y } : null;
   const done = (friends.data ?? []).filter((f) => f.doneToday === true);
   const pending = (friends.data ?? []).filter((f) => f.doneToday === false);
 
@@ -101,7 +115,12 @@ export default function CompletionScreen() {
           <IconButton icon="close" tone="onBrand" accessibilityLabel={t.common.close} onPress={finish} />
         </View>
 
-        <Animated.View style={[styles.diken, dikenStyle]}>
+        <Animated.View
+          style={[styles.diken, dikenStyle]}
+          onLayout={(e) => {
+            const { x, y, width } = e.nativeEvent.layout;
+            setDikenTop({ x: x + width / 2, y: y + m.sparkFromTop });
+          }}>
           <Diken mood="cosku" stage="tam" gear="bant" size={m.completionDiken} />
         </Animated.View>
 
@@ -110,14 +129,26 @@ export default function CompletionScreen() {
             {t.moments.completion.title}
           </Text>
           <Text style={[ty.completionSub, styles.center, { color: c.sub }]}>
-            {t.moments.completion.sub}
+            {flare === 'start'
+              ? t.moments.completion.startSub
+              : flare === 'milestone'
+                ? t.moments.completion.milestoneSub(currentStreak)
+                : t.moments.completion.sub}
           </Text>
         </View>
 
-        {streak.isPending || recent.isPending ? (
+        {!ready || flare === undefined ? (
           <ActivityIndicator color={c.text} style={styles.loader} />
         ) : (
-          streak.data && <StreakCard streak={streak.data.currentStreak} week={week} />
+          streak.data && (
+            <StreakCard
+              streak={streak.data.currentStreak}
+              week={week}
+              flare={flare}
+              onLayout={(e) => setCardOrigin({ x: e.nativeEvent.layout.x, y: e.nativeEvent.layout.y })}
+              onTodayCenter={(x, y) => setTodayInCard({ x, y })}
+            />
+          )
         )}
 
         {doneText && (
@@ -143,6 +174,8 @@ export default function CompletionScreen() {
             />
           )}
         </View>
+
+        {flare && !reduced && dikenTop && sparkTarget && <StreakSpark from={dikenTop} to={sparkTarget} />}
       </ScrollView>
     </View>
   );

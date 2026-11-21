@@ -3,7 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { StreakIcon } from '@/components/icons';
+import { SeedlingIcon } from '@/components/icons';
 import { Button } from '@/components/ui';
 import WelcomeArt from '@/features/onboarding/WelcomeArt';
 import { useT } from '@/i18n';
@@ -26,7 +26,7 @@ export default function WelcomeScreen() {
     <View style={[styles.screen, { backgroundColor: c.welcomeBg }]}>
       <StatusBar style="light" />
       <View style={[styles.logo, { top: insets.top + m.welcomeLogoTop }]}>
-        <StreakIcon color={c.welcomeLogo} size={m.welcomeLogoIconSize} strokeWidth={m.welcomeLogoIconStroke} />
+        <SeedlingIcon color={c.welcomeLogo} size={m.welcomeLogoIconSize} strokeWidth={m.welcomeLogoIconStroke} />
         <Text accessibilityRole="header" style={[ot.welcomeLogo, { color: c.welcomeLogo }]}>
           {t.common.appName}
         </Text>

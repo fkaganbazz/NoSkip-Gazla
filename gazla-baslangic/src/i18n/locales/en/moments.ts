@@ -14,6 +14,15 @@ export const moments: typeof tr = {
   completion: {
     title: "Today's done!",
     sub: "Diken's all watered. Same time tomorrow.",
+    startSub: 'First spark! Come back tomorrow and keep it burning.',
+    milestoneSub: (n) =>
+      n === 7
+        ? "One week! This fire's not going out."
+        : n === 30
+          ? "One month! This fire's here to stay."
+          : n === 365
+            ? 'One year! Diken is in awe.'
+            : `${n} days! The fire's roaring.`,
     great: 'Awesome',
     friendsDone: (names) => `${joinNames(names)} finished today too.`,
     hypeUp: (names) =>
@@ -22,6 +31,9 @@ export const moments: typeof tr = {
 
   streakCard: {
     label: 'day streak',
+    started: 'STREAK STARTED!',
+    milestone: (n) => (n === 7 ? '1 WEEK!' : n === 30 ? '1 MONTH!' : n === 365 ? '1 YEAR!' : `${n} DAYS!`),
+    plusOne: '+1',
     a11y: (n) => `${n}-day streak`,
     dayState: {
       empty: 'not done',

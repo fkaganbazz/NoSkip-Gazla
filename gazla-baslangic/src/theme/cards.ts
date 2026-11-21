@@ -69,7 +69,8 @@ export const cardColors: Record<'light' | 'dark', CardColors> = {
     pokeShadow: palette.orange700,
     streakChipBg: palette.nightPurple,
     streakChipText: palette.sand,
-    streakChipIcon: palette.darkActionText, // #8BE0AE
+    // Seri alevi: kutlama kartındaki alevin turuncusu (koyu çip zemininde okunur)
+    streakChipIcon: '#FF7A3D',
     dropStroke: lightColors.action,
     dropFilled: lightColors.action,
     dropEmpty: palette.white,
@@ -94,7 +95,7 @@ export const cardColors: Record<'light' | 'dark', CardColors> = {
     pokeShadow: palette.orange700,
     streakChipBg: '#0E2A1C',
     streakChipText: palette.green100,
-    streakChipIcon: palette.darkActionText,
+    streakChipIcon: '#FF7A3D',
     dropStroke: darkColors.action,
     dropFilled: darkColors.action,
     dropEmpty: 'transparent',

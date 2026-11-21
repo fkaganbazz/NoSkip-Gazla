@@ -36,3 +36,20 @@ export function formatRemaining(ms: number, t: Messages) {
   if (hours === 0) return minutesShort(minutes);
   return minutes === 0 ? hoursShort(hours) : `${hoursShort(hours)} ${minutesShort(minutes)}`;
 }
+
+/** Seri kartının kutlaması: seri arttı, ilk gün (seri başladı) ya da kilometre taşı */
+export type StreakFlareKind = 'up' | 'start' | 'milestone';
+
+/** Kartın alev aldığı seri günleri */
+export const STREAK_MILESTONES = [7, 30, 100, 365];
+
+/**
+ * Kutlama yalnızca bugün tamamlandıysa (son açık gün dolu) oynar; gece toleransında dünü bitirince ya da
+ * bugün boşken kart sessiz kalır.
+ */
+export function streakFlareKind(streak: number, week: WeekCell[]): StreakFlareKind | null {
+  const today = [...week].reverse().find((d) => d.isToday);
+  if (!today || today.state !== 'done' || streak < 1) return null;
+  if (streak === 1) return 'start';
+  return STREAK_MILESTONES.includes(streak) ? 'milestone' : 'up';
+}

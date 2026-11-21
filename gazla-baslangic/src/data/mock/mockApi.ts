@@ -195,6 +195,9 @@ const isOlderThan = (a: ActivityItem, cursor: string) => {
 };
 
 class MockStore {
+  /** Bugünden önceki genel seri (geliştirme senaryoları değiştirir) */
+  streakBase: Record<string, number> = { ...seedStreakBase };
+
   signedIn = true;
   profileCompleted = true;
   profiles = new Map<string, Profile>();
@@ -422,7 +425,7 @@ class MockStore {
   }
 
   streakOf(userId: string) {
-    return (seedStreakBase[userId] ?? 0) + (this.doneTodayAll(userId) ? 1 : 0);
+    return (this.streakBase[userId] ?? 0) + (this.doneTodayAll(userId) ? 1 : 0);
   }
 
   /** app.challenge_streak: bugünden (bittiyse son günden) geriye kesintisiz kapsanan günler; bugün henüz açık */
@@ -586,6 +589,22 @@ export const mockDev = {
     store.seedHistoryOf((h) => h.challengeId === c.id);
     // Bahçe üyelikten okunur (getGarden): bitirdiyse kaktüs kendiliğinden eklenir
     store.finalize(c, new Date().toISOString(), null);
+  },
+  /**
+   * Seri kutlaması senaryosu: bugünün bütün görevleri işaretlenmiş, önceki seri `before` gün. Tamamlama ekranı
+   * açılınca kart kutlar: 0 → seri başladı (son 6 günün işaretlemeleri de silinir), 6 → kilometre taşı (7), diğerleri
+   * → seri arttı.
+   */
+  simulateDayComplete(before: number) {
+    const today = localDate();
+    store.streakBase[ME_ID] = before;
+    for (const c of store.runningFor(ME_ID, today)) {
+      if (before === 0) {
+        for (let i = 1; i <= 6; i += 1) store.checkins.delete(store.key(ME_ID, c.id, addDays(today, -i)));
+        store.rescues = store.rescues.filter((r) => !(r.userId === ME_ID && r.challengeId === c.id && r.rescuedDate >= addDays(today, -6)));
+      }
+      if (!store.covered(ME_ID, c.id, today)) store.putCheckin(ME_ID, c.id, today, c.taskType === 'number' ? 1 : null, null, null);
+    }
   },
   /**
    * Çevrimdışı benzetimi: açıkken onlineManager çevrimdışı olur (sorgular duraklar) ve her mock

@@ -56,6 +56,30 @@ export const celebrationColors = {
   logoBg: palette.nightPurple,
 } as const;
 
+/** Seri alevi ve kutlaması (Completion seri kartı; iki modda aynı) */
+export const flameColors = {
+  outerBottom: palette.potOrange,
+  outerTop: '#FF9A3D',
+  innerBottom: palette.flowerYellow,
+  innerTop: '#FFE7A1',
+  outline: palette.nightPurple,
+  /** Alevin arkasındaki sıcaklık (radyal parlama) */
+  heat: '#FFAA3C',
+  embers: [palette.flowerYellow, '#FF9A3D', palette.potOrange, '#FFE7A1'],
+  /** Kilometre taşında kartın çevresindeki ışık */
+  glow: '#FF7A3D',
+  /** Yeni sayı turuncu parlayıp yeşile döner */
+  numberFlash: palette.potOrange,
+  plusBg: palette.potOrange,
+  plusText: palette.nightPurple,
+  pillBg: palette.potOrange,
+  pillText: palette.nightPurple,
+  pillShadow: '#B83A0B',
+  ripple: palette.potOrange,
+  spark: palette.flowerYellow,
+  sparkStroke: palette.sand,
+} as const;
+
 // Finished --------------------------------------------------------------------------------------------
 
 export type FinishedColors = {
@@ -250,6 +274,40 @@ export const momentsMetrics = {
   adBadgePaddingY: 3,
   adBadgePaddingX: 8,
   adBadgeRadius: 8,
+
+  // Seri kartı alevi ve kutlaması
+  streakColumnFlame: 96,
+  flameHeight: 28,
+  flameNumberGap: 2,
+  heatSize: 56,
+  emberSize: 5,
+  plusTop: -8,
+  plusRight: -6,
+  plusPaddingX: 7,
+  plusPaddingY: 2,
+  pillTop: -15,
+  pillPaddingLeft: 9,
+  pillPaddingRight: 12,
+  pillPaddingYTop: 3,
+  pillPaddingYBottom: 1,
+  pillFlameHeight: 15,
+  pillGapFlame: 4,
+  pillShadowY: 3,
+  glowInset: 4,
+  glowBorder: 3,
+  glowBlur: 24,
+  rippleBorder: 3,
+  rippleScale: 1.9,
+  sparkSize: 16,
+  /** Kıvılcım Diken'in tepesinden çıkar: Diken kutusunun üstünden (px) */
+  sparkFromTop: 16,
+  sparkTrailSize: 6,
+  /** Kıvılcımın yayı: önce sağa ve yukarı, sonra hedefin üstünden iner (px) */
+  sparkRiseX: 70,
+  sparkRiseY: -40,
+  sparkDiveX: 10,
+  sparkDiveY: -120,
+  sparkSpinDeg: 560,
 } as const;
 
 // Hareket (Completion) --------------------------------------------------------------------------------
@@ -279,6 +337,60 @@ export const momentsMotion = {
   confettiDelayMs: 320,
   confettiDurationMs: 600,
   confettiDrop: 14,
+} as const;
+
+/**
+ * Seri kartının kutlaması (Completion). Zamanlar ekran açılışından (ms). Sıra: Diken'den bugünün dairesine
+ * kıvılcım → gün dolar → alev harlanır, sayı kayar (ilk günde alev sıfırdan tutuşur) → kilometre taşında
+ * kart alev alır. Titreşimler de aynı anlarda (src/features/moments/useStreakFlare).
+ */
+export const streakFlareMotion = {
+  sparkAt: 550,
+  sparkMs: 430,
+  /** Kıvılcımın arkasındaki ışık noktaları */
+  trailCount: 6,
+  trailMs: 380,
+  dayFillAt: 980,
+  dayFillMs: 360,
+  rippleMs: 520,
+  checkAt: 1100,
+  checkMs: 260,
+  flareAt: 1160,
+  flareMs: 760,
+  flareScale: 1.5,
+  milestoneFlareScale: 1.75,
+  numberOutMs: 260,
+  numberInMs: 640,
+  plusMs: 900,
+  /** İlk gün: alev tutuşur, sonra "1" */
+  igniteAt: 1200,
+  igniteMs: 650,
+  startNumberAt: 1420,
+  numberPopMs: 380,
+  /** Kilometre taşı: kart parlar, nabız atar */
+  milestoneAt: 1420,
+  glowMs: 1100,
+  cardPulseMs: 700,
+  pillAt: 1440,
+  pillMs: 460,
+  heatMs: 900,
+  emberMs: 900,
+  emberStaggerMs: 22,
+  emberCount: 11,
+  startEmberCount: 12,
+  milestoneEmberCount: 22,
+  emberRise: 34,
+  emberSpread: 44,
+  milestoneEmberSpread: 70,
+  /** Ekran açık kaldıkça alevin sakin titremesi */
+  flickerMs: 1400,
+  innerFlickerMs: 900,
+  /** Titreşim anları */
+  hapticLightAt: 980,
+  hapticSuccessAt: 1160,
+  hapticIgniteAt: 1200,
+  hapticStartSuccessAt: 1420,
+  hapticMilestoneAt: [1420, 1560],
 } as const;
 
 // Yazı ------------------------------------------------------------------------------------------------
@@ -333,4 +445,9 @@ export const momentsTypography = {
   friendsPill: { fontFamily: fonts.bold, fontSize: 14 },
   /** "30 sn" rozeti · Nunito 800 · 12 */
   adBadge: { fontFamily: fonts.extraBold, fontSize: 12 },
+
+  /** Seri kartı: "+1" · Nunito 800 · 13 */
+  plusOne: { fontFamily: fonts.extraBold, fontSize: 13 },
+  /** "SERİ BAŞLADI!", "1 HAFTA!" · Baloo 2 800 · 15 · aralık 0.6 */
+  flarePill: { fontFamily: fonts.heading, fontSize: 15, lineHeight: 19, letterSpacing: 0.6 },
 } as const satisfies Record<string, TextStyle>;
